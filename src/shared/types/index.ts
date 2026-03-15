@@ -20,6 +20,29 @@ export type { Theme, UserSettings, SettingsUpdate } from "./settings";
 
 export { THEME, DEFAULT_SETTINGS } from "./settings";
 
+// Schema types
+export type {
+  TypePlaceholder,
+  TemplateValue,
+  TemplateObject,
+  TemplateArray,
+  Schema,
+  MutableSchema,
+  CreateSchemaInput,
+  UpdateSchemaInput,
+  ValidationError,
+  ValidationResult,
+  EventValidation,
+} from "./schema";
+
+export {
+  TYPE_PLACEHOLDER,
+  TYPE_PLACEHOLDERS,
+  isTypePlaceholder,
+  createSchema,
+  getSchemaEventName,
+} from "./schema";
+
 // Message types
 export type {
   PortName,

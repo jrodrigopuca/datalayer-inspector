@@ -10,5 +10,9 @@ export {
   type ViewMode,
   CONNECTION_STATE,
   type ConnectionState,
+  RIGHT_PANEL_VIEW,
+  type RightPanelView,
+  type RightPanelViewType,
 } from "./ui";
 export { createSettingsSlice, type SettingsSlice } from "./settings";
+export { createSchemasSlice, type SchemasSlice } from "./schemas";

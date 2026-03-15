@@ -241,17 +241,17 @@ dataLayer.push({event: "purchase"})
 
 > Objetivo: Features que ningún competidor ofrece. La extensión pasa de "viewer" a "QA tool".
 
-### 2.1 — Export JSON
+### 2.1 — Export JSON ✅
 
 **Entregable**: Exportar eventos capturados como archivo JSON.
 
-- [ ] Botón "Export JSON" en toolbar del DevTools panel
-- [ ] Opciones de export:
+- [x] Botón "Export JSON" en toolbar del DevTools panel
+- [x] Opciones de export:
   - Todos los eventos vs solo los filtrados
   - Formato: "raw" (tal como se capturó) vs "clean" (sin metadata interna)
   - Incluir/excluir timestamp y URL
-- [ ] Genera archivo `.json` descargable con nombre: `datalayer-{domain}-{timestamp}.json`
-- [ ] Formato del archivo:
+- [x] Genera archivo `.json` descargable con nombre: `datalayer-{domain}-{timestamp}.json`
+- [x] Formato del archivo:
   ```json
   {
     "exportedAt": "2026-03-15T10:30:00Z",
@@ -268,7 +268,7 @@ dataLayer.push({event: "purchase"})
     ]
   }
   ```
-- [ ] Keyboard shortcut: `Cmd+Shift+E` / `Ctrl+Shift+E`
+- [x] Keyboard shortcut: `Cmd+Shift+E` / `Ctrl+Shift+E`
 
 ### 2.2 — Schema Validation
 

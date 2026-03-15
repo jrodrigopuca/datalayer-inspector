@@ -23,6 +23,24 @@ export const CONNECTION_STATE = {
 export type ConnectionState =
   (typeof CONNECTION_STATE)[keyof typeof CONNECTION_STATE];
 
+/** Right panel view types */
+export const RIGHT_PANEL_VIEW = {
+  EVENT_DETAIL: "event-detail",
+  SCHEMA_LIST: "schema-list",
+  SCHEMA_EDITOR: "schema-editor",
+  VALIDATION_ERRORS: "validation-errors",
+} as const;
+
+export type RightPanelViewType =
+  (typeof RIGHT_PANEL_VIEW)[keyof typeof RIGHT_PANEL_VIEW];
+
+/** Right panel view state */
+export type RightPanelView =
+  | { type: typeof RIGHT_PANEL_VIEW.EVENT_DETAIL }
+  | { type: typeof RIGHT_PANEL_VIEW.SCHEMA_LIST }
+  | { type: typeof RIGHT_PANEL_VIEW.SCHEMA_EDITOR; schemaId: string | null }
+  | { type: typeof RIGHT_PANEL_VIEW.VALIDATION_ERRORS; eventId: string };
+
 export interface UISlice {
   /** Current view mode for detail panel */
   viewMode: ViewMode;
@@ -42,6 +60,8 @@ export interface UISlice {
   tabId: number | null;
   /** JSON tree expanded paths (for detail view) */
   expandedPaths: Set<string>;
+  /** Current right panel view */
+  rightPanelView: RightPanelView;
 
   // Actions
   setViewMode: (mode: ViewMode) => void;
@@ -56,6 +76,11 @@ export interface UISlice {
   expandPath: (path: string) => void;
   collapsePath: (path: string) => void;
   resetExpandedPaths: () => void;
+  setRightPanelView: (view: RightPanelView) => void;
+  showEventDetail: () => void;
+  showSchemaList: () => void;
+  showSchemaEditor: (schemaId: string | null) => void;
+  showValidationErrors: (eventId: string) => void;
 }
 
 export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
@@ -68,6 +93,7 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   errorMessage: null,
   tabId: null,
   expandedPaths: new Set(),
+  rightPanelView: { type: RIGHT_PANEL_VIEW.EVENT_DETAIL },
 
   setViewMode: (viewMode) => set({ viewMode }),
 
@@ -111,4 +137,22 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
     }),
 
   resetExpandedPaths: () => set({ expandedPaths: new Set() }),
+
+  setRightPanelView: (rightPanelView) => set({ rightPanelView }),
+
+  showEventDetail: () =>
+    set({ rightPanelView: { type: RIGHT_PANEL_VIEW.EVENT_DETAIL } }),
+
+  showSchemaList: () =>
+    set({ rightPanelView: { type: RIGHT_PANEL_VIEW.SCHEMA_LIST } }),
+
+  showSchemaEditor: (schemaId) =>
+    set({
+      rightPanelView: { type: RIGHT_PANEL_VIEW.SCHEMA_EDITOR, schemaId },
+    }),
+
+  showValidationErrors: (eventId) =>
+    set({
+      rightPanelView: { type: RIGHT_PANEL_VIEW.VALIDATION_ERRORS, eventId },
+    }),
 });

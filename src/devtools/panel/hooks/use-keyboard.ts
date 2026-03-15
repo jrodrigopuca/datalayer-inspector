@@ -5,6 +5,7 @@
 import { useEffect } from "react";
 import { useEventSelection } from "./use-events";
 import { useCommands } from "./use-connection";
+import { useExport } from "./use-export";
 import { usePanelStore } from "../store";
 
 /**
@@ -13,6 +14,7 @@ import { usePanelStore } from "../store";
 export function useKeyboard(): void {
   const { selectNext, selectPrevious, selectEvent } = useEventSelection();
   const { clearEvents, toggleRecording } = useCommands();
+  const { exportAll, canExport } = useExport();
   const setSearchQuery = usePanelStore((s) => s.setSearchQuery);
 
   useEffect(() => {
@@ -46,6 +48,14 @@ export function useKeyboard(): void {
           case "r":
             event.preventDefault();
             toggleRecording();
+            return;
+
+          case "e":
+            // Cmd+Shift+E for export
+            if (event.shiftKey && canExport) {
+              event.preventDefault();
+              exportAll();
+            }
             return;
         }
       }
@@ -82,5 +92,5 @@ export function useKeyboard(): void {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectNext, selectPrevious, selectEvent, clearEvents, toggleRecording, setSearchQuery]);
+  }, [selectNext, selectPrevious, selectEvent, clearEvents, toggleRecording, exportAll, canExport, setSearchQuery]);
 }

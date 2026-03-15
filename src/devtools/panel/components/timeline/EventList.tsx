@@ -6,7 +6,7 @@
  */
 
 import { useRef, useEffect } from "react";
-import { useFilteredEvents, useEventSelection } from "../../hooks";
+import { useFilteredEvents, useEventSelection, useValidation, useSchemas } from "../../hooks";
 import { usePanelStore } from "../../store";
 import { EventItem } from "./EventItem";
 
@@ -14,6 +14,9 @@ export function EventList() {
   const events = useFilteredEvents();
   const { selectedEventId, selectEvent } = useEventSelection();
   const autoScroll = usePanelStore((s) => s.autoScroll);
+  const showSchemaEditor = usePanelStore((s) => s.showSchemaEditor);
+  const { getValidation } = useValidation();
+  const { createSchemaFromEvent } = useSchemas();
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -56,6 +59,11 @@ export function EventList() {
           event={event}
           isSelected={event.id === selectedEventId}
           onClick={() => selectEvent(event.id)}
+          onCreateSchema={() => {
+            const schema = createSchemaFromEvent(event);
+            showSchemaEditor(schema.id);
+          }}
+          validation={getValidation(event.id)}
         />
       ))}
       <div ref={bottomRef} />

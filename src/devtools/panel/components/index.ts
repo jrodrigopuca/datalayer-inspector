@@ -16,3 +16,6 @@ export * from "./detail";
 
 // Search
 export * from "./search";
+
+// Schema
+export * from "./schema";

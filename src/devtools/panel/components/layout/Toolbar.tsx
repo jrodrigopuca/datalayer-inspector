@@ -3,17 +3,18 @@
  */
 
 import { useShallow } from "zustand/react/shallow";
-import { usePanelStore } from "../../store";
+import { usePanelStore, RIGHT_PANEL_VIEW } from "../../store";
 import { selectEventCounts, selectConnectionInfo } from "../../store/selectors";
-import { useCommands } from "../../hooks";
+import { useCommands, useExport, useSchemas } from "../../hooks";
 import { Button } from "../common";
 import { cn } from "@/lib/utils";
 
 export function Toolbar() {
-  const { isRecording, containers } = usePanelStore(
+  const { isRecording, containers, rightPanelView } = usePanelStore(
     useShallow((s) => ({
       isRecording: s.isRecording,
       containers: s.containers,
+      rightPanelView: s.rightPanelView,
     }))
   );
 
@@ -22,6 +23,12 @@ export function Toolbar() {
     useShallow(selectConnectionInfo)
   );
   const { clearEvents, toggleRecording } = useCommands();
+  const { exportAll, canExport } = useExport();
+  const { schemas } = useSchemas();
+  const showSchemaList = usePanelStore((s) => s.showSchemaList);
+
+  const isSchemaView = rightPanelView.type === RIGHT_PANEL_VIEW.SCHEMA_LIST ||
+    rightPanelView.type === RIGHT_PANEL_VIEW.SCHEMA_EDITOR;
 
   return (
     <div className="flex items-center gap-2 px-2 py-1.5 border-b border-panel-border bg-panel-surface">
@@ -50,6 +57,34 @@ export function Toolbar() {
       >
         <ClearIcon className="w-4 h-4 mr-1" />
         Clear
+      </Button>
+
+      {/* Export JSON button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => exportAll()}
+        disabled={!canExport}
+        title="Export as JSON (Cmd+Shift+E)"
+      >
+        <ExportIcon className="w-4 h-4 mr-1" />
+        Export
+      </Button>
+
+      {/* Schemas button */}
+      <Button
+        variant={isSchemaView ? "primary" : "ghost"}
+        size="sm"
+        onClick={showSchemaList}
+        title="Validation schemas"
+      >
+        <SchemaIcon className="w-4 h-4 mr-1" />
+        Schemas
+        {schemas.length > 0 && (
+          <span className="ml-1 px-1 py-0.5 text-2xs bg-white/20 rounded">
+            {schemas.length}
+          </span>
+        )}
       </Button>
 
       {/* Separator */}
@@ -105,6 +140,42 @@ function ClearIcon({ className }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+      />
+    </svg>
+  );
+}
+
+function ExportIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+      />
+    </svg>
+  );
+}
+
+function SchemaIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
       />
     </svg>
   );

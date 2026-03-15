@@ -10,7 +10,7 @@ import {
   SplitPane,
   StatusBar,
   EventList,
-  DetailView,
+  RightPanel,
   SearchBar,
 } from "./components";
 
@@ -33,7 +33,7 @@ export default function App() {
       <div className="flex-1 overflow-hidden">
         <SplitPane
           left={<EventList />}
-          right={<DetailView />}
+          right={<RightPanel />}
           defaultLeftWidth={300}
           minLeftWidth={200}
           maxLeftWidth={500}
