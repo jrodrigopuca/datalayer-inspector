@@ -38,6 +38,16 @@
   color-scheme: dark;
 }
 
+/* Ensure full height chain for flexbox layouts */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 /* Scrollbar styling for DevTools panel */
 ::-webkit-scrollbar {
   width: 8px;

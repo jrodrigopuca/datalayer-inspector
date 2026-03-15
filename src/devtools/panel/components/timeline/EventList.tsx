@@ -1,87 +1,40 @@
 /**
- * EventList component - virtualized list of events
+ * EventList component - simple scrollable list of events
  *
- * Uses a simple virtualization approach without external libraries
- * to keep bundle size small.
+ * Note: Virtualization removed for simplicity. React handles hundreds
+ * of items fine. Can add virtualization later if needed for 1000+ events.
  */
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect } from "react";
 import { useFilteredEvents, useEventSelection } from "../../hooks";
 import { usePanelStore } from "../../store";
 import { EventItem } from "./EventItem";
-
-const ITEM_HEIGHT = 48; // Fixed height for virtualization
-const OVERSCAN = 5; // Extra items to render above/below viewport
 
 export function EventList() {
   const events = useFilteredEvents();
   const { selectedEventId, selectEvent } = useEventSelection();
   const autoScroll = usePanelStore((s) => s.autoScroll);
-
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(0);
-
-  // Calculate visible range
-  const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - OVERSCAN);
-  const endIndex = Math.min(
-    events.length,
-    Math.ceil((scrollTop + containerHeight) / ITEM_HEIGHT) + OVERSCAN
-  );
-
-  const visibleEvents = events.slice(startIndex, endIndex);
-  const totalHeight = events.length * ITEM_HEIGHT;
-  const offsetY = startIndex * ITEM_HEIGHT;
-
-  // Handle scroll
-  function handleScroll(): void {
-    if (containerRef.current) {
-      setScrollTop(containerRef.current.scrollTop);
-    }
-  }
-
-  // Update container height on resize
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setContainerHeight(entry.contentRect.height);
-      }
-    });
-
-    observer.observe(container);
-    setContainerHeight(container.clientHeight);
-
-    return () => observer.disconnect();
-  }, []);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new events arrive
   useEffect(() => {
-    if (autoScroll && containerRef.current && events.length > 0) {
-      containerRef.current.scrollTop = totalHeight;
+    if (autoScroll && bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [events.length, autoScroll, totalHeight]);
+  }, [events.length, autoScroll]);
 
   // Scroll selected event into view
   useEffect(() => {
-    if (!selectedEventId || !containerRef.current) return;
+    if (!selectedEventId) return;
 
-    const selectedIndex = events.findIndex((e) => e.id === selectedEventId);
-    if (selectedIndex === -1) return;
-
-    const itemTop = selectedIndex * ITEM_HEIGHT;
-    const itemBottom = itemTop + ITEM_HEIGHT;
-    const viewTop = containerRef.current.scrollTop;
-    const viewBottom = viewTop + containerHeight;
-
-    if (itemTop < viewTop) {
-      containerRef.current.scrollTop = itemTop;
-    } else if (itemBottom > viewBottom) {
-      containerRef.current.scrollTop = itemBottom - containerHeight;
+    const selectedElement = document.querySelector(
+      `[data-event-id="${selectedEventId}"]`
+    );
+    if (selectedElement) {
+      selectedElement.scrollIntoView({ block: "nearest" });
     }
-  }, [selectedEventId, events, containerHeight]);
+  }, [selectedEventId]);
 
   if (events.length === 0) {
     return (
@@ -96,31 +49,16 @@ export function EventList() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      onScroll={handleScroll}
-      className="h-full overflow-auto"
-    >
-      {/* Spacer for virtualization */}
-      <div style={{ height: totalHeight, position: "relative" }}>
-        <div
-          style={{
-            position: "absolute",
-            top: offsetY,
-            left: 0,
-            right: 0,
-          }}
-        >
-          {visibleEvents.map((event) => (
-            <EventItem
-              key={event.id}
-              event={event}
-              isSelected={event.id === selectedEventId}
-              onClick={() => selectEvent(event.id)}
-            />
-          ))}
-        </div>
-      </div>
+    <div ref={containerRef} className="h-full overflow-auto">
+      {events.map((event) => (
+        <EventItem
+          key={event.id}
+          event={event}
+          isSelected={event.id === selectedEventId}
+          onClick={() => selectEvent(event.id)}
+        />
+      ))}
+      <div ref={bottomRef} />
     </div>
   );
 }

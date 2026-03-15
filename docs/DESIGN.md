@@ -6,6 +6,68 @@ Este documento describe el diseño técnico de implementación: patrones, decisi
 
 ---
 
+## Implementation Notes (Post Phase 1)
+
+### Key Technical Decisions Made During Implementation
+
+#### 1. Page Script Build Strategy
+
+**Problem**: CRXJS generates ES modules by default, but Chrome throws MIME type errors when injecting page scripts as modules.
+
+**Solution**: Separate Vite config (`vite.page-script.config.ts`) that builds page script as standalone IIFE:
+- Output to `public/page-script.js` (pre-build)
+- Main build copies to `dist/`
+- Build command: `tsc && vite build --config vite.page-script.config.ts && vite build`
+
+#### 2. EventList Simplification
+
+**Problem**: Custom virtualization logic had height calculation bugs in DevTools context. `containerHeight` was 0, causing only 5 items (OVERSCAN) to render.
+
+**Solution**: Removed virtualization entirely. React handles hundreds of items fine. If 1000+ events needed, add `@tanstack/virtual` later.
+
+**Current implementation**: Simple `.map()` with native scroll:
+```tsx
+<div className="h-full overflow-auto">
+  {events.map((event) => <EventItem key={event.id} ... />)}
+</div>
+```
+
+#### 3. Full-Height Layout Chain
+
+**Problem**: `h-full` on EventList didn't work because parent containers lacked explicit height.
+
+**Solution**: Added to `globals.css`:
+```css
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+```
+
+And `h-full` to SplitPane's left pane container.
+
+#### 4. Event Badge Display
+
+**Problem**: EventBadge was showing category name ("Custom", "GTM") instead of actual event name.
+
+**Solution**: Badge now shows the real event name (`page_view`, `gtm.js`, `purchase`, etc.) with color-coding based on category.
+
+### File Changes Summary
+
+| File | Change |
+|------|--------|
+| `vite.page-script.config.ts` | New - IIFE build for page script |
+| `package.json` | Updated build script |
+| `src/styles/globals.css` | Added height: 100% chain |
+| `src/devtools/panel/components/layout/SplitPane.tsx` | Added h-full to left pane |
+| `src/devtools/panel/components/timeline/EventList.tsx` | Simplified, removed virtualization |
+| `src/devtools/panel/components/timeline/EventItem.tsx` | Added data-event-id attribute |
+| `src/devtools/panel/components/timeline/EventBadge.tsx` | Fixed to show event name |
+
+---
+
 ## Índice
 
 1. [Principios de Diseño](#1-principios-de-diseño)

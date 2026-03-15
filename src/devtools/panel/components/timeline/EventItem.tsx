@@ -48,6 +48,7 @@ export function EventItem({ event, isSelected, onClick }: EventItemProps) {
 
   return (
     <div
+      data-event-id={event.id}
       onClick={onClick}
       className={cn(
         "h-12 px-2 py-1.5 border-l-4 cursor-pointer transition-colors",

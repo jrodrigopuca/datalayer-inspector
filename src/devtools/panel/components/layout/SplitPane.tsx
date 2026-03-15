@@ -62,7 +62,7 @@ export function SplitPane({
     >
       {/* Left pane */}
       <div
-        className="flex-shrink-0 overflow-hidden"
+        className="flex-shrink-0 h-full overflow-hidden"
         style={{ width: leftWidth }}
       >
         {left}

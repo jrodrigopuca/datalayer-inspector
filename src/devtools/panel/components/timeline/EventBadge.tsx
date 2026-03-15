@@ -1,5 +1,7 @@
 /**
  * EventBadge component - visual indicator for event type
+ *
+ * Shows the actual event name (like in dataLayer), with color based on category
  */
 
 import { Badge } from "../common";
@@ -10,7 +12,7 @@ interface EventBadgeProps {
 }
 
 /**
- * Determine event category from event name
+ * Determine event category from event name (used for coloring)
  */
 function getEventCategory(
   eventName: string | null
@@ -24,17 +26,12 @@ function getEventCategory(
   return "custom";
 }
 
-const categoryLabels: Record<string, string> = {
-  gtm: "GTM",
-  ecommerce: "Ecom",
-  custom: "Custom",
-  error: "Error",
-};
-
 export function EventBadge({ eventName }: EventBadgeProps) {
   const category = getEventCategory(eventName);
+  // Show actual event name, or "push" for events without event key
+  const displayLabel = eventName ?? "push";
 
-  return <Badge variant={category}>{categoryLabels[category]}</Badge>;
+  return <Badge variant={category}>{displayLabel}</Badge>;
 }
 
 export { getEventCategory };
