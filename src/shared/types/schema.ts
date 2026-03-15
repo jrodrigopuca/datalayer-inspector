@@ -3,6 +3,10 @@
  *
  * Template-based validation where users define expected JSON structure
  * with type placeholders like @string, @number, @boolean, @array, @any
+ *
+ * Extended syntax:
+ * - @string? - optional string (field can be missing)
+ * - @enum(a, b, c) - must be one of the specified values
  */
 
 /**
@@ -13,6 +17,10 @@
  * @array - any array
  * @object - any object
  * @any - any value (just checks existence)
+ *
+ * Modifiers:
+ * - ? suffix makes it optional: @string?, @number?
+ * - @enum(val1, val2) for enumerated values
  */
 export const TYPE_PLACEHOLDER = {
   STRING: "@string",
@@ -39,13 +47,83 @@ export const TYPE_PLACEHOLDERS: readonly TypePlaceholder[] = [
 ];
 
 /**
- * Check if a value is a type placeholder
+ * Check if a value is a basic type placeholder (without modifiers)
  */
 export function isTypePlaceholder(value: unknown): value is TypePlaceholder {
   return (
     typeof value === "string" &&
     TYPE_PLACEHOLDERS.includes(value as TypePlaceholder)
   );
+}
+
+/**
+ * Check if a value is an extended placeholder (includes optional and enum)
+ */
+export function isExtendedPlaceholder(value: unknown): boolean {
+  if (typeof value !== "string" || !value.startsWith("@")) {
+    return false;
+  }
+  // Basic placeholders
+  if (isTypePlaceholder(value)) {
+    return true;
+  }
+  // Optional placeholders: @string?, @number?, etc.
+  if (value.endsWith("?")) {
+    const base = value.slice(0, -1);
+    return TYPE_PLACEHOLDERS.includes(base as TypePlaceholder);
+  }
+  // Enum placeholder: @enum(value1, value2, ...)
+  if (value.startsWith("@enum(") && value.endsWith(")")) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Parse an extended placeholder into its components
+ */
+export interface ParsedPlaceholder {
+  type: "basic" | "optional" | "enum";
+  baseType?: TypePlaceholder;
+  enumValues?: readonly string[];
+}
+
+export function parsePlaceholder(value: string): ParsedPlaceholder | null {
+  if (!value.startsWith("@")) {
+    return null;
+  }
+
+  // Enum: @enum(value1, value2, ...)
+  if (value.startsWith("@enum(") && value.endsWith(")")) {
+    const inner = value.slice(6, -1); // Remove "@enum(" and ")"
+    const values = inner.split(",").map((v) => v.trim());
+    return {
+      type: "enum",
+      enumValues: values,
+    };
+  }
+
+  // Optional: @string?, @number?, etc.
+  if (value.endsWith("?")) {
+    const base = value.slice(0, -1) as TypePlaceholder;
+    if (TYPE_PLACEHOLDERS.includes(base)) {
+      return {
+        type: "optional",
+        baseType: base,
+      };
+    }
+    return null;
+  }
+
+  // Basic: @string, @number, etc.
+  if (TYPE_PLACEHOLDERS.includes(value as TypePlaceholder)) {
+    return {
+      type: "basic",
+      baseType: value as TypePlaceholder,
+    };
+  }
+
+  return null;
 }
 
 /**

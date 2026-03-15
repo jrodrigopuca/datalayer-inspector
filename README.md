@@ -6,7 +6,9 @@ A Chrome DevTools extension built for developers and technical analysts who need
 
 ## Status
 
-**Phase 1 (MVP): Complete**
+**Phase 2 (Differentiation): In Progress**
+
+### Phase 1 (Complete)
 
 - Real-time dataLayer event capture
 - DevTools panel with event timeline and JSON tree view
@@ -14,6 +16,39 @@ A Chrome DevTools extension built for developers and technical analysts who need
 - Search and filter events
 - Copy events to clipboard
 - Popup quick view
+
+### Phase 2 (Current)
+
+- ✅ Schema validation with template-based matching
+- ✅ Export as JSON file
+- ✅ Export as Playwright/Cypress test assertions
+- ✅ Export evidence images (PNG/PDF)
+- ⏳ Diff view for comparing snapshots
+
+## Schema Validation
+
+Strata includes a powerful schema validation system using JSON templates:
+
+```json
+{
+  "event": "purchase",
+  "ecommerce": {
+    "transaction_id": "@string",
+    "value": "@number",
+    "currency": "@enum(USD, EUR, GBP)",
+    "items": [{ "item_id": "@string", "price": "@number" }]
+  }
+}
+```
+
+**Features:**
+- **Template-based matching**: Schemas apply when all literal values match
+- **Type placeholders**: `@string`, `@number`, `@boolean`, `@array`, `@object`, `@any`
+- **Optional fields**: `@string?`, `@number?` (won't fail if missing)
+- **Enum validation**: `@enum(val1, val2, val3)`
+- **Nested object and array validation**
+- **Create schema from event**: Right-click any event to auto-generate a template
+- **Import/Export**: Share schemas as JSON files
 
 ## Development
 
@@ -77,16 +112,8 @@ src/
 |--------|-------|
 | Page script size | 2.9 KB |
 | Total bundle | ~285 KB |
-| Unit tests | 51 passing |
+| Unit tests | 146 passing |
 | E2E tests | 18 passing |
-
-## Phase 2 (Planned)
-
-- Schema validation for dataLayer events
-- Diff view for comparing snapshots
-- Export as Playwright/Cypress test assertions
-- Export as JSON file
-- Export evidence images (PNG/PDF)
 
 ## License
 

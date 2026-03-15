@@ -41,6 +41,15 @@ export type RightPanelView =
   | { type: typeof RIGHT_PANEL_VIEW.SCHEMA_EDITOR; schemaId: string | null }
   | { type: typeof RIGHT_PANEL_VIEW.VALIDATION_ERRORS; eventId: string };
 
+/** Active modal types */
+export const MODAL_TYPE = {
+  NONE: "none",
+  EXPORT_TEST: "export-test",
+  EXPORT_EVIDENCE: "export-evidence",
+} as const;
+
+export type ModalType = (typeof MODAL_TYPE)[keyof typeof MODAL_TYPE];
+
 export interface UISlice {
   /** Current view mode for detail panel */
   viewMode: ViewMode;
@@ -62,6 +71,8 @@ export interface UISlice {
   expandedPaths: Set<string>;
   /** Current right panel view */
   rightPanelView: RightPanelView;
+  /** Currently active modal */
+  activeModal: ModalType;
 
   // Actions
   setViewMode: (mode: ViewMode) => void;
@@ -81,6 +92,8 @@ export interface UISlice {
   showSchemaList: () => void;
   showSchemaEditor: (schemaId: string | null) => void;
   showValidationErrors: (eventId: string) => void;
+  openModal: (modal: ModalType) => void;
+  closeModal: () => void;
 }
 
 export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
@@ -94,6 +107,7 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   tabId: null,
   expandedPaths: new Set(),
   rightPanelView: { type: RIGHT_PANEL_VIEW.EVENT_DETAIL },
+  activeModal: MODAL_TYPE.NONE,
 
   setViewMode: (viewMode) => set({ viewMode }),
 
@@ -155,4 +169,8 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
     set({
       rightPanelView: { type: RIGHT_PANEL_VIEW.VALIDATION_ERRORS, eventId },
     }),
+
+  openModal: (activeModal) => set({ activeModal }),
+
+  closeModal: () => set({ activeModal: MODAL_TYPE.NONE }),
 });

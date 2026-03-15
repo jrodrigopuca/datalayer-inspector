@@ -33,12 +33,15 @@ export type {
   ValidationError,
   ValidationResult,
   EventValidation,
+  ParsedPlaceholder,
 } from "./schema";
 
 export {
   TYPE_PLACEHOLDER,
   TYPE_PLACEHOLDERS,
   isTypePlaceholder,
+  isExtendedPlaceholder,
+  parsePlaceholder,
   createSchema,
   getSchemaEventName,
 } from "./schema";
@@ -72,3 +75,22 @@ export {
   CLIENT_REQUEST_TYPE,
   CLIENT_RESPONSE_TYPE,
 } from "./messages";
+
+// Test generator types
+export type {
+  TestFramework,
+  AssertionStyle,
+  TestGeneratorOptions,
+  GeneratedTest,
+} from "./test-generator";
+
+export { TEST_FRAMEWORK, ASSERTION_STYLE } from "./test-generator";
+
+// Evidence export types
+export type {
+  EvidenceFormat,
+  EvidenceOptions,
+  GeneratedEvidence,
+} from "./evidence";
+
+export { EVIDENCE_FORMAT, DEFAULT_EVIDENCE_OPTIONS } from "./evidence";

@@ -13,6 +13,8 @@ export {
   RIGHT_PANEL_VIEW,
   type RightPanelView,
   type RightPanelViewType,
+  MODAL_TYPE,
+  type ModalType,
 } from "./ui";
 export { createSettingsSlice, type SettingsSlice } from "./settings";
 export { createSchemasSlice, type SchemasSlice } from "./schemas";

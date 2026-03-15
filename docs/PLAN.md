@@ -14,7 +14,7 @@
 ## Alcance del Plan
 
 - **Fase 1 (MVP)**: ✅ COMPLETA — Monitoreo real-time, UI moderna, DevTools panel
-- **Fase 2 (Diferenciación)**: Schema validation, diff view, export test assertions, export JSON
+- **Fase 2 (Diferenciación)**: Schema validation ✅, diff view, export test assertions, export JSON ✅
 
 ---
 
@@ -231,7 +231,7 @@ dataLayer.push({event: "purchase"})
 
 **Entregable**: Extensión estable y testeada.
 
-- [x] **Unit tests** (Vitest): 51 tests passing
+- [x] **Unit tests** (Vitest): 51 tests → 99 tests (incluyendo schema validation)
 - [x] **E2E tests** (Playwright): 18 tests passing
 - [x] **Manual QA**: Verificado en sitios con GTM, sin GTM, SPAs, múltiples containers
 
@@ -270,52 +270,61 @@ dataLayer.push({event: "purchase"})
   ```
 - [x] Keyboard shortcut: `Cmd+Shift+E` / `Ctrl+Shift+E`
 
-### 2.2 — Schema Validation
+### 2.2 — Schema Validation ✅
 
 **Entregable**: Validar eventos del dataLayer contra esquemas definidos por el usuario.
 
 > **Killer feature** — Ningún competidor lo tiene. Transforma la extensión de "viewer" a "QA tool".
 
-- [ ] **Schema definition UI**:
-  - Crear schemas desde el panel de Settings
-  - Cada schema tiene: nombre, event name pattern (regex), campos requeridos, tipos esperados
-  - Ejemplo: schema "Purchase" → event: `purchase`, requiere `ecommerce.items[]`, cada item requiere `item_id`, `item_name`, `price`
-- [ ] **Schema format** (JSON almacenado en `chrome.storage.local`):
+- [x] **Template-based validation**:
+  - Users define expected JSON structure with type placeholders (`@string`, `@number`, `@boolean`, `@array`, `@object`, `@any`)
+  - Literal values must match exactly
+  - Arrays validate each element against first element pattern
+  - Nested objects validate recursively
 
+- [x] **Schema definition UI**:
+  - SchemaList panel: view all schemas with toggle/edit/delete
+  - SchemaEditor: name, description, JSON template textarea
+  - Type placeholders help section in editor
+  - Schemas stored in `chrome.storage.local`
+
+- [x] **Schema format** (JSON stored in `chrome.storage.local`):
   ```typescript
-  interface SchemaRule {
-  	id: string;
-  	name: string;
-  	eventPattern: string; // regex o string exacto
-  	required: SchemaField[]; // campos requeridos
-  	optional?: SchemaField[]; // campos opcionales documentados
-  	enabled: boolean;
-  }
-
-  interface SchemaField {
-  	path: string; // dot notation: "ecommerce.items[].item_id"
-  	type: "string" | "number" | "boolean" | "array" | "object";
-  	description?: string;
+  interface Schema {
+    id: string;
+    name: string;
+    template: TemplateObject;  // JSON with @type placeholders
+    enabled: boolean;
+    description?: string;
+    createdAt: number;
+    updatedAt: number;
   }
   ```
 
-- [ ] **Validación en real-time**:
-  - Cada evento se valida contra todos los schemas habilitados cuyo `eventPattern` haga match
-  - Resultado por evento: ✅ pass, ⚠️ warnings (campos opcionales faltantes), ❌ fail (campos requeridos faltantes o tipo incorrecto)
-  - Badge de status en el timeline (icono de check/warning/x)
-- [ ] **Validation detail view**:
-  - Al seleccionar un evento fallido, mostrar lista de errores/warnings
-  - Cada error indica: campo faltante o tipo incorrecto, valor esperado vs recibido
-  - Link rápido al campo en el JSON tree view
-- [ ] **Schemas presets** (built-in):
-  - GA4 Recommended Events (page_view, purchase, add_to_cart, begin_checkout, etc.)
-  - Importar/exportar schemas como JSON
-- [ ] **Import/Export schemas**:
-  - Exportar todos los schemas como archivo `.json` (para compartir con equipo)
-  - Importar schemas desde archivo `.json`
-- [ ] **Dashboard de validación**:
-  - Summary: X eventos validados, Y pasaron, Z fallaron
-  - Filtro rápido: "Show only failed"
+- [x] **Real-time validation**:
+  - Each event validated against all enabled schemas whose template.event matches
+  - Result per event: ✅ pass, ❌ fail, ○ none (no matching schema)
+  - Validation badge in timeline (green check / red X)
+  - Click badge to see validation details
+
+- [x] **Validation detail view**:
+  - ValidationErrors panel shows all errors for selected event
+  - Each error shows: path, message, expected vs actual value
+  - Visual hierarchy by schema
+
+- [x] **Create schema from event**:
+  - Right-click any event → creates schema with type placeholders auto-generated
+  - `eventToTemplate()` converts real values to `@type` placeholders
+
+- [x] **Import/Export schemas**:
+  - Export all schemas as JSON file
+  - Import schemas from JSON file (merges with existing)
+
+- [x] **Core implementation**:
+  - `schema-validator.ts`: validateEvent(), validateEventAgainstSchema(), schemaMatchesEvent(), eventToTemplate()
+  - 35 unit tests covering all validation scenarios
+  - Schemas slice in Zustand store
+  - useSchemas + useValidation hooks
 
 ### 2.3 — Diff View
 
@@ -459,24 +468,24 @@ dataLayer.push({event: "purchase"})
 
 ## Milestone Summary
 
-| Milestone                 | Entregable                                    | Dependencias |
-| ------------------------- | --------------------------------------------- | ------------ |
-| **1.1** Scaffold          | Build funcional, instalable en Chrome         | —            |
-| **1.2** Captura           | dataLayer.push() interceptado, eventos fluyen | 1.1          |
-| **1.3** Service Worker    | Estado por tab, message routing               | 1.2          |
-| **1.4** DevTools Panel    | Timeline + JSON tree view                     | 1.3          |
-| **1.5** Search/Filter     | Búsqueda y filtros en timeline                | 1.4          |
-| **1.6** Multi-Container   | Múltiples GTM containers + custom DL          | 1.2          |
-| **1.7** Copy/Export       | Copiar eventos al clipboard                   | 1.4          |
-| **1.8** Popup             | Vista rápida sin DevTools                     | 1.3          |
-| **1.9** Settings          | Configuración persistente                     | 1.4          |
-| **1.10** QA Fase 1        | Tests + validación manual                     | 1.1–1.9      |
-| **2.1** Export JSON       | Descargar archivo JSON                        | 1.7          |
-| **2.2** Schema Validation | Validar contra schemas definidos              | 1.4          |
-| **2.3** Diff View         | Comparar snapshots side-by-side               | 1.4          |
-| **2.4** Export Tests      | Generar Playwright/Cypress assertions         | 1.7, 2.2     |
-| **2.5** Export Evidence   | Generar PNG/PDF de evidencia para Analytics   | 1.4          |
-| **2.6** QA Fase 2         | Tests + validación manual                     | 2.1–2.5      |
+| Milestone                 | Entregable                                    | Dependencias | Status |
+| ------------------------- | --------------------------------------------- | ------------ | ------ |
+| **1.1** Scaffold          | Build funcional, instalable en Chrome         | —            | ✅ |
+| **1.2** Captura           | dataLayer.push() interceptado, eventos fluyen | 1.1          | ✅ |
+| **1.3** Service Worker    | Estado por tab, message routing               | 1.2          | ✅ |
+| **1.4** DevTools Panel    | Timeline + JSON tree view                     | 1.3          | ✅ |
+| **1.5** Search/Filter     | Búsqueda y filtros en timeline                | 1.4          | ✅ |
+| **1.6** Multi-Container   | Múltiples GTM containers + custom DL          | 1.2          | ✅ |
+| **1.7** Copy/Export       | Copiar eventos al clipboard                   | 1.4          | ✅ |
+| **1.8** Popup             | Vista rápida sin DevTools                     | 1.3          | ✅ |
+| **1.9** Settings          | Configuración persistente                     | 1.4          | ✅ |
+| **1.10** QA Fase 1        | Tests + validación manual                     | 1.1–1.9      | ✅ |
+| **2.1** Export JSON       | Descargar archivo JSON                        | 1.7          | ✅ |
+| **2.2** Schema Validation | Validar contra schemas definidos              | 1.4          | ✅ |
+| **2.3** Diff View         | Comparar snapshots side-by-side               | 1.4          | ⏳ |
+| **2.4** Export Tests      | Generar Playwright/Cypress assertions         | 1.7, 2.2     | ⏳ |
+| **2.5** Export Evidence   | Generar PNG/PDF de evidencia para Analytics   | 1.4          | ⏳ |
+| **2.6** QA Fase 2         | Tests + validación manual                     | 2.1–2.5      | ⏳ |
 
 ```
 Fase 1: 1.1 ──▶ 1.2 ──▶ 1.3 ──▶ 1.4 ──▶ 1.5

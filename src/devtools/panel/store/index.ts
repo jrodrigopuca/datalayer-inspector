@@ -30,10 +30,11 @@ export const usePanelStore = create<PanelStore>()((...args) => ({
 export type { EventsSlice, UISlice, SettingsSlice, SchemasSlice };
 
 // Re-export constants
-export { VIEW_MODE, CONNECTION_STATE, RIGHT_PANEL_VIEW } from "./slices";
+export { VIEW_MODE, CONNECTION_STATE, RIGHT_PANEL_VIEW, MODAL_TYPE } from "./slices";
 export type {
   ViewMode,
   ConnectionState,
   RightPanelView,
   RightPanelViewType,
+  ModalType,
 } from "./slices";

@@ -3,7 +3,7 @@
  */
 
 import { useShallow } from "zustand/react/shallow";
-import { usePanelStore, RIGHT_PANEL_VIEW } from "../../store";
+import { usePanelStore, RIGHT_PANEL_VIEW, MODAL_TYPE } from "../../store";
 import { selectEventCounts, selectConnectionInfo } from "../../store/selectors";
 import { useCommands, useExport, useSchemas } from "../../hooks";
 import { Button } from "../common";
@@ -26,6 +26,7 @@ export function Toolbar() {
   const { exportAll, canExport } = useExport();
   const { schemas } = useSchemas();
   const showSchemaList = usePanelStore((s) => s.showSchemaList);
+  const openModal = usePanelStore((s) => s.openModal);
 
   const isSchemaView = rightPanelView.type === RIGHT_PANEL_VIEW.SCHEMA_LIST ||
     rightPanelView.type === RIGHT_PANEL_VIEW.SCHEMA_EDITOR;
@@ -69,6 +70,30 @@ export function Toolbar() {
       >
         <ExportIcon className="w-4 h-4 mr-1" />
         Export
+      </Button>
+
+      {/* Export Test button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => openModal(MODAL_TYPE.EXPORT_TEST)}
+        disabled={!canExport}
+        title="Export as test code (Cmd+Shift+T)"
+      >
+        <TestIcon className="w-4 h-4 mr-1" />
+        Test
+      </Button>
+
+      {/* Export Evidence button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => openModal(MODAL_TYPE.EXPORT_EVIDENCE)}
+        disabled={!canExport}
+        title="Export as evidence (PNG/PDF)"
+      >
+        <EvidenceIcon className="w-4 h-4 mr-1" />
+        Evidence
       </Button>
 
       {/* Schemas button */}
@@ -176,6 +201,42 @@ function SchemaIcon({ className }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
+    </svg>
+  );
+}
+
+function TestIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+      />
+    </svg>
+  );
+}
+
+function EvidenceIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
       />
     </svg>
   );

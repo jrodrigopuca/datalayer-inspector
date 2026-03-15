@@ -69,6 +69,163 @@ describe("schemaMatchesEvent", () => {
 
     expect(schemaMatchesEvent(schema, event)).toBe(true);
   });
+
+  describe("strict matching with multiple literals", () => {
+    it("matches only when ALL literal values match", () => {
+      const schema = createMockSchema({
+        event: "ga4.trackEvent",
+        event_name: "page_view",
+        event_params: {
+          flow: "login",
+          screen_name: "@string",
+        },
+      });
+
+      // Should match - all literals match
+      const matchingEvent = createMockEvent(
+        {
+          event_name: "page_view",
+          event_params: {
+            flow: "login",
+            screen_name: "ingresa tu usuario",
+            service: "extra_field",
+          },
+        },
+        "ga4.trackEvent"
+      );
+
+      // Should NOT match - different event_name
+      const nonMatchingEvent = createMockEvent(
+        {
+          event_name: "impression",
+          event_params: {
+            flow: "login",
+            screen_name: "ingresa tu usuario",
+          },
+        },
+        "ga4.trackEvent"
+      );
+
+      expect(schemaMatchesEvent(schema, matchingEvent)).toBe(true);
+      expect(schemaMatchesEvent(schema, nonMatchingEvent)).toBe(false);
+    });
+
+    it("does not match when nested literal differs", () => {
+      const schema = createMockSchema({
+        event: "click",
+        context: {
+          area: "header",
+          type: "navigation",
+        },
+      });
+
+      const eventWithDifferentArea = createMockEvent(
+        {
+          context: {
+            area: "footer",
+            type: "navigation",
+          },
+        },
+        "click"
+      );
+
+      expect(schemaMatchesEvent(schema, eventWithDifferentArea)).toBe(false);
+    });
+
+    it("matches when event has extra fields not in template", () => {
+      const schema = createMockSchema({
+        event: "purchase",
+        currency: "USD",
+      });
+
+      const eventWithExtras = createMockEvent(
+        {
+          currency: "USD",
+          value: 100,
+          items: [],
+          transaction_id: "T123",
+        },
+        "purchase"
+      );
+
+      expect(schemaMatchesEvent(schema, eventWithExtras)).toBe(true);
+    });
+
+    it("does not match when required literal field is missing in event", () => {
+      const schema = createMockSchema({
+        event: "purchase",
+        currency: "USD",
+        store_id: "STORE_001",
+      });
+
+      const eventMissingField = createMockEvent(
+        {
+          currency: "USD",
+          // store_id is missing
+        },
+        "purchase"
+      );
+
+      expect(schemaMatchesEvent(schema, eventMissingField)).toBe(false);
+    });
+
+    it("matches when only placeholders are used (no literals)", () => {
+      const schema = createMockSchema({
+        event: "@string",
+        value: "@number",
+        items: "@array",
+      });
+
+      const anyEvent = createMockEvent(
+        {
+          value: 50,
+          items: ["a", "b"],
+        },
+        "any_event_name"
+      );
+
+      expect(schemaMatchesEvent(schema, anyEvent)).toBe(true);
+    });
+
+    it("handles boolean literal matching", () => {
+      const schema = createMockSchema({
+        event: "consent",
+        accepted: true,
+      });
+
+      const acceptedEvent = createMockEvent({ accepted: true }, "consent");
+      const rejectedEvent = createMockEvent({ accepted: false }, "consent");
+
+      expect(schemaMatchesEvent(schema, acceptedEvent)).toBe(true);
+      expect(schemaMatchesEvent(schema, rejectedEvent)).toBe(false);
+    });
+
+    it("handles number literal matching", () => {
+      const schema = createMockSchema({
+        event: "level_up",
+        level: 10,
+      });
+
+      const level10Event = createMockEvent({ level: 10 }, "level_up");
+      const level5Event = createMockEvent({ level: 5 }, "level_up");
+
+      expect(schemaMatchesEvent(schema, level10Event)).toBe(true);
+      expect(schemaMatchesEvent(schema, level5Event)).toBe(false);
+    });
+
+    it("handles null literal matching", () => {
+      const schema = createMockSchema({
+        event: "error",
+        error_code: null,
+      });
+
+      const nullEvent = createMockEvent({ error_code: null }, "error");
+      const nonNullEvent = createMockEvent({ error_code: 404 }, "error");
+
+      expect(schemaMatchesEvent(schema, nullEvent)).toBe(true);
+      expect(schemaMatchesEvent(schema, nonNullEvent)).toBe(false);
+    });
+  });
 });
 
 describe("validateEventAgainstSchema - type placeholders", () => {
@@ -170,6 +327,202 @@ describe("validateEventAgainstSchema - literal values", () => {
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
     expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+  });
+});
+
+describe("validateEventAgainstSchema - optional fields", () => {
+  it("passes when optional field is missing", () => {
+    const schema = createMockSchema({
+      event: "purchase",
+      currency: "@string",
+      coupon_code: "@string?", // Optional
+    });
+    const eventWithoutCoupon = createMockEvent({ currency: "USD" }, "purchase");
+
+    const result = validateEventAgainstSchema(eventWithoutCoupon, schema);
+    expect(result.status).toBe("pass");
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("passes when optional field is present and valid", () => {
+    const schema = createMockSchema({
+      event: "purchase",
+      currency: "@string",
+      coupon_code: "@string?",
+    });
+    const eventWithCoupon = createMockEvent(
+      { currency: "USD", coupon_code: "SAVE10" },
+      "purchase"
+    );
+
+    const result = validateEventAgainstSchema(eventWithCoupon, schema);
+    expect(result.status).toBe("pass");
+  });
+
+  it("fails when optional field is present but wrong type", () => {
+    const schema = createMockSchema({
+      event: "purchase",
+      currency: "@string",
+      discount: "@number?",
+    });
+    const eventWithWrongType = createMockEvent(
+      { currency: "USD", discount: "10%" }, // Should be number
+      "purchase"
+    );
+
+    const result = validateEventAgainstSchema(eventWithWrongType, schema);
+    expect(result.status).toBe("fail");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.path).toBe("discount");
+    expect(result.errors[0]?.message).toContain("number (optional)");
+  });
+
+  it("supports all optional types: @boolean?, @array?, @object?", () => {
+    const schema = createMockSchema({
+      event: "test",
+      debug: "@boolean?",
+      tags: "@array?",
+      metadata: "@object?",
+    });
+
+    // All missing - should pass
+    const emptyEvent = createMockEvent({}, "test");
+    expect(validateEventAgainstSchema(emptyEvent, schema).status).toBe("pass");
+
+    // All present and valid - should pass
+    const fullEvent = createMockEvent(
+      { debug: true, tags: ["a", "b"], metadata: { key: "value" } },
+      "test"
+    );
+    expect(validateEventAgainstSchema(fullEvent, schema).status).toBe("pass");
+
+    // Wrong types - should fail
+    const wrongTypes = createMockEvent(
+      { debug: "yes", tags: "not-array", metadata: "not-object" },
+      "test"
+    );
+    const result = validateEventAgainstSchema(wrongTypes, schema);
+    expect(result.status).toBe("fail");
+    expect(result.errors).toHaveLength(3);
+  });
+
+  it("optional fields do not affect schema matching", () => {
+    const schema = createMockSchema({
+      event: "purchase",
+      currency: "USD",
+      discount: "@number?", // Optional - should not affect matching
+    });
+
+    // Event without discount should still match
+    const eventNoDiscount = createMockEvent({ currency: "USD" }, "purchase");
+    expect(schemaMatchesEvent(schema, eventNoDiscount)).toBe(true);
+
+    // Event with discount should also match
+    const eventWithDiscount = createMockEvent(
+      { currency: "USD", discount: 10 },
+      "purchase"
+    );
+    expect(schemaMatchesEvent(schema, eventWithDiscount)).toBe(true);
+  });
+});
+
+describe("validateEventAgainstSchema - enum values", () => {
+  it("passes when value is in enum list", () => {
+    const schema = createMockSchema({
+      event: "consent",
+      consent_type: "@enum(analytics, marketing, functional)",
+    });
+    const validEvent = createMockEvent({ consent_type: "analytics" }, "consent");
+
+    const result = validateEventAgainstSchema(validEvent, schema);
+    expect(result.status).toBe("pass");
+  });
+
+  it("passes for any valid enum value", () => {
+    const schema = createMockSchema({
+      event: "consent",
+      consent_type: "@enum(analytics, marketing, functional)",
+    });
+
+    for (const value of ["analytics", "marketing", "functional"]) {
+      const event = createMockEvent({ consent_type: value }, "consent");
+      expect(validateEventAgainstSchema(event, schema).status).toBe("pass");
+    }
+  });
+
+  it("fails when value is not in enum list", () => {
+    const schema = createMockSchema({
+      event: "consent",
+      consent_type: "@enum(analytics, marketing, functional)",
+    });
+    const invalidEvent = createMockEvent({ consent_type: "advertising" }, "consent");
+
+    const result = validateEventAgainstSchema(invalidEvent, schema);
+    expect(result.status).toBe("fail");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.path).toBe("consent_type");
+    expect(result.errors[0]?.message).toContain("one of");
+    expect(result.errors[0]?.message).toContain("analytics");
+    expect(result.errors[0]?.message).toContain("advertising");
+  });
+
+  it("handles single-value enum", () => {
+    const schema = createMockSchema({
+      event: "test",
+      status: "@enum(active)",
+    });
+
+    const validEvent = createMockEvent({ status: "active" }, "test");
+    const invalidEvent = createMockEvent({ status: "inactive" }, "test");
+
+    expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+  });
+
+  it("enum values are trimmed (whitespace handling)", () => {
+    const schema = createMockSchema({
+      event: "test",
+      status: "@enum(  active  ,  pending  ,  done  )",
+    });
+
+    const event = createMockEvent({ status: "active" }, "test");
+    expect(validateEventAgainstSchema(event, schema).status).toBe("pass");
+  });
+
+  it("enum does not affect schema matching", () => {
+    const schema = createMockSchema({
+      event: "consent",
+      action: "grant",
+      consent_type: "@enum(analytics, marketing)", // Should not affect matching
+    });
+
+    const eventAnalytics = createMockEvent(
+      { action: "grant", consent_type: "analytics" },
+      "consent"
+    );
+    const eventAdvertising = createMockEvent(
+      { action: "grant", consent_type: "advertising" },
+      "consent"
+    );
+
+    // Both should MATCH (enum is for validation, not matching)
+    expect(schemaMatchesEvent(schema, eventAnalytics)).toBe(true);
+    expect(schemaMatchesEvent(schema, eventAdvertising)).toBe(true);
+
+    // But validation differs
+    expect(validateEventAgainstSchema(eventAnalytics, schema).status).toBe("pass");
+    expect(validateEventAgainstSchema(eventAdvertising, schema).status).toBe("fail");
+  });
+
+  it("handles numeric enum values as strings", () => {
+    const schema = createMockSchema({
+      event: "rating",
+      stars: "@enum(1, 2, 3, 4, 5)",
+    });
+
+    // Numbers are converted to strings for comparison
+    const event = createMockEvent({ stars: 5 }, "rating");
+    expect(validateEventAgainstSchema(event, schema).status).toBe("pass");
   });
 });
 

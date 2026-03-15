@@ -196,58 +196,117 @@ const DEFAULT_SETTINGS: UserSettings = {
 
 ### 4.3 Fase 2 — Schema Types
 
+El sistema de validación usa **templates JSON** que definen la estructura esperada de un evento. Los templates permiten combinar valores literales (para matching) con placeholders de tipo (para validación).
+
+#### Type Placeholders
+
 ```typescript
-type FieldType = "string" | "number" | "boolean" | "array" | "object";
+/** Placeholders básicos de tipo */
+const TYPE_PLACEHOLDER = {
+  STRING: "@string",   // cualquier string
+  NUMBER: "@number",   // cualquier número
+  BOOLEAN: "@boolean", // true o false
+  ARRAY: "@array",     // cualquier array
+  OBJECT: "@object",   // cualquier objeto
+  ANY: "@any",         // cualquier valor (solo verifica existencia)
+} as const;
 
-/** Un campo esperado en un evento */
-interface SchemaField {
-  /** Path en dot notation. Soporta array notation: "ecommerce.items[].item_id" */
-  path: string;
-  /** Tipo esperado del valor */
-  type: FieldType;
-  /** Descripción para el usuario */
-  description?: string;
+type TypePlaceholder = "@string" | "@number" | "@boolean" | "@array" | "@object" | "@any";
+```
+
+#### Extended Placeholder Syntax
+
+```typescript
+/**
+ * Sintaxis extendida:
+ * - @string?  - campo opcional (no falla si está ausente)
+ * - @number?  - campo opcional numérico
+ * - @enum(a, b, c) - debe ser uno de los valores listados
+ */
+
+// Ejemplos:
+"@string"           // campo requerido, debe ser string
+"@string?"          // campo opcional, si existe debe ser string
+"@enum(USD, EUR)"   // debe ser exactamente "USD" o "EUR"
+```
+
+#### Template Types
+
+```typescript
+/** Valor en un template - puede ser literal, placeholder, objeto anidado o patrón de array */
+type TemplateValue =
+  | string   // literal "purchase" o placeholder "@string"
+  | number   // literal 25
+  | boolean  // literal true/false
+  | null     // literal null
+  | TemplateObject  // objeto anidado { key: value }
+  | TemplateArray;  // patrón de array [{ item_id: "@string" }]
+
+/** Objeto template - keys mapean a template values */
+interface TemplateObject {
+  [key: string]: TemplateValue;
 }
 
-/** Regla de validación para un tipo de evento */
-interface SchemaRule {
-  id: string;
+/** Array template - primer elemento define el patrón para todos los elementos */
+type TemplateArray = TemplateValue[];
+```
+
+#### Schema Interface
+
+```typescript
+/** Un schema de validación */
+interface Schema {
+  /** Identificador único */
+  readonly id: string;
   /** Nombre legible para el usuario */
-  name: string;
-  /** Pattern para hacer match contra eventName. String exacto o regex (marcado con prefijo /) */
-  eventPattern: string;
-  /** Campos que DEBEN estar presentes */
-  required: SchemaField[];
-  /** Campos opcionales documentados (warning si faltan) */
-  optional: SchemaField[];
-  /** Si esta regla está activa */
-  enabled: boolean;
+  readonly name: string;
+  /** La estructura JSON esperada */
+  readonly template: TemplateObject;
+  /** Si la validación está activa */
+  readonly enabled: boolean;
+  /** Descripción opcional */
+  readonly description?: string;
+  /** Timestamp de creación */
+  readonly createdAt: number;
+  /** Timestamp de última modificación */
+  readonly updatedAt: number;
+}
+```
+
+#### Validation Result Types
+
+```typescript
+/** Detalle de error de validación */
+interface ValidationError {
+  /** JSON path donde ocurrió el error, ej: "ecommerce.items[0].price" */
+  readonly path: string;
+  /** Mensaje de error legible */
+  readonly message: string;
+  /** Qué se esperaba */
+  readonly expected?: string;
+  /** Qué se encontró */
+  readonly actual?: string;
 }
 
-type ValidationSeverity = "error" | "warning";
-
-/** Resultado de validar un campo */
-interface ValidationIssue {
-  severity: ValidationSeverity;
-  /** Path del campo con el problema */
-  fieldPath: string;
-  /** Descripción del problema */
-  message: string;
-  /** Valor esperado (para display) */
-  expected?: string;
-  /** Valor encontrado (para display) */
-  actual?: string;
-}
-
-type ValidationStatus = "pass" | "warn" | "fail";
-
-/** Resultado de validar un evento contra todos los schemas */
+/** Resultado de validar un evento contra un schema */
 interface ValidationResult {
-  eventId: EventId;
-  /** ID de la SchemaRule que matcheó */
-  schemaId: string;
-  status: ValidationStatus;
-  issues: ValidationIssue[];
+  /** El schema que se aplicó */
+  readonly schemaId: string;
+  readonly schemaName: string;
+  /** Estado general */
+  readonly status: "pass" | "fail";
+  /** Lista de errores (vacía si pass) */
+  readonly errors: readonly ValidationError[];
+}
+
+/** Resultados agregados para un evento (puede matchear múltiples schemas) */
+interface EventValidation {
+  /** Event ID */
+  readonly eventId: string;
+  /** Estado general (fail si CUALQUIER schema falló) */
+  readonly status: "pass" | "fail" | "none";
+  /** Resultados por schema */
+  readonly results: readonly ValidationResult[];
 }
 ```
 
@@ -1358,30 +1417,87 @@ strata/
 
 ### 19.1 Schema Validation Engine
 
+El motor de validación usa un sistema de **template matching** con dos fases: matching (¿aplica este schema?) y validación (¿cumple los requisitos?).
+
 ```
-Input: DataLayerEvent + SchemaRule[]
-Output: ValidationResult[]
+Input: DataLayerEvent + Schema[]
+Output: EventValidation
 
-Algoritmo:
-1. Para cada SchemaRule habilitada:
-   a. Si eventPattern empieza con "/", es regex → test contra eventName
-   b. Si no, comparar como string exacto contra eventName
-   c. Si no matchea → skip
-   d. Si matchea:
-      i.  Para cada campo en required[]:
-          - Resolver path en dot notation contra event.data
-          - Si path incluye "[]": iterar sobre cada elemento del array
-          - Verificar existencia → error si falta
-          - Verificar tipo → error si no coincide
-      ii. Para cada campo en optional[]:
-          - Misma resolución
-          - Si falta → warning (no error)
-      iii. Construir ValidationResult
+═══════════════════════════════════════════════════════════════════
+FASE 1: SCHEMA MATCHING (¿Qué schemas aplican a este evento?)
+═══════════════════════════════════════════════════════════════════
 
-Path resolution:
-- "ecommerce.value" → data.ecommerce.value
-- "ecommerce.items[].item_id" → para cada data.ecommerce.items[i], verificar item_id
-- Soportar hasta 3 niveles de nesting de arrays
+Un schema APLICA a un evento si y solo si TODOS los valores literales
+del template existen y matchean exactamente en el evento.
+
+Reglas de matching:
+- Valores literales (strings no-placeholder, numbers, booleans, null)
+  DEBEN existir y ser exactamente iguales en el evento
+- Placeholders (@string, @number, etc.) se IGNORAN durante matching
+- Solo se usan para validación posterior
+- Arrays: el primer elemento define el patrón, se verifica contra
+  cada elemento del array en el evento
+
+Ejemplo:
+  Template: { event: "purchase", ecommerce: { currency: "@string" } }
+  
+  ✓ Matchea: { event: "purchase", ecommerce: { currency: "USD", value: 100 } }
+  ✗ No matchea: { event: "view_item", ecommerce: { currency: "USD" } }
+    (porque event !== "purchase")
+
+═══════════════════════════════════════════════════════════════════
+FASE 2: VALIDACIÓN (Para cada schema que aplica)
+═══════════════════════════════════════════════════════════════════
+
+Algoritmo recursivo que compara template vs evento:
+
+validateValue(templateValue, actualValue, path):
+  
+  1. Si templateValue es placeholder básico (@string, @number, etc.):
+     - Verificar que actualValue existe
+     - Verificar que el tipo coincide
+     - @any: solo verifica existencia
+     - Error si falla cualquier check
+  
+  2. Si templateValue es placeholder opcional (@string?, @number?, etc.):
+     - Si actualValue no existe → OK (es opcional)
+     - Si existe → verificar tipo
+     - Error solo si existe pero el tipo es incorrecto
+  
+  3. Si templateValue es @enum(val1, val2, ...):
+     - Verificar que actualValue es exactamente uno de los valores
+     - Error si no está en la lista
+  
+  4. Si templateValue es objeto:
+     - Para cada key en template:
+       - Llamar recursivamente validateValue(template[key], actual[key], path.key)
+     - Keys extra en el evento se ignoran (schema define mínimos)
+  
+  5. Si templateValue es array:
+     - Verificar que actualValue es array
+     - Si template tiene elementos: usar template[0] como patrón
+       - Validar CADA elemento del actual array contra ese patrón
+       - Path incluye índice: "items[0].name", "items[1].name"
+  
+  6. Si templateValue es literal (string, number, boolean, null):
+     - Ya se verificó en matching, pero double-check por consistencia
+     - Error si no coincide exactamente
+
+═══════════════════════════════════════════════════════════════════
+OUTPUT
+═══════════════════════════════════════════════════════════════════
+
+EventValidation:
+  - status: "pass" si todos los schemas aplicados pasaron
+           "fail" si alguno falló
+           "none" si ningún schema aplicó
+  - results: array de ValidationResult por cada schema que aplicó
+
+ValidationError incluye:
+  - path: ubicación exacta del error (ej: "ecommerce.items[2].price")
+  - message: descripción legible
+  - expected: qué se esperaba (ej: "number")
+  - actual: qué se encontró (ej: "string: 'free'")
 ```
 
 ### 19.2 Diff Engine
@@ -1474,30 +1590,110 @@ Para implementar color-coding y presets de schema validation:
 
 ---
 
-## Apéndice B — Ejemplo de Schema Preset GA4 Purchase
+## Apéndice B — Ejemplo de Schema Template GA4 Purchase
+
+El nuevo sistema de schemas usa **templates JSON** que reflejan la estructura exacta esperada del evento. Los valores literales se usan para matching, los placeholders para validación de tipos.
+
+### Schema básico (solo campos requeridos)
 
 ```json
 {
   "id": "ga4-purchase",
   "name": "GA4 Purchase Event",
-  "eventPattern": "purchase",
-  "required": [
-    { "path": "ecommerce.transaction_id", "type": "string", "description": "Unique transaction ID" },
-    { "path": "ecommerce.value", "type": "number", "description": "Total value of the transaction" },
-    { "path": "ecommerce.currency", "type": "string", "description": "Currency code (ISO 4217)" },
-    { "path": "ecommerce.items", "type": "array", "description": "Array of purchased items" },
-    { "path": "ecommerce.items[].item_id", "type": "string", "description": "Product ID/SKU" },
-    { "path": "ecommerce.items[].item_name", "type": "string", "description": "Product name" }
-  ],
-  "optional": [
-    { "path": "ecommerce.tax", "type": "number", "description": "Tax amount" },
-    { "path": "ecommerce.shipping", "type": "number", "description": "Shipping cost" },
-    { "path": "ecommerce.coupon", "type": "string", "description": "Coupon code" },
-    { "path": "ecommerce.items[].price", "type": "number", "description": "Item price" },
-    { "path": "ecommerce.items[].quantity", "type": "number", "description": "Quantity purchased" },
-    { "path": "ecommerce.items[].item_brand", "type": "string", "description": "Product brand" },
-    { "path": "ecommerce.items[].item_category", "type": "string", "description": "Product category" }
-  ],
-  "enabled": true
+  "description": "Validates GA4 purchase events with required ecommerce fields",
+  "enabled": true,
+  "template": {
+    "event": "purchase",
+    "ecommerce": {
+      "transaction_id": "@string",
+      "value": "@number",
+      "currency": "@enum(USD, EUR, GBP, ARS, MXN)",
+      "items": [
+        {
+          "item_id": "@string",
+          "item_name": "@string",
+          "price": "@number",
+          "quantity": "@number"
+        }
+      ]
+    }
+  }
 }
 ```
+
+### Schema con campos opcionales
+
+```json
+{
+  "id": "ga4-purchase-full",
+  "name": "GA4 Purchase Event (Full)",
+  "description": "GA4 purchase with optional fields for tax, shipping, and item details",
+  "enabled": true,
+  "template": {
+    "event": "purchase",
+    "ecommerce": {
+      "transaction_id": "@string",
+      "value": "@number",
+      "currency": "@string",
+      "tax": "@number?",
+      "shipping": "@number?",
+      "coupon": "@string?",
+      "items": [
+        {
+          "item_id": "@string",
+          "item_name": "@string",
+          "price": "@number",
+          "quantity": "@number",
+          "item_brand": "@string?",
+          "item_category": "@string?",
+          "item_variant": "@string?",
+          "discount": "@number?"
+        }
+      ]
+    }
+  }
+}
+```
+
+### Cómo funciona el matching
+
+El schema `ga4-purchase` **aplica** a un evento si:
+1. `event` es exactamente `"purchase"` (literal match)
+2. Existe `ecommerce` como objeto (estructura match)
+3. Los placeholders NO se evalúan para matching, solo para validación
+
+Ejemplo de evento que matchea:
+```json
+{
+  "event": "purchase",
+  "ecommerce": {
+    "transaction_id": "T-12345",
+    "value": 99.99,
+    "currency": "USD",
+    "items": [
+      { "item_id": "SKU-001", "item_name": "Widget", "price": 49.99, "quantity": 2 }
+    ]
+  }
+}
+```
+
+Ejemplo de evento que NO matchea (diferente event name):
+```json
+{
+  "event": "add_to_cart",
+  "ecommerce": {
+    "value": 49.99,
+    "currency": "USD",
+    "items": [...]
+  }
+}
+```
+
+### Errores de validación típicos
+
+| Error | Mensaje |
+|-------|---------|
+| Campo faltante | `Missing required field` at path `ecommerce.transaction_id` |
+| Tipo incorrecto | `Expected number, got string: "free"` at path `ecommerce.value` |
+| Enum inválido | `Expected one of: USD, EUR, GBP, ARS, MXN. Got: "PESO"` at path `ecommerce.currency` |
+| Array vacío | `Expected non-empty array` at path `ecommerce.items` |

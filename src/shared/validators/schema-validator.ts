@@ -2,6 +2,12 @@
  * Schema validation engine
  *
  * Validates dataLayer events against user-defined JSON templates
+ *
+ * Supports:
+ * - Basic placeholders: @string, @number, @boolean, @array, @object, @any
+ * - Optional fields: @string?, @number?, etc.
+ * - Enum values: @enum(value1, value2, value3)
+ * - Literal matching: exact values like "page_view" or 123
  */
 
 import type {
@@ -13,7 +19,12 @@ import type {
   EventValidation,
   DataLayerEvent,
 } from "../types";
-import { isTypePlaceholder, TYPE_PLACEHOLDER } from "../types";
+import {
+  isTypePlaceholder,
+  isExtendedPlaceholder,
+  parsePlaceholder,
+  TYPE_PLACEHOLDER,
+} from "../types";
 
 /**
  * Get the display type of a JavaScript value
@@ -71,6 +82,43 @@ function formatValue(value: unknown): string {
 }
 
 /**
+ * Format expected type for error messages (improved version)
+ */
+function formatExpectedType(template: TemplateValue): string {
+  if (typeof template !== "string") {
+    if (template === null) return "null";
+    if (Array.isArray(template)) return "array";
+    if (typeof template === "object") return "object";
+    return formatValue(template);
+  }
+
+  const parsed = parsePlaceholder(template);
+  if (!parsed) {
+    return formatValue(template);
+  }
+
+  switch (parsed.type) {
+    case "basic":
+      return parsed.baseType?.slice(1) ?? "unknown"; // Remove @
+    case "optional":
+      return `${parsed.baseType?.slice(1)} (optional)`;
+    case "enum":
+      return `one of: ${parsed.enumValues?.join(", ")}`;
+    default:
+      return template;
+  }
+}
+
+/**
+ * Check if a template value represents an optional field
+ */
+function isOptionalField(template: TemplateValue): boolean {
+  if (typeof template !== "string") return false;
+  const parsed = parsePlaceholder(template);
+  return parsed?.type === "optional";
+}
+
+/**
  * Validate a value against a template value
  *
  * @param actual - The actual value from the event
@@ -84,17 +132,54 @@ function validateValue(
   path: string,
   errors: ValidationError[]
 ): void {
-  // Handle type placeholders
-  if (isTypePlaceholder(expected)) {
-    if (!matchesTypePlaceholder(actual, expected)) {
-      errors.push({
-        path,
-        message: `Expected ${expected.slice(1)}, got ${getValueType(actual)}`,
-        expected: expected.slice(1), // Remove @ prefix
-        actual: getValueType(actual),
-      });
+  // Handle extended placeholders (optional, enum, basic)
+  if (typeof expected === "string" && expected.startsWith("@")) {
+    const parsed = parsePlaceholder(expected);
+
+    if (parsed) {
+      switch (parsed.type) {
+        case "optional":
+          // Optional: if undefined, it's OK; otherwise validate the type
+          if (actual === undefined) {
+            return; // OK - optional field is missing
+          }
+          if (!matchesTypePlaceholder(actual, parsed.baseType!)) {
+            errors.push({
+              path,
+              message: `Expected ${parsed.baseType!.slice(1)} (optional), got ${getValueType(actual)}`,
+              expected: `${parsed.baseType!.slice(1)} (optional)`,
+              actual: getValueType(actual),
+            });
+          }
+          return;
+
+        case "enum":
+          // Enum: value must be one of the allowed values
+          const enumValues = parsed.enumValues!;
+          if (!enumValues.includes(String(actual))) {
+            errors.push({
+              path,
+              message: `Expected one of [${enumValues.join(", ")}], got ${formatValue(actual)}`,
+              expected: `one of: ${enumValues.join(", ")}`,
+              actual: formatValue(actual),
+            });
+          }
+          return;
+
+        case "basic":
+          // Basic type placeholder
+          if (!matchesTypePlaceholder(actual, parsed.baseType!)) {
+            errors.push({
+              path,
+              message: `Expected ${parsed.baseType!.slice(1)}, got ${getValueType(actual)}`,
+              expected: parsed.baseType!.slice(1),
+              actual: getValueType(actual),
+            });
+          }
+          return;
+      }
     }
-    return;
+    // If it starts with @ but isn't a valid placeholder, treat as literal
   }
 
   // Handle null
@@ -151,11 +236,14 @@ function validateValue(
       const actualValue = actualObj[key];
       const childPath = path ? `${path}.${key}` : key;
 
-      // Check if key exists
+      // Check if key exists (unless it's optional)
       if (actualValue === undefined) {
+        if (isOptionalField(templateValue)) {
+          continue; // OK - optional field is missing
+        }
         errors.push({
           path: childPath,
-          message: "Missing required field",
+          message: `Missing required field`,
           expected: formatExpectedType(templateValue),
           actual: "undefined",
         });
@@ -180,40 +268,124 @@ function validateValue(
 }
 
 /**
- * Format expected type for error messages
- */
-function formatExpectedType(template: TemplateValue): string {
-  if (isTypePlaceholder(template)) {
-    return template.slice(1); // Remove @ prefix
-  }
-  if (template === null) return "null";
-  if (Array.isArray(template)) return "array";
-  if (typeof template === "object") return "object";
-  return formatValue(template);
-}
-
-/**
- * Check if a schema matches an event (by event name)
+ * Check if a schema matches an event
+ *
+ * A schema matches if ALL literal values in the template match the event data.
+ * Type placeholders (@string, @number, etc.) are NOT used for matching.
+ * Optional fields (@string?) and enums (@enum(...)) are NOT used for matching.
+ * This allows schemas to be specific about which events they apply to.
+ *
+ * Example: A schema with { "event": "ga4.trackEvent", "event_name": "page_view" }
+ * will ONLY match events where both fields have those exact values.
  */
 export function schemaMatchesEvent(
   schema: Schema,
   event: DataLayerEvent
 ): boolean {
-  const templateEvent = schema.template["event"];
+  return templateMatchesData(schema.template, event.data);
+}
 
-  // If schema has no event key, it matches all events
-  if (templateEvent === undefined) {
+/**
+ * Check if a value is an extended placeholder (for matching purposes)
+ * Extended placeholders include: @string, @number?, @enum(...), etc.
+ */
+function isAnyPlaceholder(value: unknown): boolean {
+  return isTypePlaceholder(value) || isExtendedPlaceholder(value);
+}
+
+/**
+ * Check if all literal values in a template match the corresponding values in data
+ */
+function templateMatchesData(
+  template: TemplateValue,
+  data: unknown
+): boolean {
+  // Any placeholder (basic, optional, enum) always matches for matching purposes
+  if (typeof template === "string" && isAnyPlaceholder(template)) {
     return true;
   }
 
-  // If template event is a placeholder, it matches any event
-  if (isTypePlaceholder(templateEvent)) {
+  // Null literal must match exactly
+  if (template === null) {
+    return data === null;
+  }
+
+  // Arrays: if template has a pattern, we don't use it for matching
+  // (arrays are structural, not literal matchers)
+  if (Array.isArray(template)) {
     return true;
   }
 
-  // Literal match
-  if (typeof templateEvent === "string") {
-    return event.eventName === templateEvent;
+  // Objects: recursively check all properties
+  if (typeof template === "object" && template !== null) {
+    // Data must also be an object
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
+      return false;
+    }
+
+    const dataObj = data as Record<string, unknown>;
+
+    // Check each template property
+    for (const [key, templateValue] of Object.entries(template)) {
+      const dataValue = dataObj[key];
+
+      // If the template has a literal value, data MUST have that key
+      // (for matching purposes - validation will catch missing fields later)
+      if (!isAnyPlaceholder(templateValue) && dataValue === undefined) {
+        // Literal in template but missing in data = no match
+        if (isPrimitiveLiteral(templateValue)) {
+          return false;
+        }
+        // For nested objects, check if they contain any literals
+        if (typeof templateValue === "object" && templateValue !== null && containsLiterals(templateValue)) {
+          return false;
+        }
+      }
+
+      // Recursively check nested values
+      if (!templateMatchesData(templateValue, dataValue)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // Primitive literals (string, number, boolean) must match exactly
+  return template === data;
+}
+
+/**
+ * Check if a value is a primitive literal (string, number, boolean)
+ * Note: Placeholders (@string, @enum(...)) are NOT literals
+ */
+function isPrimitiveLiteral(value: TemplateValue): boolean {
+  if (typeof value === "string") {
+    // Strings starting with @ are placeholders, not literals
+    return !value.startsWith("@");
+  }
+  const type = typeof value;
+  return type === "number" || type === "boolean";
+}
+
+/**
+ * Check if a template object contains any literal values (recursively)
+ */
+function containsLiterals(template: TemplateValue): boolean {
+  if (typeof template === "string" && isAnyPlaceholder(template)) {
+    return false;
+  }
+
+  if (isPrimitiveLiteral(template) || template === null) {
+    return true;
+  }
+
+  if (Array.isArray(template)) {
+    return template.some(containsLiterals);
+  }
+
+  if (typeof template === "object" && template !== null) {
+    return Object.values(template).some(containsLiterals);
   }
 
   return false;
