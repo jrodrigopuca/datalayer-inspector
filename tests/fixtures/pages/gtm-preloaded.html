@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preloaded DataLayer Test</title>
+  <script>
+    // DataLayer created and populated BEFORE extension loads
+    // This tests the extension's ability to capture pre-existing events
+    window.dataLayer = [
+      { event: 'gtm.js', 'gtm.start': Date.now() - 1000 },
+      { event: 'page_view', page_title: 'Preloaded Page', page_location: window.location.href },
+      { user_id: 'U-PRELOAD', user_type: 'returning', login_status: 'logged_in' },
+      { 
+        event: 'view_item',
+        ecommerce: {
+          currency: 'USD',
+          value: 49.99,
+          items: [{
+            item_id: 'PRELOAD-SKU',
+            item_name: 'Preloaded Product',
+            price: 49.99
+          }]
+        }
+      }
+    ];
+    
+    window.google_tag_manager = {
+      'GTM-PRELOAD': { dataLayer: { name: 'dataLayer' } }
+    };
+  </script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+    .info-box {
+      padding: 1rem;
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+    .event-count {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #059669;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      margin: 0.5rem;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f5f5f5;
+    }
+    #preloaded-events {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #f0f9ff;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+    }
+    .event-item {
+      padding: 0.5rem;
+      margin: 0.25rem 0;
+      background: white;
+      border-radius: 4px;
+      border-left: 3px solid #3b82f6;
+    }
+  </style>
+</head>
+<body>
+  <h1>Preloaded DataLayer Test</h1>
+  
+  <div class="info-box">
+    <p><strong>Test Scenario:</strong> This page has <span class="event-count">4</span> events already in the dataLayer before the extension's page script is injected.</p>
+    <p>The extension should capture these pre-existing events with <code>timestamp: 0</code> to indicate they existed before monitoring started.</p>
+  </div>
+
+  <h2>Pre-loaded Events:</h2>
+  <div id="preloaded-events"></div>
+
+  <h2>Push New Events:</h2>
+  <button id="push-new" onclick="pushNewEvent()">Push New Event</button>
+  <button id="push-purchase" onclick="pushPurchase()">Push Purchase</button>
+
+  <script>
+    // Display pre-loaded events
+    const container = document.getElementById('preloaded-events');
+    dataLayer.forEach((event, index) => {
+      const div = document.createElement('div');
+      div.className = 'event-item';
+      div.innerHTML = `<strong>[${index}]</strong> ${JSON.stringify(event)}`;
+      container.appendChild(div);
+    });
+
+    function pushNewEvent() {
+      dataLayer.push({
+        event: 'new_event_after_load',
+        timestamp: Date.now(),
+        is_new: true
+      });
+      alert('Pushed new event! Check extension.');
+    }
+
+    function pushPurchase() {
+      dataLayer.push({
+        event: 'purchase',
+        ecommerce: {
+          transaction_id: 'POST-LOAD-' + Date.now(),
+          currency: 'USD',
+          value: 99.99,
+          items: [{
+            item_id: 'POST-SKU',
+            item_name: 'New Product',
+            price: 99.99,
+            quantity: 1
+          }]
+        }
+      });
+      alert('Pushed purchase event! Check extension.');
+    }
+  </script>
+</body>
+</html>

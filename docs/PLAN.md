@@ -1,6 +1,11 @@
 # Strata — Plan de Desarrollo
 
 > Basado en [RESEARCH.md](./RESEARCH.md) — Marzo 2026
+>
+> **Documentos relacionados**:
+> - [SPEC.md](./SPEC.md) — Especificación técnica (tipos, protocolos, APIs)
+> - [DESIGN.md](./DESIGN.md) — Diseño de implementación (arquitectura, patrones, código)
+> - [TEST-CASES.md](./TEST-CASES.md) — Casos de prueba y fixtures
 
 ## Visión
 
@@ -49,8 +54,7 @@
 │                     ▼                                  │
 │  ┌─────────────────────────────────────────────┐      │
 │  │         Page Script (injected)               │      │
-│  │  ├── DataLayerHelper listener                │      │
-│  │  ├── Intercepts dataLayer.push()             │      │
+│  │  ├── Monkey-patches dataLayer.push()         │      │
 │  │  ├── Captures URL + timestamp                │      │
 │  │  └── Detects multiple containers             │      │
 │  └─────────────────────────────────────────────┘      │

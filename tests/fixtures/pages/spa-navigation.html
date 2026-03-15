@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPA Navigation Test</title>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ event: 'gtm.js', 'gtm.start': Date.now() });
+    window.google_tag_manager = {
+      'GTM-SPA': { dataLayer: { name: 'dataLayer' } }
+    };
+  </script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    nav {
+      background: #1f2937;
+      padding: 1rem;
+      display: flex;
+      gap: 1rem;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+    }
+    nav a:hover, nav a.active {
+      background: #374151;
+    }
+    main {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+    .page {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .page.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .product-card {
+      border: 1px solid #ddd;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      background: #3b82f6;
+      color: white;
+    }
+    button:hover {
+      background: #2563eb;
+    }
+    #event-log {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1f2937;
+      color: #10b981;
+      padding: 0.5rem 1rem;
+      font-family: monospace;
+      font-size: 11px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="#home" class="active" data-page="home">Home</a>
+    <a href="#products" data-page="products">Products</a>
+    <a href="#cart" data-page="cart">Cart</a>
+    <a href="#checkout" data-page="checkout">Checkout</a>
+  </nav>
+
+  <main>
+    <div id="home" class="page active">
+      <h1>Welcome to SPA Store</h1>
+      <p>This page simulates a Single Page Application with client-side routing.</p>
+      <p>Navigate between pages to trigger virtual pageview events.</p>
+    </div>
+
+    <div id="products" class="page">
+      <h1>Products</h1>
+      <div class="product-card">
+        <div>
+          <strong>Widget Pro</strong>
+          <p>$29.99</p>
+        </div>
+        <button onclick="addToCart('WIDGET-PRO', 'Widget Pro', 29.99)">Add to Cart</button>
+      </div>
+      <div class="product-card">
+        <div>
+          <strong>Gadget Plus</strong>
+          <p>$49.99</p>
+        </div>
+        <button onclick="addToCart('GADGET-PLUS', 'Gadget Plus', 49.99)">Add to Cart</button>
+      </div>
+      <div class="product-card">
+        <div>
+          <strong>Super Bundle</strong>
+          <p>$79.99</p>
+        </div>
+        <button onclick="addToCart('SUPER-BUNDLE', 'Super Bundle', 79.99)">Add to Cart</button>
+      </div>
+    </div>
+
+    <div id="cart" class="page">
+      <h1>Shopping Cart</h1>
+      <div id="cart-items">
+        <p>Your cart is empty.</p>
+      </div>
+      <button onclick="beginCheckout()">Proceed to Checkout</button>
+    </div>
+
+    <div id="checkout" class="page">
+      <h1>Checkout</h1>
+      <p>Complete your purchase.</p>
+      <button onclick="completePurchase()">Complete Purchase</button>
+    </div>
+  </main>
+
+  <div id="event-log"></div>
+
+  <script>
+    let cart = [];
+
+    function logEvent(data) {
+      const log = document.getElementById('event-log');
+      const entry = document.createElement('div');
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${JSON.stringify(data)}`;
+      log.insertBefore(entry, log.firstChild);
+    }
+
+    // SPA Navigation
+    function navigateTo(pageId) {
+      // Hide all pages
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+      
+      // Show target page
+      document.getElementById(pageId).classList.add('active');
+      document.querySelector(`nav a[data-page="${pageId}"]`).classList.add('active');
+      
+      // Update URL without reload
+      history.pushState({ page: pageId }, '', `#${pageId}`);
+      
+      // Push virtual pageview
+      const pageViewData = {
+        event: 'page_view',
+        page_title: pageId.charAt(0).toUpperCase() + pageId.slice(1),
+        page_location: window.location.href,
+        page_path: `/${pageId}`,
+        navigation_type: 'spa'
+      };
+      logEvent(pageViewData);
+      dataLayer.push(pageViewData);
+    }
+
+    // Navigation click handler
+    document.querySelectorAll('nav a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const pageId = link.dataset.page;
+        navigateTo(pageId);
+      });
+    });
+
+    // Handle browser back/forward
+    window.addEventListener('popstate', (e) => {
+      const pageId = e.state?.page || 'home';
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+      document.querySelector(`nav a[data-page="${pageId}"]`).classList.add('active');
+      
+      // Push virtual pageview for back/forward navigation
+      const pageViewData = {
+        event: 'page_view',
+        page_title: pageId.charAt(0).toUpperCase() + pageId.slice(1),
+        page_location: window.location.href,
+        navigation_type: 'popstate'
+      };
+      logEvent(pageViewData);
+      dataLayer.push(pageViewData);
+    });
+
+    function addToCart(itemId, itemName, price) {
+      cart.push({ item_id: itemId, item_name: itemName, price: price, quantity: 1 });
+      updateCartDisplay();
+      
+      const addToCartData = {
+        event: 'add_to_cart',
+        ecommerce: {
+          currency: 'USD',
+          value: price,
+          items: [{ item_id: itemId, item_name: itemName, price: price, quantity: 1 }]
+        }
+      };
+      logEvent(addToCartData);
+      dataLayer.push(addToCartData);
+    }
+
+    function updateCartDisplay() {
+      const cartDiv = document.getElementById('cart-items');
+      if (cart.length === 0) {
+        cartDiv.innerHTML = '<p>Your cart is empty.</p>';
+      } else {
+        cartDiv.innerHTML = cart.map(item => 
+          `<div class="product-card"><span>${item.item_name}</span><span>$${item.price.toFixed(2)}</span></div>`
+        ).join('');
+      }
+    }
+
+    function beginCheckout() {
+      if (cart.length === 0) {
+        alert('Add items to cart first!');
+        return;
+      }
+      navigateTo('checkout');
+      
+      const checkoutData = {
+        event: 'begin_checkout',
+        ecommerce: {
+          currency: 'USD',
+          value: cart.reduce((sum, item) => sum + item.price, 0),
+          items: cart
+        }
+      };
+      logEvent(checkoutData);
+      dataLayer.push(checkoutData);
+    }
+
+    function completePurchase() {
+      if (cart.length === 0) {
+        alert('No items in cart!');
+        return;
+      }
+      
+      const purchaseData = {
+        event: 'purchase',
+        ecommerce: {
+          transaction_id: 'SPA-' + Date.now(),
+          currency: 'USD',
+          value: cart.reduce((sum, item) => sum + item.price, 0),
+          tax: (cart.reduce((sum, item) => sum + item.price, 0) * 0.08).toFixed(2),
+          shipping: 5.99,
+          items: cart
+        }
+      };
+      logEvent(purchaseData);
+      dataLayer.push(purchaseData);
+      
+      cart = [];
+      updateCartDisplay();
+      alert('Purchase complete! Transaction ID: ' + purchaseData.ecommerce.transaction_id);
+    }
+
+    // Initial page view
+    dataLayer.push({
+      event: 'page_view',
+      page_title: 'Home',
+      page_location: window.location.href,
+      page_path: '/home',
+      navigation_type: 'initial'
+    });
+  </script>
+</body>
+</html>

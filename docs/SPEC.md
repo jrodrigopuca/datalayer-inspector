@@ -77,7 +77,13 @@ El service worker en MV3 se **suspende** tras ~30 segundos de inactividad. Esto 
     "32": "src/assets/icons/icon-32.png",
     "48": "src/assets/icons/icon-48.png",
     "128": "src/assets/icons/icon-128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["src/page/index.ts"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
 ```
 
@@ -93,11 +99,22 @@ El service worker en MV3 se **suspende** tras ~30 segundos de inactividad. Esto 
 | `tabs`             | Escuchar `onRemoved` para cleanup (pedido al usuario)    | Opcional    |
 | `<all_urls>`       | Content script debe correr en cualquier sitio            | Sí          |
 
+### 3.2 Web Accessible Resources
+
+El page script (`src/page/index.ts`) debe ser accesible desde el contexto de la página para poder ser inyectado como `<script>` tag. Sin esta declaración, el content script no podría obtener la URL del script para inyectarlo.
+
 ---
 
-## 4. Tipos Compartidos (`src/shared/types.ts`)
+## 4. Tipos Compartidos (`src/shared/types/`)
 
 Todos los tipos que cruzan boundaries entre contextos se definen aquí. Son el **contrato** de la extensión.
+
+> **Estructura**: Los tipos están organizados en archivos separados dentro de `src/shared/types/` con un `index.ts` que re-exporta todo:
+> - `events.ts` — DataLayerEvent, TabState, ContainerInfo
+> - `messages.ts` — Tipos de mensajes entre contextos
+> - `settings.ts` — UserSettings y configuración
+> - `export.ts` — Tipos para exportación (JSON, test, evidence)
+> - `index.ts` — Re-exports
 
 ### 4.1 Core Types
 
@@ -269,6 +286,7 @@ interface DiffEntry {
 ### 4.5 Fase 2 — Export Types
 
 ```typescript
+// === JSON & Test Export ===
 type ExportFormat = "json-raw" | "json-clean";
 type TestFramework = "playwright" | "cypress";
 type AssertionStyle = "exact" | "type-only";
@@ -288,6 +306,62 @@ interface ExportTestOptions {
   includeWaits: boolean;
   /** IDs de los eventos seleccionados para export */
   eventIds: EventId[];
+}
+
+// === Evidence Image Export (Feature 2.5) ===
+type EvidenceFormat = "png" | "pdf";
+
+interface EvidenceMetadata {
+  /** Página donde se capturaron los eventos */
+  pageUrl: string;
+  pageTitle: string;
+  /** Timestamp del momento de generar el evidence */
+  generatedAt: number;
+  /** Usuario/proyecto (opcional, configurado en settings) */
+  projectName?: string;
+  testerName?: string;
+}
+
+interface EvidenceEventDisplay {
+  /** Evento a mostrar */
+  event: DataLayerEvent;
+  /** Estado de validación contra schema (si aplica) */
+  validationStatus?: "valid" | "invalid" | "not-validated";
+  /** Errores de validación (si hay) */
+  validationErrors?: string[];
+}
+
+interface ExportEvidenceOptions {
+  /** Formato de salida */
+  format: EvidenceFormat;
+  /** Eventos a incluir (vacío = todos los visibles) */
+  eventIds: EventId[];
+  /** Incluir metadata del proyecto */
+  includeMetadata: boolean;
+  /** Incluir payloads completos o solo resumen */
+  detailLevel: "summary" | "full";
+  /** Tema visual */
+  theme: "light" | "dark" | "system";
+  /** Branding custom (logo, colores) - Fase futura */
+  branding?: {
+    logoUrl?: string;
+    accentColor?: string;
+  };
+}
+
+interface EvidenceDocument {
+  metadata: EvidenceMetadata;
+  events: EvidenceEventDisplay[];
+  /** Stats de la sesión */
+  summary: {
+    totalEvents: number;
+    eventTypes: Record<string, number>;
+    validationResults?: {
+      valid: number;
+      invalid: number;
+      notValidated: number;
+    };
+  };
 }
 ```
 

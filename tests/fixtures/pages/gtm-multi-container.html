@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi Container Test Page</title>
+  <script>
+    // Two separate dataLayer arrays
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer2 = window.dataLayer2 || [];
+    
+    // Initial events
+    window.dataLayer.push({ event: 'gtm.js', 'gtm.start': Date.now() });
+    window.dataLayer2.push({ event: 'gtm.js', 'gtm.start': Date.now() });
+    
+    // Simulated GTM containers pointing to different dataLayers
+    window.google_tag_manager = {
+      'GTM-AAAA01': { dataLayer: { name: 'dataLayer' } },
+      'GTM-BBBB02': { dataLayer: { name: 'dataLayer2' } }
+    };
+  </script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+    .container-section {
+      margin: 2rem 0;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    .container-section h3 {
+      margin-top: 0;
+    }
+    .container-1 { border-color: #3b82f6; }
+    .container-1 h3 { color: #3b82f6; }
+    .container-2 { border-color: #10b981; }
+    .container-2 h3 { color: #10b981; }
+    button {
+      padding: 0.5rem 1rem;
+      margin: 0.5rem 0.5rem 0.5rem 0;
+      cursor: pointer;
+      border: none;
+      border-radius: 4px;
+      color: white;
+    }
+    .container-1 button { background: #3b82f6; }
+    .container-2 button { background: #10b981; }
+    button:hover { opacity: 0.9; }
+    #event-log {
+      margin-top: 2rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .log-column {
+      padding: 1rem;
+      background: #f9f9f9;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      padding: 0.25rem 0;
+      border-bottom: 1px solid #eee;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <h1>Multi Container Test Page</h1>
+  <p>This page simulates two GTM containers with separate dataLayer arrays.</p>
+  
+  <div class="container-section container-1">
+    <h3>Container 1: GTM-AAAA01 (dataLayer)</h3>
+    <button id="push-dl1-pageview" onclick="pushToDL1('page_view')">Page View</button>
+    <button id="push-dl1-event" onclick="pushToDL1('custom_event')">Custom Event</button>
+    <button id="push-dl1-ecommerce" onclick="pushEcommerceDL1()">Ecommerce</button>
+  </div>
+
+  <div class="container-section container-2">
+    <h3>Container 2: GTM-BBBB02 (dataLayer2)</h3>
+    <button id="push-dl2-pageview" onclick="pushToDL2('page_view')">Page View</button>
+    <button id="push-dl2-event" onclick="pushToDL2('custom_event')">Custom Event</button>
+    <button id="push-dl2-ecommerce" onclick="pushEcommerceDL2()">Ecommerce</button>
+  </div>
+
+  <div id="event-log">
+    <div class="log-column">
+      <strong>dataLayer (GTM-AAAA01):</strong>
+      <div id="log-dl1"></div>
+    </div>
+    <div class="log-column">
+      <strong>dataLayer2 (GTM-BBBB02):</strong>
+      <div id="log-dl2"></div>
+    </div>
+  </div>
+
+  <script>
+    function logToDL1(data) {
+      const log = document.getElementById('log-dl1');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.textContent = JSON.stringify(data);
+      log.insertBefore(entry, log.firstChild);
+    }
+
+    function logToDL2(data) {
+      const log = document.getElementById('log-dl2');
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.textContent = JSON.stringify(data);
+      log.insertBefore(entry, log.firstChild);
+    }
+
+    function pushToDL1(eventName) {
+      const data = {
+        event: eventName,
+        container: 'GTM-AAAA01',
+        timestamp: Date.now()
+      };
+      logToDL1(data);
+      dataLayer.push(data);
+    }
+
+    function pushToDL2(eventName) {
+      const data = {
+        event: eventName,
+        container: 'GTM-BBBB02',
+        timestamp: Date.now()
+      };
+      logToDL2(data);
+      dataLayer2.push(data);
+    }
+
+    function pushEcommerceDL1() {
+      const data = {
+        event: 'add_to_cart',
+        ecommerce: {
+          currency: 'USD',
+          value: 19.99,
+          items: [{ item_id: 'DL1-SKU', item_name: 'Product from DL1' }]
+        }
+      };
+      logToDL1(data);
+      dataLayer.push(data);
+    }
+
+    function pushEcommerceDL2() {
+      const data = {
+        event: 'add_to_cart',
+        ecommerce: {
+          currency: 'EUR',
+          value: 24.99,
+          items: [{ item_id: 'DL2-SKU', item_name: 'Product from DL2' }]
+        }
+      };
+      logToDL2(data);
+      dataLayer2.push(data);
+    }
+  </script>
+</body>
+</html>

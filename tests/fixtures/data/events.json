@@ -1,0 +1,90 @@
+{
+  "basicPageView": {
+    "event": "page_view",
+    "page_title": "Home Page",
+    "page_location": "https://example.com/"
+  },
+  "ecommerceAddToCart": {
+    "event": "add_to_cart",
+    "ecommerce": {
+      "currency": "USD",
+      "value": 29.99,
+      "items": [
+        {
+          "item_id": "SKU-123",
+          "item_name": "Widget",
+          "price": 29.99,
+          "quantity": 1
+        }
+      ]
+    }
+  },
+  "ecommercePurchase": {
+    "event": "purchase",
+    "ecommerce": {
+      "transaction_id": "T-12345",
+      "currency": "USD",
+      "value": 59.98,
+      "tax": 4.99,
+      "shipping": 5.99,
+      "items": [
+        {
+          "item_id": "SKU-123",
+          "item_name": "Widget",
+          "price": 29.99,
+          "quantity": 2
+        }
+      ]
+    }
+  },
+  "gtmInternal": {
+    "event": "gtm.js",
+    "gtm.start": 1710500000000
+  },
+  "customEvent": {
+    "event": "custom_interaction",
+    "category": "engagement",
+    "action": "click",
+    "label": "hero_button"
+  },
+  "pushWithoutEvent": {
+    "user_id": "U-12345",
+    "user_type": "premium"
+  },
+  "viewItem": {
+    "event": "view_item",
+    "ecommerce": {
+      "currency": "USD",
+      "value": 49.99,
+      "items": [
+        {
+          "item_id": "SKU-456",
+          "item_name": "Gadget",
+          "price": 49.99,
+          "item_category": "Electronics"
+        }
+      ]
+    }
+  },
+  "beginCheckout": {
+    "event": "begin_checkout",
+    "ecommerce": {
+      "currency": "USD",
+      "value": 79.98,
+      "items": [
+        {
+          "item_id": "SKU-123",
+          "item_name": "Widget",
+          "price": 29.99,
+          "quantity": 1
+        },
+        {
+          "item_id": "SKU-456",
+          "item_name": "Gadget",
+          "price": 49.99,
+          "quantity": 1
+        }
+      ]
+    }
+  }
+}

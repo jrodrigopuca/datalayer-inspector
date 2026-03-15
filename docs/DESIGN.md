@@ -1,4 +1,4 @@
-# DataLayer Inspector — Technical Design
+# Strata — Technical Design
 
 > Derivado de [SPEC.md](./SPEC.md) y [TEST-CASES.md](./TEST-CASES.md) — Marzo 2026
 
@@ -20,6 +20,7 @@ Este documento describe el diseño técnico de implementación: patrones, decisi
 10. [Persistencia](#10-persistencia)
 11. [Decisiones de Diseño](#11-decisiones-de-diseño)
 12. [Diagramas](#12-diagramas)
+13. [Fase 2 — Diseño de Features](#13-fase-2--diseño-de-features)
 
 ---
 
@@ -1696,7 +1697,7 @@ App
 
 ```
 ┌─────────────────────────────────┐
-│ DataLayer Inspector          ⚙  │  ← Header (32px)
+│ Strata                       ⚙  │  ← Header (32px)
 ├─────────────────────────────────┤
 │                                 │
 │  📊 42 events captured          │  ← Event Summary
@@ -2112,6 +2113,146 @@ export class StorageManager {
 
 ---
 
+## 13. Fase 2 — Diseño de Features
+
+### 13.1 Export Evidence Image (Feature 2.5)
+
+Genera capturas PNG o documentos PDF con los eventos del dataLayer para documentación de QA.
+
+#### Arquitectura
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                     DevTools Panel                                │
+│                                                                   │
+│  ┌─────────────────┐    ┌─────────────────┐                      │
+│  │ ExportEvidence  │───▶│ EvidenceDialog  │                      │
+│  │ Button          │    │ (options modal)  │                      │
+│  └─────────────────┘    └────────┬────────┘                      │
+│                                  │                                │
+│                                  ▼                                │
+│  ┌───────────────────────────────────────────────────────────┐   │
+│  │                   evidence-generator.ts                    │   │
+│  │                                                            │   │
+│  │  ┌──────────────┐    ┌──────────────┐    ┌─────────────┐  │   │
+│  │  │ buildLayout  │───▶│ renderToPNG  │───▶│ download    │  │   │
+│  │  │ (HTML/CSS)   │    │ (html2canvas) │    │ (blob→file)│  │   │
+│  │  └──────────────┘    └──────────────┘    └─────────────┘  │   │
+│  │         │                                                  │   │
+│  │         │            ┌──────────────┐    ┌─────────────┐  │   │
+│  │         └───────────▶│ renderToPDF  │───▶│ download    │  │   │
+│  │                      │ (jspdf)      │    │ (blob→file)│  │   │
+│  │                      └──────────────┘    └─────────────┘  │   │
+│  └───────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+#### Dependencias
+
+| Librería | Uso | Size (gzip) |
+|----------|-----|-------------|
+| `html2canvas` | Renderizar HTML a canvas para PNG | ~40KB |
+| `jspdf` | Generar PDF | ~90KB |
+
+> **Nota**: Ambas librerías se cargan lazy (dynamic import) para no afectar el bundle de Fase 1.
+
+#### Componentes
+
+```
+src/devtools/panel/
+├── components/
+│   └── export/
+│       ├── ExportEvidenceButton.tsx   # Trigger button en toolbar
+│       ├── EvidenceDialog.tsx         # Modal de opciones
+│       ├── EvidencePreview.tsx        # Vista previa del evidence
+│       └── EvidenceLayout.tsx         # Template del documento
+└── lib/
+    └── evidence/
+        ├── index.ts                   # Public API
+        ├── generator.ts               # Lógica principal
+        ├── layout.ts                  # Construir HTML del documento
+        ├── renderers/
+        │   ├── png.ts                 # html2canvas wrapper
+        │   └── pdf.ts                 # jspdf wrapper
+        └── templates/
+            ├── light.css              # Estilos tema claro
+            └── dark.css               # Estilos tema oscuro
+```
+
+#### Flujo
+
+```typescript
+// 1. Usuario hace click en "Export Evidence"
+// 2. Se abre EvidenceDialog con opciones
+
+// 3. Al confirmar, se ejecuta:
+async function exportEvidence(options: ExportEvidenceOptions): Promise<void> {
+  // a. Obtener eventos del store
+  const events = options.eventIds.length > 0
+    ? selectEventsByIds(options.eventIds)
+    : selectFilteredEvents();
+  
+  // b. Construir metadata
+  const metadata = buildMetadata(options);
+  
+  // c. Crear documento
+  const document: EvidenceDocument = {
+    metadata,
+    events: events.map(enrichWithValidation),
+    summary: computeSummary(events),
+  };
+  
+  // d. Generar output según formato
+  if (options.format === 'png') {
+    const blob = await renderToPNG(document, options);
+    downloadBlob(blob, `strata-evidence-${Date.now()}.png`);
+  } else {
+    const blob = await renderToPDF(document, options);
+    downloadBlob(blob, `strata-evidence-${Date.now()}.pdf`);
+  }
+}
+```
+
+#### Layout del Evidence
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  STRATA — DataLayer Evidence                                │
+│                                                              │
+│  Page: https://example.com/checkout                         │
+│  Generated: 2026-03-15 14:30:22                             │
+│  Project: Acme E-commerce                                    │
+│  Events: 12 captured | 10 valid | 2 invalid                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  #1 | gtm.js | 14:30:01.234                           ✓     │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ { "event": "gtm.js", "gtm.start": 1710512... }     │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  #2 | page_view | 14:30:01.456                        ✓     │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ { "event": "page_view", "page_title": "Check..." } │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  #3 | add_to_cart | 14:30:05.789                      ✗     │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ { "event": "add_to_cart", ... }                    │    │
+│  │ ⚠ Missing required field: currency                 │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### Consideraciones de Performance
+
+- El rendering se hace off-screen para no bloquear UI
+- Para >50 eventos, se muestra "Large export" warning
+- PDF usa compresión de imágenes
+- PNG se escala a max 4000px de ancho
+
+---
+
 ## Apéndice A — Checklist de Implementación
 
 ### Fase 1
@@ -2167,4 +2308,5 @@ export class StorageManager {
 - [ ] Diff engine
 - [ ] Test code generator
 - [ ] Export JSON
+- [ ] Export Evidence Image (Feature 2.5)
 - [ ] Snapshot management

@@ -1,0 +1,141 @@
+/**
+ * Service Worker - Entry Point
+ *
+ * Background service worker for the extension.
+ * Handles:
+ * - Message routing from content scripts
+ * - Request/response from DevTools panel and popup
+ * - Tab lifecycle events
+ * - Long-lived port connections
+ */
+
+import { registerPort } from "./port-manager";
+import {
+  handleContentMessage,
+  handleClientRequest,
+  handleTabRemoved,
+  handleTabNavigation,
+} from "./message-handler";
+import { PORT_NAME } from "@shared/types";
+
+/**
+ * Initialize service worker
+ */
+function init(): void {
+  setupMessageListeners();
+  setupPortListener();
+  setupTabListeners();
+
+  console.log("[Strata] Service worker initialized");
+}
+
+/**
+ * Set up message listeners
+ */
+function setupMessageListeners(): void {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // Check if this is a client request (expects response)
+    if (isClientRequest(message)) {
+      handleClientRequest(message, sender)
+        .then(sendResponse)
+        .catch((error) => {
+          sendResponse({
+            type: "ERROR",
+            payload: { message: String(error) },
+          });
+        });
+      // Return true to indicate async response
+      return true;
+    }
+
+    // Otherwise treat as content script message (no response needed)
+    handleContentMessage(message, sender);
+    return false;
+  });
+}
+
+/**
+ * Check if message is a client request (vs content script message)
+ */
+function isClientRequest(message: unknown): boolean {
+  if (typeof message !== "object" || message === null) {
+    return false;
+  }
+
+  const type = (message as Record<string, unknown>).type;
+
+  // Client requests use these types
+  const clientTypes = [
+    "GET_EVENTS",
+    "GET_CONTAINERS",
+    "CLEAR_EVENTS",
+    "SET_RECORDING",
+    "GET_TAB_STATE",
+    "GET_SETTINGS",
+    "UPDATE_SETTINGS",
+  ];
+
+  return typeof type === "string" && clientTypes.includes(type);
+}
+
+/**
+ * Set up long-lived port connections
+ */
+function setupPortListener(): void {
+  chrome.runtime.onConnect.addListener((port) => {
+    // Validate port name
+    if (!Object.values(PORT_NAME).includes(port.name as typeof PORT_NAME[keyof typeof PORT_NAME])) {
+      console.warn(`[Strata] Unknown port: ${port.name}`);
+      return;
+    }
+
+    // Get tab ID from port sender or from first message
+    const senderTabId = port.sender?.tab?.id;
+
+    if (senderTabId !== undefined) {
+      // Content script or popup with tab context
+      registerPort(port, senderTabId);
+    } else {
+      // DevTools panel - get tabId from inspectedWindow
+      port.onMessage.addListener(function handleFirstMessage(message: unknown) {
+        if (
+          typeof message === "object" &&
+          message !== null &&
+          "tabId" in message &&
+          typeof (message as { tabId: unknown }).tabId === "number"
+        ) {
+          registerPort(port, (message as { tabId: number }).tabId);
+          port.onMessage.removeListener(handleFirstMessage);
+        }
+      });
+    }
+  });
+}
+
+/**
+ * Set up tab lifecycle listeners
+ */
+function setupTabListeners(): void {
+  // Tab closed
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    handleTabRemoved(tabId);
+  });
+
+  // Tab navigation (URL change)
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (changeInfo.url) {
+      handleTabNavigation(tabId, changeInfo.url);
+    }
+  });
+
+  // Handle browser action click (if no popup)
+  chrome.action.onClicked.addListener((tab) => {
+    if (tab.id !== undefined) {
+      // Could open DevTools or show a notification
+      console.log(`[Strata] Action clicked for tab ${tab.id}`);
+    }
+  });
+}
+
+// Initialize
+init();

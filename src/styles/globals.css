@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+/*
+ * Strata Design Tokens
+ * Using Tailwind 4 CSS-first configuration
+ */
+
+@theme {
+  /* Brand colors */
+  --color-brand-primary: oklch(0.7 0.15 220);
+  --color-brand-secondary: oklch(0.65 0.12 280);
+
+  /* Semantic colors for event types */
+  --color-event-gtm: oklch(0.7 0.12 145);
+  --color-event-ecommerce: oklch(0.7 0.15 45);
+  --color-event-custom: oklch(0.7 0.12 280);
+  --color-event-error: oklch(0.65 0.2 25);
+
+  /* Validation states */
+  --color-valid: oklch(0.7 0.15 145);
+  --color-invalid: oklch(0.65 0.2 25);
+  --color-warning: oklch(0.75 0.15 85);
+
+  /* Panel background */
+  --color-panel-bg: oklch(0.15 0.01 260);
+  --color-panel-surface: oklch(0.2 0.01 260);
+  --color-panel-border: oklch(0.3 0.01 260);
+
+  /* Font sizes for dense UI */
+  --font-size-2xs: 0.625rem;
+
+  /* Spacing for compact layouts */
+  --spacing-panel: 0.5rem;
+}
+
+/* Dark theme is default for DevTools */
+:root {
+  color-scheme: dark;
+}
+
+/* Scrollbar styling for DevTools panel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-panel-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-panel-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.4 0.01 260);
+}

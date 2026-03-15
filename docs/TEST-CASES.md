@@ -1,4 +1,4 @@
-# DataLayer Inspector — Test Cases
+# Strata — Test Cases
 
 > Derivado de [SPEC.md](./SPEC.md) — Marzo 2026
 
@@ -1567,3 +1567,47 @@ afterAll(() => {
 | TC-GEN-003 | Generar Cypress con valores exactos |
 | TC-GEN-004 | Código generado compila sin errores |
 | TC-GEN-005 | Incluir navigation y waits opcionales |
+
+### 9.4 Export Evidence Image (Feature 2.5)
+
+> Exportación de evidencias visuales (PNG/PDF) para documentación QA.
+
+#### Unit Tests
+
+| ID | Descripción |
+|----|-------------|
+| TC-EVIDENCE-001 | Generar PNG con un solo evento |
+| TC-EVIDENCE-002 | Generar PNG con múltiples eventos |
+| TC-EVIDENCE-003 | Generar PDF con metadata de proyecto |
+| TC-EVIDENCE-004 | Incluir resumen de validación en evidence |
+| TC-EVIDENCE-005 | Respetar tema (light/dark/system) |
+| TC-EVIDENCE-006 | Excluir eventos no seleccionados |
+| TC-EVIDENCE-007 | Summary level muestra solo event names |
+| TC-EVIDENCE-008 | Full level muestra payloads completos |
+
+#### Integration Tests
+
+| ID | Descripción |
+|----|-------------|
+| TC-EVIDENCE-INT-001 | Exportar evidence desde panel con eventos filtrados |
+| TC-EVIDENCE-INT-002 | Evidence incluye validation status de schema |
+| TC-EVIDENCE-INT-003 | Evidence muestra container ID correcto |
+| TC-EVIDENCE-INT-004 | Timestamp formatting consistente |
+
+#### E2E Tests
+
+| ID | Descripción |
+|----|-------------|
+| TC-EVIDENCE-E2E-001 | Click "Export Evidence" abre diálogo de opciones |
+| TC-EVIDENCE-E2E-002 | Selección de formato (PNG/PDF) funciona |
+| TC-EVIDENCE-E2E-003 | Download se dispara con nombre correcto |
+| TC-EVIDENCE-E2E-004 | PNG generado tiene dimensiones razonables |
+| TC-EVIDENCE-E2E-005 | PDF generado es válido y se puede abrir |
+
+#### Visual Regression Tests
+
+| ID | Descripción |
+|----|-------------|
+| TC-EVIDENCE-VIS-001 | Evidence PNG coincide con snapshot baseline |
+| TC-EVIDENCE-VIS-002 | Evidence dark theme coincide con snapshot |
+| TC-EVIDENCE-VIS-003 | Evidence con errores de validación tiene estilos correctos |
