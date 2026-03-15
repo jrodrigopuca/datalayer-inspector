@@ -568,3 +568,4 @@ Los siguientes features están documentados en el research pero NO se implementa
 - Performance impact view
 - TypeScript type generation
 - Firefox support
+- **Role-based views** (Dev/QA/Analytics) — Evaluar post-lanzamiento si hay feedback de usuarios que lo soliciten. Concepto: misma data con layouts optimizados por workflow, posiblemente como "View Mode" toggle en lugar de tabs separados.
