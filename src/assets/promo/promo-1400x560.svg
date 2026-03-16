@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b"/>
+      <stop offset="100%" style="stop-color:#0f172a"/>
+    </linearGradient>
+    <!-- Subtle grid pattern -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#334155" stroke-width="0.5" opacity="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="1400" height="560" fill="url(#bg)"/>
+  <rect width="1400" height="560" fill="url(#grid)"/>
+  
+  <!-- Logo -->
+  <rect x="180" y="180" width="200" height="200" rx="32" fill="#3B82F6"/>
+  <text x="280" y="315" font-family="system-ui, -apple-system, sans-serif" font-size="120" font-weight="bold" fill="white" text-anchor="middle">S</text>
+  
+  <!-- Text content -->
+  <text x="440" y="260" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="bold" fill="white">Strata</text>
+  <text x="440" y="320" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#94a3b8">The Developer's DataLayer Inspector</text>
+  
+  <!-- Feature pills -->
+  <rect x="440" y="360" width="120" height="36" rx="18" fill="#3B82F6" opacity="0.2"/>
+  <text x="500" y="384" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#3B82F6" text-anchor="middle" font-weight="600">Inspect</text>
+  
+  <rect x="580" y="360" width="120" height="36" rx="18" fill="#22c55e" opacity="0.2"/>
+  <text x="640" y="384" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#22c55e" text-anchor="middle" font-weight="600">Validate</text>
+  
+  <rect x="720" y="360" width="120" height="36" rx="18" fill="#f59e0b" opacity="0.2"/>
+  <text x="780" y="384" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#f59e0b" text-anchor="middle" font-weight="600">Export</text>
+  
+  <!-- Mock UI preview on the right -->
+  <rect x="920" y="100" width="400" height="360" rx="12" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+  
+  <!-- Mock toolbar -->
+  <rect x="920" y="100" width="400" height="40" rx="12" fill="#1e293b"/>
+  <rect x="920" y="128" width="400" height="12" fill="#1e293b"/>
+  <circle cx="945" cy="120" r="6" fill="#ef4444"/>
+  <circle cx="965" cy="120" r="6" fill="#f59e0b"/>
+  <circle cx="985" cy="120" r="6" fill="#22c55e"/>
+  <text x="1020" y="125" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="#64748b">Strata Panel</text>
+  
+  <!-- Mock events -->
+  <rect x="935" y="155" width="370" height="32" rx="4" fill="#1e293b"/>
+  <rect x="943" y="163" width="4" height="16" rx="2" fill="#3B82F6"/>
+  <text x="958" y="176" font-family="monospace" font-size="11" fill="#94a3b8">gtm.js</text>
+  <rect x="1240" y="163" width="50" height="16" rx="8" fill="#3B82F6" opacity="0.2"/>
+  <text x="1265" y="175" font-family="system-ui" font-size="9" fill="#3B82F6" text-anchor="middle">GTM</text>
+  
+  <rect x="935" y="195" width="370" height="32" rx="4" fill="#1e293b"/>
+  <rect x="943" y="203" width="4" height="16" rx="2" fill="#f59e0b"/>
+  <text x="958" y="216" font-family="monospace" font-size="11" fill="#94a3b8">page_view</text>
+  <rect x="1220" y="203" width="70" height="16" rx="8" fill="#22c55e" opacity="0.2"/>
+  <text x="1255" y="215" font-family="system-ui" font-size="9" fill="#22c55e" text-anchor="middle">VALID</text>
+  
+  <rect x="935" y="235" width="370" height="32" rx="4" fill="#1e293b"/>
+  <rect x="943" y="243" width="4" height="16" rx="2" fill="#a855f7"/>
+  <text x="958" y="256" font-family="monospace" font-size="11" fill="#94a3b8">purchase</text>
+  <rect x="1220" y="243" width="70" height="16" rx="8" fill="#22c55e" opacity="0.2"/>
+  <text x="1255" y="255" font-family="system-ui" font-size="9" fill="#22c55e" text-anchor="middle">VALID</text>
+  
+  <rect x="935" y="275" width="370" height="32" rx="4" fill="#1e293b"/>
+  <rect x="943" y="283" width="4" height="16" rx="2" fill="#f59e0b"/>
+  <text x="958" y="296" font-family="monospace" font-size="11" fill="#94a3b8">add_to_cart</text>
+  <rect x="1220" y="283" width="70" height="16" rx="8" fill="#ef4444" opacity="0.2"/>
+  <text x="1255" y="295" font-family="system-ui" font-size="9" fill="#ef4444" text-anchor="middle">ERROR</text>
+  
+  <!-- Mock JSON preview -->
+  <rect x="935" y="320" width="370" height="125" rx="4" fill="#1e293b"/>
+  <text x="950" y="342" font-family="monospace" font-size="10" fill="#64748b">{</text>
+  <text x="965" y="358" font-family="monospace" font-size="10" fill="#7dd3fc">"event"</text>
+  <text x="1015" y="358" font-family="monospace" font-size="10" fill="#64748b">:</text>
+  <text x="1025" y="358" font-family="monospace" font-size="10" fill="#fcd34d">"purchase"</text>
+  <text x="1090" y="358" font-family="monospace" font-size="10" fill="#64748b">,</text>
+  <text x="965" y="374" font-family="monospace" font-size="10" fill="#7dd3fc">"ecommerce"</text>
+  <text x="1045" y="374" font-family="monospace" font-size="10" fill="#64748b">: {</text>
+  <text x="980" y="390" font-family="monospace" font-size="10" fill="#7dd3fc">"value"</text>
+  <text x="1025" y="390" font-family="monospace" font-size="10" fill="#64748b">:</text>
+  <text x="1035" y="390" font-family="monospace" font-size="10" fill="#4ade80">149.99</text>
+  <text x="1080" y="390" font-family="monospace" font-size="10" fill="#64748b">,</text>
+  <text x="980" y="406" font-family="monospace" font-size="10" fill="#7dd3fc">"currency"</text>
+  <text x="1050" y="406" font-family="monospace" font-size="10" fill="#64748b">:</text>
+  <text x="1060" y="406" font-family="monospace" font-size="10" fill="#fcd34d">"USD"</text>
+  <text x="965" y="422" font-family="monospace" font-size="10" fill="#64748b">}</text>
+  <text x="950" y="438" font-family="monospace" font-size="10" fill="#64748b">}</text>
+</svg>
