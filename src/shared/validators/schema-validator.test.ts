@@ -424,6 +424,90 @@ describe("validateEventAgainstSchema - optional fields", () => {
     );
     expect(schemaMatchesEvent(schema, eventWithDiscount)).toBe(true);
   });
+
+  it("@optional alias works like @any? - passes when field is missing", () => {
+    const schema = createMockSchema({
+      event: "ga4.trackEvent",
+      event_name: "page_view",
+      event_params: {
+        flow: "login",
+        screen_name: "@string",
+        service: "@optional",
+      },
+    });
+
+    const eventWithService = createMockEvent(
+      {
+        event_name: "page_view",
+        event_params: {
+          flow: "login",
+          screen_name: "ingresa tu usuario",
+          service: "kEE",
+        },
+      },
+      "ga4.trackEvent"
+    );
+
+    const result = validateEventAgainstSchema(eventWithService, schema);
+    expect(result.status).toBe("pass");
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("@optional alias passes when field is missing", () => {
+    const schema = createMockSchema({
+      event: "test",
+      required_field: "@string",
+      optional_field: "@optional",
+    });
+
+    const eventWithoutOptional = createMockEvent(
+      { required_field: "hello" },
+      "test"
+    );
+
+    const result = validateEventAgainstSchema(eventWithoutOptional, schema);
+    expect(result.status).toBe("pass");
+  });
+
+  it("@optional alias accepts any type when present", () => {
+    const schema = createMockSchema({
+      event: "test",
+      data: "@optional",
+    });
+
+    // String
+    expect(
+      validateEventAgainstSchema(createMockEvent({ data: "text" }, "test"), schema).status
+    ).toBe("pass");
+    // Number
+    expect(
+      validateEventAgainstSchema(createMockEvent({ data: 123 }, "test"), schema).status
+    ).toBe("pass");
+    // Boolean
+    expect(
+      validateEventAgainstSchema(createMockEvent({ data: true }, "test"), schema).status
+    ).toBe("pass");
+    // Object
+    expect(
+      validateEventAgainstSchema(createMockEvent({ data: { nested: true } }, "test"), schema).status
+    ).toBe("pass");
+    // Array
+    expect(
+      validateEventAgainstSchema(createMockEvent({ data: [1, 2, 3] }, "test"), schema).status
+    ).toBe("pass");
+  });
+
+  it("@optional does not affect schema matching", () => {
+    const schema = createMockSchema({
+      event: "purchase",
+      currency: "USD",
+      extra: "@optional",
+    });
+
+    // Event without extra should still match
+    const eventNoExtra = createMockEvent({ currency: "USD" }, "purchase");
+    expect(schemaMatchesEvent(schema, eventNoExtra)).toBe(true);
+  });
 });
 
 describe("validateEventAgainstSchema - enum values", () => {

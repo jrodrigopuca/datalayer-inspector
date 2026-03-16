@@ -222,13 +222,29 @@ type TypePlaceholder = "@string" | "@number" | "@boolean" | "@array" | "@object"
  * - @string?  - campo opcional (no falla si está ausente)
  * - @number?  - campo opcional numérico
  * - @enum(a, b, c) - debe ser uno de los valores listados
+ * - @optional - alias para @any? (campo opcional, cualquier tipo)
  */
 
 // Ejemplos:
 "@string"           // campo requerido, debe ser string
 "@string?"          // campo opcional, si existe debe ser string
+"@optional"         // campo opcional, cualquier tipo (alias de @any?)
 "@enum(USD, EUR)"   // debe ser exactamente "USD" o "EUR"
 ```
+
+#### Common Mistakes
+
+Errores frecuentes al escribir schemas:
+
+| ❌ Incorrecto | ✅ Correcto | Explicación |
+|---------------|-------------|-------------|
+| `@enum('USD', 'EUR')` | `@enum(USD, EUR)` | No usar comillas dentro del enum - quedan como parte del valor |
+| `@enum(a,b,c)` | `@enum(a, b, c)` | Funciona igual (se hace trim), pero es menos legible |
+| `@String` | `@string` | Los placeholders son case-sensitive, siempre en minúscula |
+| `@string ?` | `@string?` | El `?` debe ir pegado al placeholder, sin espacio |
+| `[]` para validar items | `[{ "id": "@string" }]` | Array vacío solo valida que sea array, no su contenido |
+
+**Tip sobre espacios en enum:** Los valores se separan por coma y se aplica `trim()`, por lo que `@enum(a, b c, d)` resulta en los valores `"a"`, `"b c"`, `"d"`.
 
 #### Template Types
 

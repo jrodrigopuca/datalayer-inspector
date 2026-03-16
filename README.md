@@ -44,7 +44,7 @@ Strata includes a powerful schema validation system using JSON templates:
 **Features:**
 - **Template-based matching**: Schemas apply when all literal values match
 - **Type placeholders**: `@string`, `@number`, `@boolean`, `@array`, `@object`, `@any`
-- **Optional fields**: `@string?`, `@number?` (won't fail if missing)
+- **Optional fields**: `@string?`, `@number?` or `@optional` (won't fail if missing)
 - **Enum validation**: `@enum(val1, val2, val3)`
 - **Nested object and array validation**
 - **Create schema from event**: Right-click any event to auto-generate a template
@@ -112,7 +112,7 @@ src/
 |--------|-------|
 | Page script size | 2.9 KB |
 | Total bundle | ~285 KB |
-| Unit tests | 146 passing |
+| Unit tests | 150 passing |
 | E2E tests | 18 passing |
 
 ## License

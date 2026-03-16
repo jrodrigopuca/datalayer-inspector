@@ -229,9 +229,19 @@ function TypePlaceholdersHelp() {
           <code className="text-event-gtm">@any</code> - any value
         </span>
       </div>
-      <p className="text-2xs text-gray-500 mt-1">
-        Literal values (without @) must match exactly.
-      </p>
+      <div className="mt-1.5 pt-1.5 border-t border-panel-border">
+        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-2xs text-gray-500">
+          <span>
+            <code className="text-event-gtm">@string?</code> - optional
+          </span>
+          <span>
+            <code className="text-event-gtm">@enum(a, b)</code> - one of values
+          </span>
+        </div>
+        <p className="text-2xs text-gray-500 mt-1">
+          Literal values must match exactly. Enum values without quotes: <code className="text-event-gtm">@enum(USD, EUR)</code>
+        </p>
+      </div>
     </div>
   );
 }

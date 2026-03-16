@@ -7,6 +7,7 @@
  * Extended syntax:
  * - @string? - optional string (field can be missing)
  * - @enum(a, b, c) - must be one of the specified values
+ * - @optional - alias for @any? (field can be missing, any type allowed)
  */
 
 /**
@@ -21,6 +22,7 @@
  * Modifiers:
  * - ? suffix makes it optional: @string?, @number?
  * - @enum(val1, val2) for enumerated values
+ * - @optional - alias for @any? (optional field, any type)
  */
 export const TYPE_PLACEHOLDER = {
   STRING: "@string",
@@ -67,6 +69,10 @@ export function isExtendedPlaceholder(value: unknown): boolean {
   if (isTypePlaceholder(value)) {
     return true;
   }
+  // @optional alias (equivalent to @any?)
+  if (value === "@optional") {
+    return true;
+  }
   // Optional placeholders: @string?, @number?, etc.
   if (value.endsWith("?")) {
     const base = value.slice(0, -1);
@@ -91,6 +97,14 @@ export interface ParsedPlaceholder {
 export function parsePlaceholder(value: string): ParsedPlaceholder | null {
   if (!value.startsWith("@")) {
     return null;
+  }
+
+  // @optional alias (equivalent to @any?)
+  if (value === "@optional") {
+    return {
+      type: "optional",
+      baseType: TYPE_PLACEHOLDER.ANY,
+    };
   }
 
   // Enum: @enum(value1, value2, ...)
