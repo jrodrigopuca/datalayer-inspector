@@ -2,6 +2,8 @@
  * Breadcrumb component - shows path to current JSON node
  */
 
+import { ChevronIcon } from "../common";
+
 interface BreadcrumbProps {
   path: readonly string[];
   onNavigate: (index: number) => void;
@@ -40,19 +42,5 @@ export function Breadcrumb({ path, onNavigate }: BreadcrumbProps) {
         </span>
       ))}
     </div>
-  );
-}
-
-function ChevronIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-    </svg>
   );
 }

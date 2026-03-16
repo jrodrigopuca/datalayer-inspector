@@ -278,3 +278,22 @@ async function notifyAllContentScripts(enabled: boolean): Promise<void> {
     // Ignore errors
   }
 }
+
+/**
+ * Toggle the extension enabled state (for keyboard shortcut)
+ */
+export async function toggleExtensionEnabled(): Promise<boolean> {
+  const currentSettings = await storage.getSettings();
+  const newEnabled = !currentSettings.enabled;
+  
+  await storage.updateSettings({ enabled: newEnabled });
+  await notifyAllContentScripts(newEnabled);
+  
+  // Broadcast to all connected clients (popup, devtools)
+  portManager.broadcastToAll({
+    type: BACKGROUND_MESSAGE_TYPE.EXTENSION_ENABLED_CHANGED,
+    payload: { enabled: newEnabled },
+  });
+  
+  return newEnabled;
+}

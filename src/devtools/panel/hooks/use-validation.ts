@@ -2,9 +2,10 @@
  * useValidation hook - validates events against schemas
  *
  * Provides validation results and re-validates when events/schemas change
+ * Uses incremental validation for new events to avoid O(n) re-validation
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { usePanelStore } from "../store";
 import type { EventValidation } from "@shared/types";
@@ -27,23 +28,60 @@ interface UseValidationReturn {
  * Hook for accessing validation results
  */
 export function useValidation(): UseValidationReturn {
-  const { events, schemas, validations, validateEvents, getValidation } =
-    usePanelStore(
-      useShallow((s) => ({
-        events: s.events,
-        schemas: s.schemas,
-        validations: s.validations,
-        validateEvents: s.validateEvents,
-        getValidation: s.getValidation,
-      }))
-    );
+  const { 
+    events, 
+    schemas, 
+    validations, 
+    validateEvents, 
+    validateNewEvents,
+    getValidation,
+    _schemaVersion,
+  } = usePanelStore(
+    useShallow((s) => ({
+      events: s.events,
+      schemas: s.schemas,
+      validations: s.validations,
+      validateEvents: s.validateEvents,
+      validateNewEvents: s.validateNewEvents,
+      getValidation: s.getValidation,
+      _schemaVersion: s._schemaVersion,
+    }))
+  );
+
+  // Track previously validated event IDs and schema version
+  const prevEventIdsRef = useRef<Set<string>>(new Set());
+  const prevSchemaVersionRef = useRef<number>(_schemaVersion);
 
   // Re-validate when events or schemas change
   useEffect(() => {
-    if (events.length > 0 && schemas.length > 0) {
+    if (events.length === 0 || schemas.length === 0) return;
+    
+    const schemaChanged = prevSchemaVersionRef.current !== _schemaVersion;
+    
+    if (schemaChanged) {
+      // Schema changed - full re-validation needed
       validateEvents(events);
+      prevSchemaVersionRef.current = _schemaVersion;
+      prevEventIdsRef.current = new Set(events.map(e => e.id));
+    } else {
+      // Find new events (not previously validated)
+      const currentIds = new Set(events.map(e => e.id));
+      const newEventIds = new Set<string>();
+      
+      for (const id of currentIds) {
+        if (!prevEventIdsRef.current.has(id)) {
+          newEventIds.add(id);
+        }
+      }
+      
+      if (newEventIds.size > 0) {
+        // Only validate new events
+        validateNewEvents(events, newEventIds);
+      }
+      
+      prevEventIdsRef.current = currentIds;
     }
-  }, [events, schemas, validateEvents]);
+  }, [events, schemas, _schemaVersion, validateEvents, validateNewEvents]);
 
   // Compute summary
   const summary = useMemo(() => {

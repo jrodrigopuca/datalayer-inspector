@@ -5,6 +5,7 @@
 import type { DataLayerEvent, EventValidation } from "@shared/types";
 import { EventBadge, getEventCategory } from "./EventBadge";
 import { usePanelStore } from "../../store";
+import { CheckIcon, XIcon } from "../common";
 import { cn } from "@/lib/utils";
 
 interface EventItemProps {
@@ -25,6 +26,40 @@ function formatTime(timestamp: number): string {
   const seconds = date.getSeconds().toString().padStart(2, "0");
   const ms = date.getMilliseconds().toString().padStart(3, "0");
   return `${hours}:${minutes}:${seconds}.${ms}`;
+}
+
+/**
+ * Get timezone abbreviation (e.g., "PST", "EST", "UTC+2")
+ */
+function getTimezoneAbbr(): string {
+  const date = new Date();
+  // Try to get timezone abbreviation from toLocaleTimeString
+  const timeString = date.toLocaleTimeString("en-US", { timeZoneName: "short" });
+  const match = timeString.match(/\s([A-Z]{2,5}|UTC[+-]\d+)$/);
+  if (match?.[1]) {
+    return match[1];
+  }
+  // Fallback: calculate UTC offset
+  const offset = -date.getTimezoneOffset();
+  const sign = offset >= 0 ? "+" : "-";
+  const absOffset = Math.abs(offset);
+  const hours = Math.floor(absOffset / 60);
+  const minutes = absOffset % 60;
+  return minutes ? `UTC${sign}${hours}:${minutes.toString().padStart(2, "0")}` : `UTC${sign}${hours}`;
+}
+
+/**
+ * Format full timestamp with date and timezone for tooltip
+ */
+function formatFullTimestamp(timestamp: number): string {
+  const date = new Date(timestamp);
+  const dateStr = date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+  const timeStr = formatTime(timestamp);
+  return `${dateStr} ${timeStr} (${getTimezoneAbbr()})`;
 }
 
 /**
@@ -70,7 +105,10 @@ export function EventItem({ event, isSelected, onClick, onCreateSchema, validati
     >
       {/* Row 1: Timestamp + badges */}
       <div className="flex items-center justify-between">
-        <span className="text-2xs text-gray-500 font-mono">
+        <span 
+          className="text-2xs text-gray-500 font-mono"
+          title={formatFullTimestamp(event.timestamp)}
+        >
           {formatTime(event.timestamp)}
         </span>
         <div className="flex items-center gap-1">
@@ -125,43 +163,37 @@ function ValidationBadge({
     showValidationErrors(eventId);
   }
 
+  // Increase hit area for touch accessibility (44px minimum)
+  // Visual badge is small but clickable area is larger
   return (
     <button
       type="button"
       onClick={handleClick}
-      className={cn(
-        "flex items-center justify-center w-4 h-4 rounded-full text-2xs font-bold cursor-pointer hover:ring-2 hover:ring-white/30",
+      aria-label={
         isPassed
-          ? "bg-green-500/20 text-green-400"
-          : "bg-red-500/20 text-red-400"
-      )}
-      title={
-        isPassed
-          ? `Passed ${validation.results.length} schema(s) - click for details`
-          : `Failed: ${validation.results.filter((r) => r.status === "fail").length} error(s) - click for details`
+          ? `Validation passed: ${validation.results.length} schema(s). Click for details`
+          : `Validation failed: ${validation.results.filter((r) => r.status === "fail").length} error(s). Click for details`
       }
-    >
-      {isPassed ? (
-        <CheckIcon className="w-2.5 h-2.5" />
-      ) : (
-        <XIcon className="w-2.5 h-2.5" />
+      className={cn(
+        // Larger hit area with padding, visual badge centered inside
+        "relative flex items-center justify-center w-6 h-6 -m-1 cursor-pointer",
+        "hover:bg-white/10 rounded transition-colors"
       )}
+    >
+      <span
+        className={cn(
+          "flex items-center justify-center w-4 h-4 rounded-full text-2xs font-bold",
+          isPassed
+            ? "bg-green-500/20 text-green-400"
+            : "bg-red-500/20 text-red-400"
+        )}
+      >
+        {isPassed ? (
+          <CheckIcon className="w-2.5 h-2.5" />
+        ) : (
+          <XIcon className="w-2.5 h-2.5" />
+        )}
+      </span>
     </button>
-  );
-}
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-    </svg>
-  );
-}
-
-function XIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-    </svg>
   );
 }

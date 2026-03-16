@@ -26,6 +26,15 @@ const POPUP_STATE = {
 
 type PopupState = (typeof POPUP_STATE)[keyof typeof POPUP_STATE];
 
+// Get version from manifest
+function getExtensionVersion(): string {
+  try {
+    return chrome.runtime.getManifest().version;
+  } catch {
+    return "0.0.0";
+  }
+}
+
 export default function App() {
   const [state, setState] = useState<PopupState>(POPUP_STATE.LOADING);
   const [tabState, setTabState] = useState<TabState | null>(null);
@@ -190,11 +199,14 @@ export default function App() {
         <span className="text-sm font-medium">Strata</span>
       </div>
       <button
+        type="button"
+        role="switch"
+        aria-checked={isEnabled}
+        aria-label={isEnabled ? "Disable extension" : "Enable extension"}
         onClick={handleToggleEnabled}
-        className={`relative w-9 h-5 rounded-full transition-colors ${
+        className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
           isEnabled ? "bg-brand-primary" : "bg-gray-600"
         }`}
-        title={isEnabled ? "Disable extension" : "Enable extension"}
       >
         <span
           className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
@@ -202,6 +214,13 @@ export default function App() {
           }`}
         />
       </button>
+    </div>
+  );
+
+  // Footer with version (always visible)
+  const footer = (
+    <div className="px-3 py-1 text-2xs text-gray-600 text-center border-t border-panel-border">
+      v{getExtensionVersion()}
     </div>
   );
 
@@ -213,6 +232,7 @@ export default function App() {
         <div className="p-4 text-center">
           <div className="text-sm text-gray-400">Loading...</div>
         </div>
+        {footer}
       </div>
     );
   }
@@ -225,6 +245,7 @@ export default function App() {
         <div className="p-4 text-center">
           <div className="text-sm text-gray-400">No active tab</div>
         </div>
+        {footer}
       </div>
     );
   }
@@ -240,6 +261,7 @@ export default function App() {
             Toggle the switch above to enable
           </div>
         </div>
+        {footer}
       </div>
     );
   }
@@ -255,6 +277,7 @@ export default function App() {
             Navigate to a page with GTM installed
           </div>
         </div>
+        {footer}
       </div>
     );
   }
@@ -276,11 +299,14 @@ export default function App() {
           </span>
         </div>
         <button
+          type="button"
+          role="switch"
+          aria-checked={isEnabled}
+          aria-label={isEnabled ? "Disable extension" : "Enable extension"}
           onClick={handleToggleEnabled}
-          className={`relative w-9 h-5 rounded-full transition-colors ${
+          className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
             isEnabled ? "bg-brand-primary" : "bg-gray-600"
           }`}
-          title={isEnabled ? "Disable extension" : "Enable extension"}
         >
           <span
             className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
@@ -302,6 +328,9 @@ export default function App() {
         onToggleRecording={handleToggleRecording}
         isRecording={tabState.isRecording}
       />
+
+      {/* Footer with version */}
+      {footer}
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { usePanelStore, VIEW_MODE } from "../../store";
 import { JsonTreeView } from "./JsonTreeView";
 import { JsonRawView } from "./JsonRawView";
 import { Breadcrumb } from "./Breadcrumb";
-import { Button } from "../common";
+import { Button, SelectIcon, TreeIcon, RawIcon } from "../common";
 
 export function DetailView() {
   const selectedEvent = useSelectedEvent();
@@ -16,10 +16,16 @@ export function DetailView() {
 
   if (!selectedEvent) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-gray-500">
-        <SelectIcon className="w-12 h-12 mb-2 opacity-50" />
-        <p className="text-sm">Select an event to view details</p>
-        <p className="text-xs mt-1">Use arrow keys or click to select</p>
+      <div className="h-full flex flex-col items-center justify-center text-gray-500 px-4">
+        <SelectIcon className="w-12 h-12 mb-3 opacity-50" />
+        <p className="text-sm font-medium text-gray-400">No event selected</p>
+        <p className="text-xs mt-1 text-center leading-relaxed">
+          Click an event in the list to inspect its payload.<br />
+          Use <kbd className="text-2xs bg-panel-surface px-1.5 py-0.5 rounded border border-panel-border">↑</kbd> <kbd className="text-2xs bg-panel-surface px-1.5 py-0.5 rounded border border-panel-border">↓</kbd> keys to navigate.
+        </p>
+        <p className="mt-4 text-2xs text-gray-600">
+          Right-click an event to create a validation schema
+        </p>
       </div>
     );
   }
@@ -74,59 +80,5 @@ export function DetailView() {
         )}
       </div>
     </div>
-  );
-}
-
-function SelectIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.5}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
-      />
-    </svg>
-  );
-}
-
-function TreeIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M4 6h16M4 10h16M4 14h16M4 18h16"
-      />
-    </svg>
-  );
-}
-
-function RawIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-      />
-    </svg>
   );
 }

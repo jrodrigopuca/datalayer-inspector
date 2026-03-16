@@ -10,6 +10,24 @@ import { EVENT_PATTERNS } from "@shared/constants";
 import type { PanelStore } from "./index";
 
 /**
+ * Cache for stringified event data (for search)
+ * WeakMap ensures entries are garbage collected when event objects are removed
+ */
+const eventDataStringCache = new WeakMap<DataLayerEvent, string>();
+
+/**
+ * Get cached stringified event data for search
+ */
+function getEventDataString(event: DataLayerEvent): string {
+  let cached = eventDataStringCache.get(event);
+  if (cached === undefined) {
+    cached = JSON.stringify(event.data).toLowerCase();
+    eventDataStringCache.set(event, cached);
+  }
+  return cached;
+}
+
+/**
  * Get selected event by ID
  */
 export function selectSelectedEvent(state: PanelStore): DataLayerEvent | null {
@@ -53,9 +71,8 @@ export function selectFilteredEvents(
     filtered = filtered.filter((event) => {
       // Search in event name
       if (event.eventName?.toLowerCase().includes(query)) return true;
-      // Search in data (stringify for deep search)
-      const dataString = JSON.stringify(event.data).toLowerCase();
-      return dataString.includes(query);
+      // Search in data (use cached stringify for deep search)
+      return getEventDataString(event).includes(query);
     });
   }
 

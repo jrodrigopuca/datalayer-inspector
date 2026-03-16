@@ -86,12 +86,17 @@ export function clearSettingsCache(): void {
 
 /**
  * Listen for external settings changes
+ * Returns an unsubscribe function to remove the listener
  */
 export function onSettingsChanged(
   callback: (settings: UserSettings) => void
-): void {
+): () => void {
   const key = STORAGE_KEYS.SETTINGS;
-  chrome.storage.onChanged.addListener((changes, areaName) => {
+  
+  const listener = (
+    changes: { [key: string]: chrome.storage.StorageChange },
+    areaName: string
+  ) => {
     const change = changes[key];
     if (areaName === "sync" && change) {
       const newValue = change.newValue as
@@ -105,5 +110,12 @@ export function onSettingsChanged(
 
       callback(cachedSettings);
     }
-  });
+  };
+  
+  chrome.storage.onChanged.addListener(listener);
+  
+  // Return unsubscribe function
+  return () => {
+    chrome.storage.onChanged.removeListener(listener);
+  };
 }

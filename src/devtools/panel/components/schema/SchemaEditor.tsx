@@ -5,7 +5,7 @@
 import { useState, useEffect } from "react";
 import { usePanelStore } from "../../store";
 import { useSchemas } from "../../hooks";
-import { Button } from "../common";
+import { Button, SchemaIcon, JsonEditor } from "../common";
 import { cn } from "@/lib/utils";
 import type { TemplateObject } from "@shared/types";
 
@@ -172,7 +172,7 @@ export function SchemaEditor({ schemaId }: SchemaEditorProps) {
           />
         </div>
 
-        {/* Template JSON textarea */}
+        {/* Template JSON editor with syntax highlighting */}
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1">
             <label
@@ -185,16 +185,12 @@ export function SchemaEditor({ schemaId }: SchemaEditorProps) {
               <span className="text-2xs text-red-400">{jsonError}</span>
             )}
           </div>
-          <textarea
+          <JsonEditor
             id="schema-template"
             value={templateJson}
-            onChange={(e) => setTemplateJson(e.target.value)}
-            spellCheck={false}
-            className={cn(
-              "w-full h-64 px-2 py-1.5 text-xs font-mono rounded border bg-panel-bg text-gray-100 resize-none",
-              "focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent",
-              jsonError ? "border-red-500/50" : "border-panel-border"
-            )}
+            onChange={setTemplateJson}
+            error={jsonError}
+            className="h-64"
           />
           <TypePlaceholdersHelp />
         </div>
@@ -253,23 +249,5 @@ function getDefaultTemplate(): string {
     },
     null,
     2
-  );
-}
-
-function SchemaIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-      />
-    </svg>
   );
 }

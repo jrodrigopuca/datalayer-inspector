@@ -3,8 +3,16 @@
  */
 
 import { useState } from "react";
-import { Button } from "../common";
+import { 
+  Button, 
+  CodeIcon, 
+  CloseIcon, 
+  CopyIcon, 
+  DownloadIcon, 
+  CheckIcon 
+} from "../common";
 import { usePanelStore } from "../../store";
+import { useFocusTrap } from "../../hooks";
 import { generateTestCode } from "@shared/generators";
 import { TEST_FRAMEWORK, ASSERTION_STYLE } from "@shared/types";
 import type { TestFramework, AssertionStyle, DataLayerEvent } from "@shared/types";
@@ -24,6 +32,12 @@ export function ExportTestModal({ events, onClose }: ExportTestModalProps) {
   const [includeWaits, setIncludeWaits] = useState(true);
   const [testName, setTestName] = useState("dataLayer events test");
   const [copied, setCopied] = useState(false);
+
+  // Focus trap
+  const containerRef = useFocusTrap<HTMLDivElement>({
+    isActive: true,
+    onEscape: onClose,
+  });
 
   const generatedCode = generateTestCode(events, {
     framework,
@@ -51,13 +65,29 @@ export function ExportTestModal({ events, onClose }: ExportTestModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-panel-bg border border-panel-border rounded-lg shadow-xl w-[800px] max-h-[90vh] flex flex-col">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="export-test-modal-title"
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Modal content */}
+      <div
+        ref={containerRef}
+        className="relative bg-panel-bg border border-panel-border rounded-lg shadow-xl w-[800px] max-h-[90vh] flex flex-col"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-panel-border">
           <div className="flex items-center gap-2">
             <CodeIcon className="w-5 h-5 text-brand-primary" />
-            <h2 className="text-sm font-medium">Export as Test Code</h2>
+            <h2 id="export-test-modal-title" className="text-sm font-medium">Export as Test Code</h2>
             <span className="text-xs text-gray-500">
               {events.length} event{events.length !== 1 ? "s" : ""}
             </span>
@@ -198,46 +228,5 @@ function ToggleButton({
     >
       {children}
     </button>
-  );
-}
-
-// Icons
-function CodeIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-    </svg>
-  );
-}
-
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  );
-}
-
-function CopyIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-    </svg>
-  );
-}
-
-function DownloadIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-    </svg>
-  );
-}
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-    </svg>
   );
 }

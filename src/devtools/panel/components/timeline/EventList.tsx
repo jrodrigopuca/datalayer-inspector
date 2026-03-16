@@ -8,6 +8,7 @@
 import { useRef, useEffect } from "react";
 import { useFilteredEvents, useEventSelection, useValidation, useSchemas } from "../../hooks";
 import { usePanelStore } from "../../store";
+import { EmptyIcon } from "../common";
 import { EventItem } from "./EventItem";
 
 export function EventList() {
@@ -41,12 +42,19 @@ export function EventList() {
 
   if (events.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-gray-500">
-        <EmptyIcon className="w-12 h-12 mb-2 opacity-50" />
-        <p className="text-sm">No events captured</p>
-        <p className="text-xs mt-1">
-          Events will appear here when dataLayer.push() is called
+      <div className="flex flex-col items-center justify-center h-full text-gray-500 px-4">
+        <EmptyIcon className="w-12 h-12 mb-3 opacity-50" />
+        <p className="text-sm font-medium text-gray-400">No events captured yet</p>
+        <p className="text-xs mt-1 text-center leading-relaxed">
+          Navigate to a page with GTM installed.<br />
+          Events will appear when <code className="text-brand-primary/80 bg-panel-surface px-1 rounded">dataLayer.push()</code> is called.
         </p>
+        <div className="mt-4 text-2xs text-gray-600">
+          <span className="inline-flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            Recording active
+          </span>
+        </div>
       </div>
     );
   }
@@ -68,23 +76,5 @@ export function EventList() {
       ))}
       <div ref={bottomRef} />
     </div>
-  );
-}
-
-function EmptyIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.5}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-      />
-    </svg>
   );
 }

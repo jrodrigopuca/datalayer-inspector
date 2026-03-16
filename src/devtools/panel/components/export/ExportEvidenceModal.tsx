@@ -3,8 +3,15 @@
  */
 
 import { useState } from "react";
-import { Button } from "../common";
+import { 
+  Button, 
+  EvidenceIcon, 
+  CloseIcon, 
+  DownloadIcon, 
+  SpinnerIcon 
+} from "../common";
 import { usePanelStore } from "../../store";
+import { useFocusTrap } from "../../hooks";
 import { generateEvidence } from "@shared/generators";
 import { EVIDENCE_FORMAT, DEFAULT_EVIDENCE_OPTIONS } from "@shared/types";
 import type { EvidenceFormat, DataLayerEvent } from "@shared/types";
@@ -29,6 +36,12 @@ export function ExportEvidenceModal({ events, onClose }: ExportEvidenceModalProp
   const [includeContainers, setIncludeContainers] = useState(DEFAULT_EVIDENCE_OPTIONS.includeContainers);
   const [includeValidation, setIncludeValidation] = useState(DEFAULT_EVIDENCE_OPTIONS.includeValidation);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Focus trap
+  const containerRef = useFocusTrap<HTMLDivElement>({
+    isActive: true,
+    onEscape: onClose,
+  });
 
   async function handleGenerate(): Promise<void> {
     setIsGenerating(true);
@@ -75,13 +88,29 @@ export function ExportEvidenceModal({ events, onClose }: ExportEvidenceModalProp
     : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-panel-bg border border-panel-border rounded-lg shadow-xl w-[500px] flex flex-col">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="export-evidence-modal-title"
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Modal content */}
+      <div
+        ref={containerRef}
+        className="relative bg-panel-bg border border-panel-border rounded-lg shadow-xl w-[500px] flex flex-col"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-panel-border">
           <div className="flex items-center gap-2">
             <EvidenceIcon className="w-5 h-5 text-brand-primary" />
-            <h2 className="text-sm font-medium">Export Evidence</h2>
+            <h2 id="export-evidence-modal-title" className="text-sm font-medium">Export Evidence</h2>
             <span className="text-xs text-gray-500">
               {events.length} event{events.length !== 1 ? "s" : ""}
             </span>
@@ -261,38 +290,5 @@ function ToggleButton({
     >
       {children}
     </button>
-  );
-}
-
-// Icons
-function EvidenceIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  );
-}
-
-function CloseIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  );
-}
-
-function DownloadIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-    </svg>
-  );
-}
-
-function SpinnerIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16 8 8 0 01-8-8z" />
-    </svg>
   );
 }

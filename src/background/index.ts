@@ -15,6 +15,7 @@ import {
   handleClientRequest,
   handleTabRemoved,
   handleTabNavigation,
+  toggleExtensionEnabled,
 } from "./message-handler";
 import { PORT_NAME } from "@shared/types";
 
@@ -25,6 +26,7 @@ function init(): void {
   setupMessageListeners();
   setupPortListener();
   setupTabListeners();
+  setupCommandListener();
 
   console.log("[Strata] Service worker initialized");
 }
@@ -133,6 +135,18 @@ function setupTabListeners(): void {
     if (tab.id !== undefined) {
       // Could open DevTools or show a notification
       console.log(`[Strata] Action clicked for tab ${tab.id}`);
+    }
+  });
+}
+
+/**
+ * Set up keyboard shortcut commands
+ */
+function setupCommandListener(): void {
+  chrome.commands.onCommand.addListener(async (command) => {
+    if (command === "toggle-recording") {
+      await toggleExtensionEnabled();
+      console.log("[Strata] Extension toggled via keyboard shortcut");
     }
   });
 }
