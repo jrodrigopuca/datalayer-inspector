@@ -11,18 +11,31 @@ import { isPageToContentMessage } from "@shared/validators";
 import {
   PAGE_MESSAGE_TYPE,
   CONTENT_MESSAGE_TYPE,
+  BACKGROUND_TO_CONTENT_TYPE,
 } from "@shared/types";
 import type {
   PageToContentMessage,
   ContentToBackgroundMessage,
   DataLayerEvent,
+  BackgroundToContentMessage,
 } from "@shared/types";
 
+/** Whether the extension is currently enabled */
+let isEnabled = true;
+
 /**
- * Start listening for messages from page script
+ * Set the enabled state of the relay
+ */
+export function setEnabled(enabled: boolean): void {
+  isEnabled = enabled;
+}
+
+/**
+ * Start listening for messages from page script and background
  */
 export function startRelay(): void {
   window.addEventListener("message", handlePageMessage);
+  chrome.runtime.onMessage.addListener(handleBackgroundMessage);
 }
 
 /**
@@ -30,12 +43,27 @@ export function startRelay(): void {
  */
 export function stopRelay(): void {
   window.removeEventListener("message", handlePageMessage);
+  chrome.runtime.onMessage.removeListener(handleBackgroundMessage);
+}
+
+/**
+ * Handle incoming message from background service worker
+ */
+function handleBackgroundMessage(message: BackgroundToContentMessage): void {
+  if (message.type === BACKGROUND_TO_CONTENT_TYPE.SET_ENABLED) {
+    setEnabled(message.payload.enabled);
+  }
 }
 
 /**
  * Handle incoming message from page script
  */
 function handlePageMessage(event: MessageEvent<unknown>): void {
+  // Ignore if extension is disabled
+  if (!isEnabled) {
+    return;
+  }
+
   // Only accept messages from same window (page script)
   if (event.source !== window) {
     return;

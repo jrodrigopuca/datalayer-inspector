@@ -10,11 +10,12 @@ import { Button } from "../common";
 import { cn } from "@/lib/utils";
 
 export function Toolbar() {
-  const { isRecording, containers, rightPanelView } = usePanelStore(
+  const { isRecording, containers, rightPanelView, settings } = usePanelStore(
     useShallow((s) => ({
       isRecording: s.isRecording,
       containers: s.containers,
       rightPanelView: s.rightPanelView,
+      settings: s.settings,
     }))
   );
 
@@ -22,7 +23,7 @@ export function Toolbar() {
   const { isConnected, isLoading } = usePanelStore(
     useShallow(selectConnectionInfo)
   );
-  const { clearEvents, toggleRecording } = useCommands();
+  const { clearEvents, toggleRecording, toggleEnabled } = useCommands();
   const { exportAll, canExport } = useExport();
   const { schemas } = useSchemas();
   const showSchemaList = usePanelStore((s) => s.showSchemaList);
@@ -137,6 +138,23 @@ export function Toolbar() {
           ))}
         </div>
       )}
+
+      {/* Extension toggle */}
+      <button
+        onClick={toggleEnabled}
+        className={cn(
+          "relative w-9 h-5 rounded-full transition-colors",
+          settings.enabled ? "bg-brand-primary" : "bg-gray-600"
+        )}
+        title={settings.enabled ? "Disable extension" : "Enable extension"}
+      >
+        <span
+          className={cn(
+            "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform",
+            settings.enabled ? "translate-x-4" : "translate-x-0"
+          )}
+        />
+      </button>
 
       {/* Connection status */}
       <div

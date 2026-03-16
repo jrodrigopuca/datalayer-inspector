@@ -30,8 +30,12 @@ export default function App() {
   const [state, setState] = useState<PopupState>(POPUP_STATE.LOADING);
   const [tabState, setTabState] = useState<TabState | null>(null);
   const [tabId, setTabId] = useState<number | null>(null);
+  const [isEnabled, setIsEnabled] = useState<boolean>(true);
 
   useEffect(() => {
+    // Load settings first
+    loadSettings();
+
     // Get current tab
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0];
@@ -44,6 +48,19 @@ export default function App() {
       connectToServiceWorker(tab.id);
     });
   }, []);
+
+  async function loadSettings(): Promise<void> {
+    try {
+      const response = await sendRequest({
+        type: CLIENT_REQUEST_TYPE.GET_SETTINGS,
+      });
+      if (response.type === CLIENT_RESPONSE_TYPE.SETTINGS) {
+        setIsEnabled(response.payload.enabled);
+      }
+    } catch {
+      // Ignore, use default
+    }
+  }
 
   function connectToServiceWorker(tabId: number): void {
     try {
@@ -81,6 +98,10 @@ export default function App() {
                 ? { ...prev, containers: message.payload.containers }
                 : null
             );
+            break;
+
+          case BACKGROUND_MESSAGE_TYPE.EXTENSION_ENABLED_CHANGED:
+            setIsEnabled(message.payload.enabled);
             break;
         }
       });
@@ -152,11 +173,46 @@ export default function App() {
     );
   }
 
+  async function handleToggleEnabled(): Promise<void> {
+    const newEnabled = !isEnabled;
+    setIsEnabled(newEnabled);
+
+    await sendRequest({
+      type: CLIENT_REQUEST_TYPE.UPDATE_SETTINGS,
+      payload: { enabled: newEnabled },
+    });
+  }
+
+  // Header with global toggle (always visible)
+  const header = (
+    <div className="flex items-center justify-between px-3 py-2 bg-panel-surface border-b border-panel-border">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium">Strata</span>
+      </div>
+      <button
+        onClick={handleToggleEnabled}
+        className={`relative w-9 h-5 rounded-full transition-colors ${
+          isEnabled ? "bg-brand-primary" : "bg-gray-600"
+        }`}
+        title={isEnabled ? "Disable extension" : "Enable extension"}
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+            isEnabled ? "translate-x-4" : "translate-x-0"
+          }`}
+        />
+      </button>
+    </div>
+  );
+
   // Loading state
   if (state === POPUP_STATE.LOADING) {
     return (
-      <div className="p-4 text-center">
-        <div className="text-sm text-gray-400">Loading...</div>
+      <div className="min-h-0">
+        {header}
+        <div className="p-4 text-center">
+          <div className="text-sm text-gray-400">Loading...</div>
+        </div>
       </div>
     );
   }
@@ -164,8 +220,26 @@ export default function App() {
   // No tab state
   if (state === POPUP_STATE.NO_TAB) {
     return (
-      <div className="p-4 text-center">
-        <div className="text-sm text-gray-400">No active tab</div>
+      <div className="min-h-0">
+        {header}
+        <div className="p-4 text-center">
+          <div className="text-sm text-gray-400">No active tab</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Extension disabled
+  if (!isEnabled) {
+    return (
+      <div className="min-h-0">
+        {header}
+        <div className="p-4 text-center">
+          <div className="text-sm text-gray-400">Extension disabled</div>
+          <div className="text-xs text-gray-500 mt-1">
+            Toggle the switch above to enable
+          </div>
+        </div>
       </div>
     );
   }
@@ -173,10 +247,13 @@ export default function App() {
   // No dataLayer detected
   if (state === POPUP_STATE.NO_DATALAYER || !tabState) {
     return (
-      <div className="p-4 text-center">
-        <div className="text-sm text-gray-400">No dataLayer detected</div>
-        <div className="text-xs text-gray-500 mt-1">
-          Navigate to a page with GTM installed
+      <div className="min-h-0">
+        {header}
+        <div className="p-4 text-center">
+          <div className="text-sm text-gray-400">No dataLayer detected</div>
+          <div className="text-xs text-gray-500 mt-1">
+            Navigate to a page with GTM installed
+          </div>
         </div>
       </div>
     );
@@ -185,7 +262,7 @@ export default function App() {
   // Ready state
   return (
     <div className="min-h-0">
-      {/* Header */}
+      {/* Header with recording indicator */}
       <div className="flex items-center justify-between px-3 py-2 bg-panel-surface border-b border-panel-border">
         <div className="flex items-center gap-2">
           <span
@@ -194,10 +271,23 @@ export default function App() {
             }`}
           />
           <span className="text-sm font-medium">Strata</span>
+          <span className="text-2xs text-gray-500">
+            {tabState.isRecording ? "Recording" : "Paused"}
+          </span>
         </div>
-        <span className="text-2xs text-gray-500">
-          {tabState.isRecording ? "Recording" : "Paused"}
-        </span>
+        <button
+          onClick={handleToggleEnabled}
+          className={`relative w-9 h-5 rounded-full transition-colors ${
+            isEnabled ? "bg-brand-primary" : "bg-gray-600"
+          }`}
+          title={isEnabled ? "Disable extension" : "Enable extension"}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+              isEnabled ? "translate-x-4" : "translate-x-0"
+            }`}
+          />
+        </button>
       </div>
 
       {/* Event summary */}

@@ -36,6 +36,7 @@ export function useConnection(): void {
   const clearEvents = usePanelStore((s) => s.clearEvents);
   const setContainers = usePanelStore((s) => s.setContainers);
   const setIsRecording = usePanelStore((s) => s.setIsRecording);
+  const updateSettings = usePanelStore((s) => s.updateSettings);
 
   useEffect(() => {
     const tabId = chrome.devtools.inspectedWindow.tabId;
@@ -84,6 +85,10 @@ export function useConnection(): void {
         case BACKGROUND_MESSAGE_TYPE.RECORDING_CHANGED:
           setIsRecording(message.payload.isRecording);
           break;
+
+        case BACKGROUND_MESSAGE_TYPE.EXTENSION_ENABLED_CHANGED:
+          updateSettings({ enabled: message.payload.enabled });
+          break;
       }
     }
 
@@ -121,6 +126,15 @@ export function useConnection(): void {
           setEvents(stateResponse.payload.events);
           setContainers(stateResponse.payload.containers);
           setIsRecording(stateResponse.payload.isRecording);
+        }
+
+        // Request settings (including enabled state)
+        const settingsResponse = await sendRequest({
+          type: CLIENT_REQUEST_TYPE.GET_SETTINGS,
+        });
+
+        if (settingsResponse.type === CLIENT_RESPONSE_TYPE.SETTINGS) {
+          updateSettings(settingsResponse.payload);
         }
       } catch (error) {
         console.error("[Strata] Failed to fetch initial state:", error);
@@ -163,6 +177,7 @@ export function useConnection(): void {
     clearEvents,
     setContainers,
     setIsRecording,
+    updateSettings,
   ]);
 }
 
@@ -172,9 +187,12 @@ export function useConnection(): void {
 export function useCommands(): {
   clearEvents: () => Promise<void>;
   toggleRecording: () => Promise<void>;
+  toggleEnabled: () => Promise<void>;
 } {
   const tabId = usePanelStore((s) => s.tabId);
   const isRecording = usePanelStore((s) => s.isRecording);
+  const settings = usePanelStore((s) => s.settings);
+  const updateSettings = usePanelStore((s) => s.updateSettings);
 
   async function sendCommand(
     request: ClientToBackgroundRequest
@@ -208,5 +226,15 @@ export function useCommands(): {
     });
   }
 
-  return { clearEvents, toggleRecording };
+  async function toggleEnabled(): Promise<void> {
+    const newEnabled = !settings.enabled;
+    updateSettings({ enabled: newEnabled });
+
+    await sendCommand({
+      type: CLIENT_REQUEST_TYPE.UPDATE_SETTINGS,
+      payload: { enabled: newEnabled },
+    });
+  }
+
+  return { clearEvents, toggleRecording, toggleEnabled };
 }

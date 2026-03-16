@@ -12,6 +12,7 @@ import {
   CLIENT_RESPONSE_TYPE,
   BACKGROUND_MESSAGE_TYPE,
   TAB_RESET_REASON,
+  BACKGROUND_TO_CONTENT_TYPE,
   toReadonlyTabState,
 } from "@shared/types";
 import type {
@@ -28,10 +29,10 @@ import * as storage from "./storage";
 /**
  * Handle message from content script
  */
-export function handleContentMessage(
+export async function handleContentMessage(
   message: unknown,
   sender: chrome.runtime.MessageSender
-): void {
+): Promise<void> {
   // Validate message
   if (!isContentToBackgroundMessage(message)) {
     return;
@@ -40,6 +41,12 @@ export function handleContentMessage(
   // Must have sender tab
   const tabId = sender.tab?.id;
   if (tabId === undefined) {
+    return;
+  }
+
+  // Check if extension is enabled
+  const settings = await storage.getSettings();
+  if (!settings.enabled) {
     return;
   }
 
@@ -199,7 +206,20 @@ async function processClientRequest(
     }
 
     case CLIENT_REQUEST_TYPE.UPDATE_SETTINGS: {
+      const oldSettings = await storage.getSettings();
       const settings = await storage.updateSettings(request.payload);
+      
+      // If enabled state changed, notify all content scripts
+      if (oldSettings.enabled !== settings.enabled) {
+        await notifyAllContentScripts(settings.enabled);
+        
+        // Also broadcast to all connected clients (popup, devtools)
+        portManager.broadcastToAll({
+          type: BACKGROUND_MESSAGE_TYPE.EXTENSION_ENABLED_CHANGED,
+          payload: { enabled: settings.enabled },
+        });
+      }
+      
       return {
         type: CLIENT_RESPONSE_TYPE.SETTINGS,
         payload: settings,
@@ -234,5 +254,27 @@ export function handleTabNavigation(tabId: number, url: string): void {
       type: BACKGROUND_MESSAGE_TYPE.TAB_STATE_RESET,
       payload: { tabId, reason: TAB_RESET_REASON.NAVIGATION },
     });
+  }
+}
+
+/**
+ * Notify all content scripts of enabled state change
+ */
+async function notifyAllContentScripts(enabled: boolean): Promise<void> {
+  try {
+    const tabs = await chrome.tabs.query({});
+    const message = {
+      type: BACKGROUND_TO_CONTENT_TYPE.SET_ENABLED,
+      payload: { enabled },
+    };
+    
+    for (const tab of tabs) {
+      if (tab.id !== undefined) {
+        // Send to each tab, ignore errors (tab might not have content script)
+        chrome.tabs.sendMessage(tab.id, message).catch(() => {});
+      }
+    }
+  } catch {
+    // Ignore errors
   }
 }

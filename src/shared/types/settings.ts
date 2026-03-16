@@ -15,6 +15,8 @@ export type Theme = (typeof THEME)[keyof typeof THEME];
  * User-configurable settings
  */
 export interface UserSettings {
+  /** Global extension enabled state */
+  readonly enabled: boolean;
   /** UI theme */
   readonly theme: Theme;
   /** DataLayer array names to monitor */
@@ -31,6 +33,7 @@ export interface UserSettings {
  * Default settings values
  */
 export const DEFAULT_SETTINGS: UserSettings = {
+  enabled: true,
   theme: THEME.AUTO,
   dataLayerNames: ["dataLayer"],
   autoScroll: true,

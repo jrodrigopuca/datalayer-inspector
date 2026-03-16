@@ -63,6 +63,7 @@ export type {
   ClientToBackgroundRequest,
   ClientResponseType,
   ClientToBackgroundResponse,
+  BackgroundToContentMessage,
 } from "./messages";
 
 export {
@@ -74,6 +75,7 @@ export {
   TAB_RESET_REASON,
   CLIENT_REQUEST_TYPE,
   CLIENT_RESPONSE_TYPE,
+  BACKGROUND_TO_CONTENT_TYPE,
 } from "./messages";
 
 // Test generator types

@@ -113,6 +113,7 @@ export const BACKGROUND_MESSAGE_TYPE = {
   CONTAINERS_UPDATED: "CONTAINERS_UPDATED",
   TAB_STATE_RESET: "TAB_STATE_RESET",
   RECORDING_CHANGED: "RECORDING_CHANGED",
+  EXTENSION_ENABLED_CHANGED: "EXTENSION_ENABLED_CHANGED",
 } as const;
 
 export type BackgroundMessageType =
@@ -149,6 +150,12 @@ export type BackgroundToClientMessage =
       readonly type: typeof BACKGROUND_MESSAGE_TYPE.RECORDING_CHANGED;
       readonly payload: {
         readonly isRecording: boolean;
+      };
+    }
+  | {
+      readonly type: typeof BACKGROUND_MESSAGE_TYPE.EXTENSION_ENABLED_CHANGED;
+      readonly payload: {
+        readonly enabled: boolean;
       };
     };
 
@@ -234,3 +241,16 @@ export type ClientToBackgroundResponse =
       readonly type: typeof CLIENT_RESPONSE_TYPE.ERROR;
       readonly payload: { readonly message: string };
     };
+
+// ============================================================================
+// Service Worker → Content Script (chrome.tabs.sendMessage)
+// ============================================================================
+
+export const BACKGROUND_TO_CONTENT_TYPE = {
+  SET_ENABLED: "SET_ENABLED",
+} as const;
+
+export type BackgroundToContentMessage = {
+  readonly type: typeof BACKGROUND_TO_CONTENT_TYPE.SET_ENABLED;
+  readonly payload: { readonly enabled: boolean };
+};
