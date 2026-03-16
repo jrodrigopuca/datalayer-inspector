@@ -4,30 +4,18 @@
 
 A Chrome DevTools extension built for developers and technical analysts who need more than just a viewer.
 
-## Status
+## Features
 
-**Phase 2 (Differentiation): In Progress**
+### Real-time Event Capture
 
-### Phase 1 (Complete)
-
-- Real-time dataLayer event capture
-- DevTools panel with event timeline and JSON tree view
+- Intercepts all `dataLayer.push()` calls as they happen
 - Multi-container GTM support
-- Search and filter events
-- Copy events to clipboard
-- Popup quick view
+- Pause/resume recording
+- Event timeline with color-coded categories (GTM, Ecommerce, Custom, Errors)
 
-### Phase 2 (Current)
+### Schema Validation
 
-- ✅ Schema validation with template-based matching
-- ✅ Export as JSON file
-- ✅ Export as Playwright/Cypress test assertions
-- ✅ Export evidence images (PNG/PDF)
-- ⏳ Diff view for comparing snapshots
-
-## Schema Validation
-
-Strata includes a powerful schema validation system using JSON templates:
+Validate your dataLayer events against JSON templates:
 
 ```json
 {
@@ -41,21 +29,53 @@ Strata includes a powerful schema validation system using JSON templates:
 }
 ```
 
-**Features:**
-- **Template-based matching**: Schemas apply when all literal values match
 - **Type placeholders**: `@string`, `@number`, `@boolean`, `@array`, `@object`, `@any`
-- **Optional fields**: `@string?`, `@number?` or `@optional` (won't fail if missing)
+- **Optional fields**: `@string?`, `@number?` (won't fail if missing)
 - **Enum validation**: `@enum(val1, val2, val3)`
-- **Nested object and array validation**
-- **Create schema from event**: Right-click any event to auto-generate a template
+- **Auto-generate schemas**: Right-click any event to create a template
 - **Import/Export**: Share schemas as JSON files
+
+### Export Options
+
+- **JSON**: Export events for debugging or documentation
+- **Test Assertions**: Generate Playwright or Cypress test code
+- **Evidence**: Create PNG or PDF screenshots for QA reports
+
+### Developer Experience
+
+- Keyboard shortcuts (`Alt+Shift+D` to toggle recording)
+- Search and filter events
+- JSON tree view with syntax highlighting
+- Copy events to clipboard
+
+## Installation
+
+### From Chrome Web Store
+
+[Install Strata](https://chrome.google.com/webstore/detail/strata/YOUR_EXTENSION_ID) (coming soon)
+
+### Manual Installation
+
+1. Download the latest release from here
+2. Open `chrome://extensions`
+3. Enable "Developer mode"
+4. Click "Load unpacked"
+5. Select the extracted folder
+
+## Usage
+
+1. Open Chrome DevTools (`F12` or `Cmd+Opt+I`)
+2. Navigate to the **Strata** tab
+3. Interact with the page to capture dataLayer events
+4. Create schemas to validate event structure
+5. Export events or test assertions as needed
 
 ## Development
 
 ### Prerequisites
 
 - Node.js 20+
-- pnpm (recommended) or npm
+- npm or pnpm
 
 ### Setup
 
@@ -63,20 +83,16 @@ Strata includes a powerful schema validation system using JSON templates:
 # Install dependencies
 npm install
 
-# Build the extension
+# Development mode (hot reload)
+npm run dev
+
+# Build for production
 npm run build
 
 # Run tests
 npm test           # Unit tests (Vitest)
 npm run test:e2e   # E2E tests (Playwright)
 ```
-
-### Load in Chrome
-
-1. Open `chrome://extensions`
-2. Enable "Developer mode"
-3. Click "Load unpacked"
-4. Select the `dist/` folder
 
 ### Project Structure
 
@@ -90,13 +106,6 @@ src/
 └── shared/         # Shared types and utilities
 ```
 
-## Documentation
-
-- [PLAN.md](./docs/PLAN.md) — Development roadmap
-- [SPEC.md](./docs/SPEC.md) — Technical specification
-- [DESIGN.md](./docs/DESIGN.md) — Architecture and patterns
-- [TEST-CASES.md](./docs/TEST-CASES.md) — Test cases and fixtures
-
 ## Tech Stack
 
 - TypeScript (strict mode)
@@ -106,15 +115,16 @@ src/
 - Zustand 5
 - Vitest + Playwright
 
-## Metrics
+## Privacy
 
-| Metric | Value |
-|--------|-------|
-| Page script size | 2.9 KB |
-| Total bundle | ~285 KB |
-| Unit tests | 150 passing |
-| E2E tests | 18 passing |
+Strata operates entirely locally. No data is collected, transmitted, or stored externally. All captured events remain in your browser's memory and are cleared when you close the tab.
+
+See our [Privacy Policy](./PRIVACY.md) for details.
 
 ## License
 
-MIT
+MIT — see [LICENSE](./LICENSE) for details.
+
+## Contributing
+
+Contributions are welcome! Please read the documentation in the `docs/` folder before submitting PRs.

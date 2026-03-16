@@ -164,10 +164,12 @@ async function processClientRequest(
     }
 
     case CLIENT_REQUEST_TYPE.GET_TAB_STATE: {
-      const state = tabManager.getTabState(request.payload.tabId);
+      // Use getOrCreateTabState to ensure we always have a state
+      // This fixes the case where popup opens before any events were captured
+      const state = tabManager.getOrCreateTabState(request.payload.tabId);
       return {
         type: CLIENT_RESPONSE_TYPE.TAB_STATE,
-        payload: state ? toReadonlyTabState(state) : null,
+        payload: toReadonlyTabState(state),
       };
     }
 

@@ -217,10 +217,18 @@ export default function App() {
     </div>
   );
 
-  // Footer with version (always visible)
+  // Get platform-specific shortcut
+  const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+  const devToolsShortcut = isMac ? "⌘⌥I" : "F12";
+
+  // Footer with version and DevTools hint (always visible)
   const footer = (
-    <div className="px-3 py-1 text-2xs text-gray-600 text-center border-t border-panel-border">
-      v{getExtensionVersion()}
+    <div className="px-3 py-1.5 text-2xs text-center border-t border-panel-border">
+      <span className="text-gray-500">
+        {devToolsShortcut} → Strata panel
+      </span>
+      <span className="text-gray-600 mx-1.5">·</span>
+      <span className="text-gray-600">v{getExtensionVersion()}</span>
     </div>
   );
 
