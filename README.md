@@ -52,7 +52,7 @@ Validate your dataLayer events against JSON templates:
 
 ### From Chrome Web Store
 
-[Install Strata](https://chrome.google.com/webstore/detail/strata/YOUR_EXTENSION_ID) (coming soon)
+[Install Strata](https://chrome.google.com/webstore/detail/strata/_______) (coming soon)
 
 ### Manual Installation
 
@@ -123,8 +123,8 @@ See our [Privacy Policy](./PRIVACY.md) for details.
 
 ## License
 
-MIT — see [LICENSE](./LICENSE) for details.
+GNU General Public License v3.0 — see [LICENSE](./LICENSE) for details.
 
 ## Contributing
 
-Contributions are welcome! Please read the documentation in the `docs/` folder before submitting PRs.
+Contributions are welcome!
