@@ -5,7 +5,10 @@
  * from DevTools panels and popups.
  */
 
-import { isContentToBackgroundMessage, isClientToBackgroundRequest } from "@shared/validators";
+import {
+  isContentToBackgroundMessage,
+  isClientToBackgroundRequest,
+} from "@shared/validators";
 import {
   CONTENT_MESSAGE_TYPE,
   CLIENT_REQUEST_TYPE,
@@ -210,18 +213,18 @@ async function processClientRequest(
     case CLIENT_REQUEST_TYPE.UPDATE_SETTINGS: {
       const oldSettings = await storage.getSettings();
       const settings = await storage.updateSettings(request.payload);
-      
+
       // If enabled state changed, notify all content scripts
       if (oldSettings.enabled !== settings.enabled) {
         await notifyAllContentScripts(settings.enabled);
-        
+
         // Also broadcast to all connected clients (popup, devtools)
         portManager.broadcastToAll({
           type: BACKGROUND_MESSAGE_TYPE.EXTENSION_ENABLED_CHANGED,
           payload: { enabled: settings.enabled },
         });
       }
-      
+
       return {
         type: CLIENT_RESPONSE_TYPE.SETTINGS,
         payload: settings,
@@ -246,16 +249,38 @@ export function handleTabRemoved(tabId: number): void {
 /**
  * Handle tab navigation (URL change)
  */
-export function handleTabNavigation(tabId: number, url: string): void {
-  // Only reset if we have state for this tab
-  if (tabManager.hasTabState(tabId)) {
-    tabManager.resetTabState(tabId, url);
+export function handleTabNavigation(tabId: number, newUrl: string): void {
+  const state = tabManager.getTabState(tabId);
+  if (!state) return;
 
-    // Notify connected clients
+  // Parse origins - handle edge cases gracefully
+  let oldOrigin = "";
+  let newOrigin = "";
+
+  try {
+    if (state.url) oldOrigin = new URL(state.url).origin;
+  } catch {
+    /* invalid URL, treat as different origin */
+  }
+
+  try {
+    newOrigin = new URL(newUrl).origin;
+  } catch {
+    /* invalid URL, treat as different origin */
+  }
+
+  const isCrossOrigin = oldOrigin !== newOrigin;
+
+  if (isCrossOrigin) {
+    // Cross-origin: full reset
+    tabManager.resetTabState(tabId, newUrl);
     portManager.broadcastToTab(tabId, {
       type: BACKGROUND_MESSAGE_TYPE.TAB_STATE_RESET,
       payload: { tabId, reason: TAB_RESET_REASON.NAVIGATION },
     });
+  } else {
+    // Same-origin: just update URL, keep events
+    tabManager.updateTabUrl(tabId, newUrl);
   }
 }
 
@@ -269,7 +294,7 @@ async function notifyAllContentScripts(enabled: boolean): Promise<void> {
       type: BACKGROUND_TO_CONTENT_TYPE.SET_ENABLED,
       payload: { enabled },
     };
-    
+
     for (const tab of tabs) {
       if (tab.id !== undefined) {
         // Send to each tab, ignore errors (tab might not have content script)
@@ -287,15 +312,15 @@ async function notifyAllContentScripts(enabled: boolean): Promise<void> {
 export async function toggleExtensionEnabled(): Promise<boolean> {
   const currentSettings = await storage.getSettings();
   const newEnabled = !currentSettings.enabled;
-  
+
   await storage.updateSettings({ enabled: newEnabled });
   await notifyAllContentScripts(newEnabled);
-  
+
   // Broadcast to all connected clients (popup, devtools)
   portManager.broadcastToAll({
     type: BACKGROUND_MESSAGE_TYPE.EXTENSION_ENABLED_CHANGED,
     payload: { enabled: newEnabled },
   });
-  
+
   return newEnabled;
 }

@@ -134,6 +134,16 @@ export function resetTabState(tabId: number, newUrl: string = ""): void {
 }
 
 /**
+ * Update tab URL without clearing events (for same-origin navigation)
+ */
+export function updateTabUrl(tabId: number, newUrl: string): void {
+  const state = tabStates.get(tabId);
+  if (state) {
+    state.url = newUrl;
+  }
+}
+
+/**
  * Remove tab state entirely (for tab close)
  */
 export function removeTabState(tabId: number): boolean {
