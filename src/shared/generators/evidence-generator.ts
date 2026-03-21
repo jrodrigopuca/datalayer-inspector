@@ -7,7 +7,28 @@
 import { jsPDF } from "jspdf";
 import type { DataLayerEvent } from "../types/events";
 import type { EvidenceOptions, GeneratedEvidence } from "../types/evidence";
-import { EVIDENCE_FORMAT, DEFAULT_EVIDENCE_OPTIONS } from "../types/evidence";
+import {
+  EVIDENCE_FORMAT,
+  EVENT_VIEW_MODE,
+  DEFAULT_EVIDENCE_OPTIONS,
+} from "../types/evidence";
+
+/**
+ * Determine if an event should be expanded based on view mode
+ */
+function shouldExpandEvent(
+  event: DataLayerEvent,
+  options: EvidenceOptions
+): boolean {
+  switch (options.eventViewMode) {
+    case EVENT_VIEW_MODE.EXPANDED:
+      return true;
+    case EVENT_VIEW_MODE.COLLAPSED:
+      return false;
+    case EVENT_VIEW_MODE.CUSTOM:
+      return options.customExpandedEvents?.has(event.id) ?? false;
+  }
+}
 
 /** Colors for the evidence document */
 const COLORS = {
@@ -30,9 +51,9 @@ const COLORS = {
   // Brand
   brand: "#3B82F6",
   // Validation status
-  validPass: "#4ade80",   // green-400
-  validFail: "#f87171",   // red-400
-  validNone: "#a1a1aa",   // zinc-400
+  validPass: "#4ade80", // green-400
+  validFail: "#f87171", // red-400
+  validNone: "#a1a1aa", // zinc-400
 };
 
 /** PDF configuration */
@@ -83,10 +104,12 @@ function generatePNG(
   const eventData = events.map((event) => {
     const jsonStr = JSON.stringify(event.data, null, 2);
     const lines = jsonStr.split("\n");
+    const isExpanded = shouldExpandEvent(event, options);
     return {
       event,
       jsonLines: lines,
-      height: options.expandedView
+      isExpanded,
+      height: isExpanded
         ? eventHeaderHeight + lines.length * lineHeightPx + eventPadding * 2
         : collapsedEventHeight,
     };
@@ -95,8 +118,16 @@ function generatePNG(
   // Calculate total canvas height
   const headerHeight = 100; // Title + metadata
   const eventsHeaderHeight = 30;
-  const totalEventsHeight = eventData.reduce((sum, e) => sum + e.height + 10, 0);
-  const height = brandingHeight + headerHeight + eventsHeaderHeight + totalEventsHeight + padding * 2;
+  const totalEventsHeight = eventData.reduce(
+    (sum, e) => sum + e.height + 10,
+    0
+  );
+  const height =
+    brandingHeight +
+    headerHeight +
+    eventsHeaderHeight +
+    totalEventsHeight +
+    padding * 2;
 
   // Create canvas
   const canvas = document.createElement("canvas");
@@ -111,28 +142,28 @@ function generatePNG(
 
   // === BRANDING HEADER ===
   let y = padding;
-  
+
   // Logo "S" in blue rounded square
   const logoSize = 24;
   ctx.fillStyle = COLORS.brand;
   roundRect(ctx, padding, y - 2, logoSize, logoSize, 4);
   ctx.fill();
-  
+
   // "S" letter
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 16px system-ui, -apple-system, sans-serif";
   ctx.fillText("S", padding + 7, y + 16);
-  
+
   // "Strata" text
   ctx.fillStyle = COLORS.textBright;
   ctx.font = "bold 14px system-ui, -apple-system, sans-serif";
   ctx.fillText("Strata", padding + logoSize + 8, y + 15);
-  
+
   // "dataLayer Inspector" subtitle
   ctx.fillStyle = COLORS.textMuted;
   ctx.font = "11px system-ui, -apple-system, sans-serif";
   ctx.fillText("dataLayer Inspector", padding + logoSize + 60, y + 15);
-  
+
   y += brandingHeight;
 
   // === SCENARIO HEADER ===
@@ -172,11 +203,20 @@ function generatePNG(
   // Events header
   ctx.fillStyle = COLORS.textMuted;
   ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
-  ctx.fillText(`${events.length} event${events.length !== 1 ? "s" : ""} captured`, padding, y + 11);
+  ctx.fillText(
+    `${events.length} event${events.length !== 1 ? "s" : ""} captured`,
+    padding,
+    y + 11
+  );
   y += 25;
 
   // Render each event
-  for (const { event, jsonLines, height: cardHeight } of eventData) {
+  for (const {
+    event,
+    jsonLines,
+    height: cardHeight,
+    isExpanded,
+  } of eventData) {
     // Get validation status for this event
     const validation = options.validations?.get(event.id);
     const validationStatus = validation?.status ?? "none";
@@ -196,15 +236,16 @@ function generatePNG(
     if (options.includeValidation && validationStatus !== "none") {
       const badgeX = padding + 10 + ctx.measureText(eventLabel).width + 10;
       const badgeText = validationStatus === "pass" ? "✓ PASS" : "✗ FAIL";
-      const badgeColor = validationStatus === "pass" ? COLORS.validPass : COLORS.validFail;
-      
+      const badgeColor =
+        validationStatus === "pass" ? COLORS.validPass : COLORS.validFail;
+
       // Badge background
       ctx.font = "bold 9px system-ui, -apple-system, sans-serif";
       const badgeWidth = ctx.measureText(badgeText).width + 10;
       ctx.fillStyle = badgeColor + "30"; // 30 = ~19% opacity in hex
       roundRect(ctx, badgeX, y + 6, badgeWidth, 14, 3);
       ctx.fill();
-      
+
       // Badge text
       ctx.fillStyle = badgeColor;
       ctx.fillText(badgeText, badgeX + 5, y + 16);
@@ -216,12 +257,18 @@ function generatePNG(
     const time = new Date(event.timestamp).toLocaleTimeString();
     ctx.fillText(time, width - padding - 80, y + 18);
 
-    if (options.expandedView) {
+    if (isExpanded) {
       // Render JSON with syntax highlighting
       ctx.font = "10px monospace";
       let lineY = y + 35;
       for (const line of jsonLines) {
-        renderSyntaxHighlightedLine(ctx, line, padding + 10, lineY, width - padding * 2 - 20);
+        renderSyntaxHighlightedLine(
+          ctx,
+          line,
+          padding + 10,
+          lineY,
+          width - padding * 2 - 20
+        );
         lineY += lineHeightPx;
       }
     }
@@ -253,16 +300,16 @@ function renderSyntaxHighlightedLine(
 ): void {
   // Truncate if too long
   const truncatedLine = line.length > 95 ? line.slice(0, 95) + "..." : line;
-  
+
   // Parse and colorize JSON tokens
   const tokens = tokenizeLine(truncatedLine);
   let currentX = x;
-  
+
   for (const token of tokens) {
     ctx.fillStyle = token.color;
     ctx.fillText(token.text, currentX, y);
     currentX += ctx.measureText(token.text).width;
-    
+
     if (currentX > x + maxWidth) break;
   }
 }
@@ -272,7 +319,7 @@ function renderSyntaxHighlightedLine(
  */
 function tokenizeLine(line: string): Array<{ text: string; color: string }> {
   const tokens: Array<{ text: string; color: string }> = [];
-  
+
   // Regex patterns for JSON syntax
   const patterns: Array<{ regex: RegExp; color: string }> = [
     // Key (property name before colon)
@@ -288,19 +335,19 @@ function tokenizeLine(line: string): Array<{ text: string; color: string }> {
     // Brackets and braces
     { regex: /[{}\[\]]/, color: COLORS.bracket },
   ];
-  
+
   let remaining = line;
-  
+
   while (remaining.length > 0) {
     let matched = false;
-    
+
     // Check for key pattern first (special handling)
     const keyMatch = remaining.match(/^(\s*)("[\w$]+")(:\s*)/);
     if (keyMatch && keyMatch[0]) {
       const whitespace = keyMatch[1] ?? "";
       const key = keyMatch[2] ?? "";
       const colon = keyMatch[3] ?? "";
-      
+
       if (whitespace) {
         tokens.push({ text: whitespace, color: COLORS.text });
       }
@@ -314,7 +361,7 @@ function tokenizeLine(line: string): Array<{ text: string; color: string }> {
       matched = true;
       continue;
     }
-    
+
     // Check other patterns
     for (const { regex, color } of patterns.slice(1)) {
       const match = remaining.match(new RegExp(`^(${regex.source})`));
@@ -325,7 +372,7 @@ function tokenizeLine(line: string): Array<{ text: string; color: string }> {
         break;
       }
     }
-    
+
     // If no pattern matched, take one character as plain text
     if (!matched) {
       // Check for whitespace or punctuation
@@ -342,7 +389,7 @@ function tokenizeLine(line: string): Array<{ text: string; color: string }> {
       }
     }
   }
-  
+
   return tokens;
 }
 
@@ -375,24 +422,24 @@ function generatePDF(
   // Logo background (blue rounded rect)
   doc.setFillColor(59, 130, 246); // #3B82F6
   doc.roundedRect(margin, y - 2, 8, 8, 1, 1, "F");
-  
+
   // "S" letter
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(255, 255, 255);
   doc.text("S", margin + 2.5, y + 4);
-  
+
   // "Strata" text
   doc.setFontSize(11);
   doc.setTextColor(30, 30, 30);
   doc.text("Strata", margin + 11, y + 4);
-  
+
   // "dataLayer Inspector" subtitle
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(128, 128, 128);
   doc.text("dataLayer Inspector", margin + 28, y + 4);
-  
+
   y += lineHeight * 2.5;
 
   // === SCENARIO TITLE ===
@@ -434,21 +481,26 @@ function generatePDF(
 
   // Events summary
   doc.setTextColor(60, 60, 60);
-  doc.text(`${events.length} event${events.length !== 1 ? "s" : ""} captured`, margin, y);
+  doc.text(
+    `${events.length} event${events.length !== 1 ? "s" : ""} captured`,
+    margin,
+    y
+  );
   y += lineHeight * 2;
 
   // Events
   for (let i = 0; i < events.length; i++) {
     const event = events[i];
     if (!event) continue;
-    
+
     const eventName = event.eventName ?? "(no event name)";
     const time = new Date(event.timestamp).toLocaleTimeString();
+    const isExpanded = shouldExpandEvent(event, options);
 
     // Calculate space needed for this event
-    const jsonStr = options.expandedView ? JSON.stringify(event.data, null, 2) : "";
+    const jsonStr = isExpanded ? JSON.stringify(event.data, null, 2) : "";
     const jsonLines = jsonStr.split("\n");
-    const eventSpace = options.expandedView
+    const eventSpace = isExpanded
       ? lineHeight * 2 + jsonLines.length * (fontSize.code * 0.4) + lineHeight
       : lineHeight * 2;
 
@@ -473,23 +525,23 @@ function generatePDF(
       const eventTextWidth = doc.getTextWidth(eventText);
       const badgeX = margin + 2 + eventTextWidth + 3;
       const badgeText = validationStatus === "pass" ? "PASS" : "FAIL";
-      
+
       // Badge background
       doc.setFontSize(6);
       doc.setFont("helvetica", "bold");
       const badgeWidth = doc.getTextWidth(badgeText) + 3;
-      
+
       if (validationStatus === "pass") {
         doc.setFillColor(74, 222, 128); // green-400
       } else {
         doc.setFillColor(248, 113, 113); // red-400
       }
       doc.roundedRect(badgeX, y - 2.5, badgeWidth, 4, 0.5, 0.5, "F");
-      
+
       // Badge text
       doc.setTextColor(255, 255, 255);
       doc.text(badgeText, badgeX + 1.5, y + 0.5);
-      
+
       // Reset font
       doc.setFontSize(fontSize.body);
     }
@@ -499,14 +551,15 @@ function generatePDF(
     doc.text(time, pageWidth - margin - 25, y + 1);
     y += lineHeight + 2;
 
-    if (options.expandedView) {
+    if (isExpanded) {
       // Event data with syntax highlighting
       doc.setFontSize(fontSize.code);
       doc.setFont("courier", "normal");
 
       for (const line of jsonLines) {
         checkPageBreak(lineHeight);
-        const truncatedLine = line.length > 100 ? line.slice(0, 100) + "..." : line;
+        const truncatedLine =
+          line.length > 100 ? line.slice(0, 100) + "..." : line;
         renderPDFSyntaxLine(doc, truncatedLine, margin + 4, y);
         y += fontSize.code * 0.4;
       }
@@ -529,10 +582,15 @@ function generatePDF(
 /**
  * Render a syntax-highlighted line in PDF
  */
-function renderPDFSyntaxLine(doc: jsPDF, line: string, x: number, y: number): void {
+function renderPDFSyntaxLine(
+  doc: jsPDF,
+  line: string,
+  x: number,
+  y: number
+): void {
   const tokens = tokenizeLine(line);
   let currentX = x;
-  
+
   for (const token of tokens) {
     // Convert hex color to RGB
     const rgb = hexToRgb(token.color);

@@ -91,8 +91,13 @@ export { TEST_FRAMEWORK, ASSERTION_STYLE } from "./test-generator";
 // Evidence export types
 export type {
   EvidenceFormat,
+  EventViewMode,
   EvidenceOptions,
   GeneratedEvidence,
 } from "./evidence";
 
-export { EVIDENCE_FORMAT, DEFAULT_EVIDENCE_OPTIONS } from "./evidence";
+export {
+  EVIDENCE_FORMAT,
+  EVENT_VIEW_MODE,
+  DEFAULT_EVIDENCE_OPTIONS,
+} from "./evidence";

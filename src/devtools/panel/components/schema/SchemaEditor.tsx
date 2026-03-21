@@ -138,7 +138,7 @@ export function SchemaEditor({ schemaId }: SchemaEditorProps) {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Page View Event"
+            placeholder="e.g., My Event"
             className={cn(
               "w-full px-2 py-1.5 text-sm rounded border bg-panel-bg text-gray-100",
               "focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent",
@@ -163,7 +163,7 @@ export function SchemaEditor({ schemaId }: SchemaEditorProps) {
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g., Validates standard page view tracking"
+            placeholder="e.g., Validate something about my event"
             className={cn(
               "w-full px-2 py-1.5 text-sm rounded border bg-panel-bg text-gray-100 border-panel-border",
               "focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent",

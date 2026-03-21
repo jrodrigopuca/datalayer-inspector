@@ -10,7 +10,18 @@ export const EVIDENCE_FORMAT = {
   PDF: "pdf",
 } as const;
 
-export type EvidenceFormat = (typeof EVIDENCE_FORMAT)[keyof typeof EVIDENCE_FORMAT];
+export type EvidenceFormat =
+  (typeof EVIDENCE_FORMAT)[keyof typeof EVIDENCE_FORMAT];
+
+/** Event view mode for export */
+export const EVENT_VIEW_MODE = {
+  EXPANDED: "expanded",
+  COLLAPSED: "collapsed",
+  CUSTOM: "custom",
+} as const;
+
+export type EventViewMode =
+  (typeof EVENT_VIEW_MODE)[keyof typeof EVENT_VIEW_MODE];
 
 /** Evidence export options */
 export interface EvidenceOptions {
@@ -18,8 +29,10 @@ export interface EvidenceOptions {
   format: EvidenceFormat;
   /** Scenario/test name for header */
   scenarioName: string;
-  /** Whether to show expanded event details */
-  expandedView: boolean;
+  /** Event view mode: all expanded, all collapsed, or custom selection */
+  eventViewMode: EventViewMode;
+  /** Set of event IDs to expand (used when eventViewMode is 'custom') */
+  customExpandedEvents?: ReadonlySet<string>;
   /** Include timestamp in header */
   includeTimestamp: boolean;
   /** Include URL in header */
@@ -33,10 +46,13 @@ export interface EvidenceOptions {
 }
 
 /** Default evidence options */
-export const DEFAULT_EVIDENCE_OPTIONS: Omit<EvidenceOptions, "validations"> = {
+export const DEFAULT_EVIDENCE_OPTIONS: Omit<
+  EvidenceOptions,
+  "validations" | "customExpandedEvents"
+> = {
   format: EVIDENCE_FORMAT.PDF,
   scenarioName: "DataLayer Evidence",
-  expandedView: true,
+  eventViewMode: EVENT_VIEW_MODE.EXPANDED,
   includeTimestamp: true,
   includeUrl: true,
   includeContainers: true,

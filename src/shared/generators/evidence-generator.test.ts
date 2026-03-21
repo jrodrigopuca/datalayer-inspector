@@ -7,8 +7,12 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { generateEvidence } from "./evidence-generator";
-import { EVIDENCE_FORMAT } from "../types/evidence";
-import type { DataLayerEvent, EventValidation, ValidationResult } from "../types";
+import { EVIDENCE_FORMAT, EVENT_VIEW_MODE } from "../types/evidence";
+import type {
+  DataLayerEvent,
+  EventValidation,
+  ValidationResult,
+} from "../types";
 
 // Mock jsPDF
 vi.mock("jspdf", () => {
@@ -21,14 +25,18 @@ vi.mock("jspdf", () => {
     text: vi.fn(),
     addPage: vi.fn(),
     getTextWidth: vi.fn().mockReturnValue(20),
-    output: vi.fn().mockReturnValue(new Blob(["mock-pdf"], { type: "application/pdf" })),
+    output: vi
+      .fn()
+      .mockReturnValue(new Blob(["mock-pdf"], { type: "application/pdf" })),
   };
   return {
     jsPDF: vi.fn(() => mockDoc),
   };
 });
 
-function createMockEvent(overrides: Partial<DataLayerEvent> = {}): DataLayerEvent {
+function createMockEvent(
+  overrides: Partial<DataLayerEvent> = {}
+): DataLayerEvent {
   return {
     id: "evt-1",
     timestamp: Date.now(),
@@ -75,7 +83,9 @@ describe("generateEvidence", () => {
   describe("PDF generation", () => {
     it("generates PDF with default options", async () => {
       const events = [createMockEvent()];
-      const result = await generateEvidence(events, { format: EVIDENCE_FORMAT.PDF });
+      const result = await generateEvidence(events, {
+        format: EVIDENCE_FORMAT.PDF,
+      });
 
       expect(result.blob).toBeInstanceOf(Blob);
       expect(result.mimeType).toBe("application/pdf");
@@ -93,7 +103,9 @@ describe("generateEvidence", () => {
     });
 
     it("handles empty events array", async () => {
-      const result = await generateEvidence([], { format: EVIDENCE_FORMAT.PDF });
+      const result = await generateEvidence([], {
+        format: EVIDENCE_FORMAT.PDF,
+      });
 
       expect(result.blob).toBeInstanceOf(Blob);
       expect(result.mimeType).toBe("application/pdf");
@@ -121,26 +133,43 @@ describe("generateEvidence", () => {
         createMockEvent({ id: "evt-3", eventName: "purchase" }),
       ];
 
-      const result = await generateEvidence(events, { format: EVIDENCE_FORMAT.PDF });
+      const result = await generateEvidence(events, {
+        format: EVIDENCE_FORMAT.PDF,
+      });
 
       expect(result.blob).toBeInstanceOf(Blob);
     });
 
-    it("respects expandedView option", async () => {
+    it("respects eventViewMode option", async () => {
       const events = [createMockEvent()];
 
       // Both should succeed
       const expanded = await generateEvidence(events, {
         format: EVIDENCE_FORMAT.PDF,
-        expandedView: true,
+        eventViewMode: EVENT_VIEW_MODE.EXPANDED,
       });
       const collapsed = await generateEvidence(events, {
         format: EVIDENCE_FORMAT.PDF,
-        expandedView: false,
+        eventViewMode: EVENT_VIEW_MODE.COLLAPSED,
       });
 
       expect(expanded.blob).toBeInstanceOf(Blob);
       expect(collapsed.blob).toBeInstanceOf(Blob);
+    });
+
+    it("respects custom eventViewMode with specific events expanded", async () => {
+      const events = [
+        createMockEvent({ id: "evt-1", eventName: "page_view" }),
+        createMockEvent({ id: "evt-2", eventName: "add_to_cart" }),
+      ];
+
+      const result = await generateEvidence(events, {
+        format: EVIDENCE_FORMAT.PDF,
+        eventViewMode: EVENT_VIEW_MODE.CUSTOM,
+        customExpandedEvents: new Set(["evt-1"]), // Only first event expanded
+      });
+
+      expect(result.blob).toBeInstanceOf(Blob);
     });
   });
 
@@ -182,7 +211,9 @@ describe("generateEvidence", () => {
 
     it("includes current date in filename", async () => {
       const events = [createMockEvent()];
-      const result = await generateEvidence(events, { format: EVIDENCE_FORMAT.PDF });
+      const result = await generateEvidence(events, {
+        format: EVIDENCE_FORMAT.PDF,
+      });
 
       const today = new Date().toISOString().slice(0, 10);
       expect(result.filename).toContain(today);
@@ -213,7 +244,12 @@ describe("generateEvidence", () => {
     it("handles events with pass status", async () => {
       const events = [createMockEvent({ id: "evt-1" })];
       const validations = new Map<string, EventValidation>([
-        ["evt-1", createMockEventValidation("evt-1", "pass", [createMockValidationResult("s1", "pass")])],
+        [
+          "evt-1",
+          createMockEventValidation("evt-1", "pass", [
+            createMockValidationResult("s1", "pass"),
+          ]),
+        ],
       ]);
 
       const result = await generateEvidence(events, {
@@ -250,8 +286,18 @@ describe("generateEvidence", () => {
         createMockEvent({ id: "evt-3" }),
       ];
       const validations = new Map<string, EventValidation>([
-        ["evt-1", createMockEventValidation("evt-1", "pass", [createMockValidationResult("s1", "pass")])],
-        ["evt-2", createMockEventValidation("evt-2", "fail", [createMockValidationResult("s1", "fail")])],
+        [
+          "evt-1",
+          createMockEventValidation("evt-1", "pass", [
+            createMockValidationResult("s1", "pass"),
+          ]),
+        ],
+        [
+          "evt-2",
+          createMockEventValidation("evt-2", "fail", [
+            createMockValidationResult("s1", "fail"),
+          ]),
+        ],
         // evt-3 has no validation (none status)
       ]);
 
