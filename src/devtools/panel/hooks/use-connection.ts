@@ -79,11 +79,9 @@ export function useConnection(): void {
           break;
 
         case BACKGROUND_MESSAGE_TYPE.TAB_STATE_RESET:
-          clearEvents();
-          // Re-sync state after navigation to ensure we're in sync with background
-          setTimeout(() => {
-            void requestInitialState(tabId);
-          }, 100);
+          // Re-sync state from background - don't clear first to avoid flash of empty state
+          // The requestInitialState will set the correct events from background
+          void requestInitialState(tabId);
           break;
 
         case BACKGROUND_MESSAGE_TYPE.RECORDING_CHANGED:

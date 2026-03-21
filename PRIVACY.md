@@ -32,12 +32,12 @@ When you use Strata:
 
 Strata requests the following permissions:
 
-| Permission | Why It's Needed |
-|------------|-----------------|
-| `activeTab` | To inject the dataLayer capture script into the current page |
-| `scripting` | To run the capture script that intercepts dataLayer.push() calls |
-| `storage` | To save your validation schemas locally |
-| `host_permissions: <all_urls>` | To work on any website where you need to debug dataLayer |
+| Permission                     | Why It's Needed                                                  |
+| ------------------------------ | ---------------------------------------------------------------- |
+| `activeTab`                    | To inject the dataLayer capture script into the current page     |
+| `scripting`                    | To run the capture script that intercepts dataLayer.push() calls |
+| `storage`                      | To save your validation schemas locally                          |
+| `host_permissions: <all_urls>` | To work on any website where you need to debug dataLayer         |
 
 ## Third-Party Services
 
@@ -63,7 +63,7 @@ If we make changes to this privacy policy, we will update the "Last updated" dat
 
 Strata is open source software. You can review the complete source code to verify our privacy practices:
 
-https://github.com/YOUR_USERNAME/strata
+https://github.com/jrodrigopuca/datalayer-inspector
 
 ## Contact
 

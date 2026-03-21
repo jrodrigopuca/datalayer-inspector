@@ -18,11 +18,15 @@ import {
   toggleExtensionEnabled,
 } from "./message-handler";
 import { PORT_NAME } from "@shared/types";
+import * as tabManager from "./tab-manager";
 
 /**
  * Initialize service worker
  */
-function init(): void {
+async function init(): Promise<void> {
+  // Restore tab states from session storage first (survives service worker dormancy)
+  await tabManager.restoreFromStorage();
+
   setupMessageListeners();
   setupPortListener();
   setupTabListeners();
@@ -86,7 +90,11 @@ function isClientRequest(message: unknown): boolean {
 function setupPortListener(): void {
   chrome.runtime.onConnect.addListener((port) => {
     // Validate port name
-    if (!Object.values(PORT_NAME).includes(port.name as typeof PORT_NAME[keyof typeof PORT_NAME])) {
+    if (
+      !Object.values(PORT_NAME).includes(
+        port.name as (typeof PORT_NAME)[keyof typeof PORT_NAME]
+      )
+    ) {
       console.warn(`[Strata] Unknown port: ${port.name}`);
       return;
     }
@@ -123,10 +131,37 @@ function setupTabListeners(): void {
     handleTabRemoved(tabId);
   });
 
-  // Tab navigation (URL change)
+  // Tab navigation (URL change) - only react to pathname changes, not hash/query
   chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.url) {
-      handleTabNavigation(tabId, changeInfo.url);
+      const state = tabManager.getTabState(tabId);
+
+      // No previous state, let handleTabNavigation deal with it
+      if (!state?.url) {
+        handleTabNavigation(tabId, changeInfo.url);
+        return;
+      }
+
+      try {
+        const oldUrl = new URL(state.url);
+        const newUrl = new URL(changeInfo.url);
+
+        // Only trigger navigation for origin or pathname changes
+        // Ignore hash and query param changes (SPAs, anchors, etc.)
+        const hasSignificantChange =
+          oldUrl.origin !== newUrl.origin ||
+          oldUrl.pathname !== newUrl.pathname;
+
+        if (hasSignificantChange) {
+          handleTabNavigation(tabId, changeInfo.url);
+        } else {
+          // Just update URL without any reset logic
+          tabManager.updateTabUrl(tabId, changeInfo.url);
+        }
+      } catch {
+        // Invalid URL, let handleTabNavigation deal with it
+        handleTabNavigation(tabId, changeInfo.url);
+      }
     }
   });
 
@@ -152,4 +187,4 @@ function setupCommandListener(): void {
 }
 
 // Initialize
-init();
+void init();
