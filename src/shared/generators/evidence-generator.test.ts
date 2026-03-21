@@ -14,23 +14,22 @@ import type {
   ValidationResult,
 } from "../types";
 
-// Mock jsPDF
+// Mock jsPDF - vitest 4 requires class-based mocks
 vi.mock("jspdf", () => {
-  const mockDoc = {
-    setFillColor: vi.fn(),
-    roundedRect: vi.fn(),
-    setFontSize: vi.fn(),
-    setFont: vi.fn(),
-    setTextColor: vi.fn(),
-    text: vi.fn(),
-    addPage: vi.fn(),
-    getTextWidth: vi.fn().mockReturnValue(20),
-    output: vi
-      .fn()
-      .mockReturnValue(new Blob(["mock-pdf"], { type: "application/pdf" })),
-  };
   return {
-    jsPDF: vi.fn(() => mockDoc),
+    jsPDF: class MockJsPDF {
+      setFillColor = vi.fn();
+      roundedRect = vi.fn();
+      setFontSize = vi.fn();
+      setFont = vi.fn();
+      setTextColor = vi.fn();
+      text = vi.fn();
+      addPage = vi.fn();
+      getTextWidth = vi.fn().mockReturnValue(20);
+      output = vi
+        .fn()
+        .mockReturnValue(new Blob(["mock-pdf"], { type: "application/pdf" }));
+    },
   };
 });
 
