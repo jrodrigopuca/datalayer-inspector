@@ -5,14 +5,14 @@
  * These tests focus on the PDF generation and helper functions.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { generateEvidence } from "./evidence-generator";
-import { EVIDENCE_FORMAT, EVENT_VIEW_MODE } from "../types/evidence";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   DataLayerEvent,
   EventValidation,
   ValidationResult,
 } from "../types";
+import { EVENT_VIEW_MODE, EVIDENCE_FORMAT } from "../types/evidence";
+import { generateEvidence } from "./evidence-generator";
 
 // Mock jsPDF - vitest 4 requires class-based mocks
 vi.mock("jspdf", () => {

@@ -4,8 +4,8 @@
  * These compute values from store state without modifying it
  */
 
-import type { DataLayerEvent } from "@shared/types";
 import { EVENT_PATTERNS } from "@shared/constants";
+import type { DataLayerEvent } from "@shared/types";
 
 import type { PanelStore } from "./index";
 
@@ -32,9 +32,7 @@ function getEventDataString(event: DataLayerEvent): string {
  */
 export function selectSelectedEvent(state: PanelStore): DataLayerEvent | null {
   if (!state.selectedEventId) return null;
-  return (
-    state.events.find((e) => e.id === state.selectedEventId) ?? null
-  );
+  return state.events.find((e) => e.id === state.selectedEventId) ?? null;
 }
 
 /**

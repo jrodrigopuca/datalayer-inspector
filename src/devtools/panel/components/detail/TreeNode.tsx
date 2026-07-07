@@ -2,9 +2,9 @@
  * TreeNode component - recursive JSON tree node
  */
 
+import { cn } from "@/lib/utils";
 import { usePanelStore } from "../../store";
 import { ArrowIcon } from "../common";
-import { cn } from "@/lib/utils";
 
 interface TreeNodeProps {
   keyName: string | number;
@@ -107,6 +107,7 @@ export function TreeNode({ keyName, value, path, depth }: TreeNodeProps) {
         {/* Expand/collapse arrow */}
         {expandable ? (
           <button
+            type="button"
             onClick={() => togglePath(path)}
             className="w-4 h-4 flex items-center justify-center text-gray-500 hover:text-gray-300"
           >

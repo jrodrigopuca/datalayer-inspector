@@ -22,6 +22,9 @@ playwright/.cache/
 .DS_Store
 Thumbs.db
 
+# Release artifacts
+*.zip
+
 # Env files
 .env
 .env.local

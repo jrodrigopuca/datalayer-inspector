@@ -4,8 +4,8 @@
  * Manages persistent user settings using chrome.storage.sync
  */
 
-import { DEFAULT_SETTINGS, type UserSettings } from "@shared/types";
 import { STORAGE_KEYS } from "@shared/constants";
+import { DEFAULT_SETTINGS, type UserSettings } from "@shared/types";
 
 /**
  * Cached settings to avoid repeated storage reads
@@ -92,16 +92,14 @@ export function onSettingsChanged(
   callback: (settings: UserSettings) => void
 ): () => void {
   const key = STORAGE_KEYS.SETTINGS;
-  
+
   const listener = (
     changes: { [key: string]: chrome.storage.StorageChange },
     areaName: string
   ) => {
     const change = changes[key];
     if (areaName === "sync" && change) {
-      const newValue = change.newValue as
-        | Partial<UserSettings>
-        | undefined;
+      const newValue = change.newValue as Partial<UserSettings> | undefined;
 
       cachedSettings = {
         ...DEFAULT_SETTINGS,
@@ -111,9 +109,9 @@ export function onSettingsChanged(
       callback(cachedSettings);
     }
   };
-  
+
   chrome.storage.onChanged.addListener(listener);
-  
+
   // Return unsubscribe function
   return () => {
     chrome.storage.onChanged.removeListener(listener);

@@ -2,10 +2,9 @@
  * Generators index
  */
 
+export { generateEvidence } from "./evidence-generator";
 export {
+  ASSERTION_STYLE,
   generateTestCode,
   TEST_FRAMEWORK,
-  ASSERTION_STYLE,
 } from "./test-generator";
-
-export { generateEvidence } from "./evidence-generator";

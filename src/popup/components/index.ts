@@ -2,6 +2,6 @@
  * Popup components index
  */
 
-export { EventSummary } from "./EventSummary";
 export { ContainerList } from "./ContainerList";
+export { EventSummary } from "./EventSummary";
 export { QuickActions } from "./QuickActions";

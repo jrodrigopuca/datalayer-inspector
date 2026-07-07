@@ -4,17 +4,17 @@
  * Handles CRUD operations and syncs with chrome.storage
  */
 
-import { useEffect, useCallback } from "react";
-import { useShallow } from "zustand/react/shallow";
-import { usePanelStore } from "../store";
 import type {
-  Schema,
   CreateSchemaInput,
-  UpdateSchemaInput,
   DataLayerEvent,
+  Schema,
   TemplateObject,
+  UpdateSchemaInput,
 } from "@shared/types";
 import { eventToTemplate } from "@shared/validators";
+import { useCallback, useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
+import { usePanelStore } from "../store";
 
 const STORAGE_KEY = "strata_schemas";
 
@@ -73,7 +73,7 @@ export function useSchemas(): UseSchemasReturn {
       }
     }
 
-    loadSchemas();
+    void loadSchemas();
   }, [setSchemas]);
 
   // Save schemas to storage when they change
@@ -88,7 +88,7 @@ export function useSchemas(): UseSchemasReturn {
 
     // Only save if we have schemas (avoid clearing on initial load)
     if (schemas.length > 0) {
-      saveSchemas();
+      void saveSchemas();
     }
   }, [schemas]);
 
@@ -123,8 +123,7 @@ export function useSchemas(): UseSchemasReturn {
   const createSchemaFromEvent = useCallback(
     (event: DataLayerEvent, name?: string): Schema => {
       const template: TemplateObject = eventToTemplate(event.data);
-      const schemaName =
-        name || `${event.eventName || "Unknown Event"} Schema`;
+      const schemaName = name || `${event.eventName || "Unknown Event"} Schema`;
 
       return storeAddSchema({
         name: schemaName,

@@ -2,7 +2,7 @@
  * useFocusTrap hook - traps focus within a container and handles Escape key
  */
 
-import { useEffect, useRef, type RefObject } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 
 interface UseFocusTrapOptions {
   /** Whether the trap is active */
@@ -14,13 +14,13 @@ interface UseFocusTrapOptions {
 }
 
 const DEFAULT_FOCUSABLE_SELECTOR = [
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  'a[href]',
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "a[href]",
   '[tabindex]:not([tabindex="-1"])',
-].join(', ');
+].join(", ");
 
 /**
  * Hook that traps focus within a container element
@@ -66,7 +66,9 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>({
         if (focusableElements.length === 0) return;
 
         const firstElement = focusableElements[0] as HTMLElement;
-        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+        const lastElement = focusableElements[
+          focusableElements.length - 1
+        ] as HTMLElement;
 
         if (e.shiftKey) {
           // Shift+Tab: if on first element, go to last

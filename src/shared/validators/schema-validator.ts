@@ -11,17 +11,17 @@
  */
 
 import type {
+  DataLayerEvent,
+  EventValidation,
   Schema,
-  TemplateValue,
   TemplateObject,
+  TemplateValue,
   ValidationError,
   ValidationResult,
-  EventValidation,
-  DataLayerEvent,
 } from "../types";
 import {
-  isTypePlaceholder,
   isExtendedPlaceholder,
+  isTypePlaceholder,
   parsePlaceholder,
   TYPE_PLACEHOLDER,
 } from "../types";
@@ -39,10 +39,7 @@ function getValueType(value: unknown): string {
 /**
  * Check if a value matches a type placeholder
  */
-function matchesTypePlaceholder(
-  value: unknown,
-  placeholder: string
-): boolean {
+function matchesTypePlaceholder(value: unknown, placeholder: string): boolean {
   switch (placeholder) {
     case TYPE_PLACEHOLDER.STRING:
       return typeof value === "string";
@@ -73,7 +70,7 @@ function formatValue(value: unknown): string {
   if (typeof value === "object") {
     try {
       const json = JSON.stringify(value);
-      return json.length > 50 ? json.slice(0, 47) + "..." : json;
+      return json.length > 50 ? `${json.slice(0, 47)}...` : json;
     } catch {
       return "[object]";
     }
@@ -153,7 +150,7 @@ function validateValue(
           }
           return;
 
-        case "enum":
+        case "enum": {
           // Enum: value must be one of the allowed values
           const enumValues = parsed.enumValues!;
           if (!enumValues.includes(String(actual))) {
@@ -165,6 +162,7 @@ function validateValue(
             });
           }
           return;
+        }
 
         case "basic":
           // Basic type placeholder
@@ -220,7 +218,11 @@ function validateValue(
 
   // Handle objects
   if (typeof expected === "object" && expected !== null) {
-    if (typeof actual !== "object" || actual === null || Array.isArray(actual)) {
+    if (
+      typeof actual !== "object" ||
+      actual === null ||
+      Array.isArray(actual)
+    ) {
       errors.push({
         path,
         message: `Expected object, got ${getValueType(actual)}`,
@@ -296,10 +298,7 @@ function isAnyPlaceholder(value: unknown): boolean {
 /**
  * Check if all literal values in a template match the corresponding values in data
  */
-function templateMatchesData(
-  template: TemplateValue,
-  data: unknown
-): boolean {
+function templateMatchesData(template: TemplateValue, data: unknown): boolean {
   // Any placeholder (basic, optional, enum) always matches for matching purposes
   if (typeof template === "string" && isAnyPlaceholder(template)) {
     return true;
@@ -337,7 +336,11 @@ function templateMatchesData(
           return false;
         }
         // For nested objects, check if they contain any literals
-        if (typeof templateValue === "object" && templateValue !== null && containsLiterals(templateValue)) {
+        if (
+          typeof templateValue === "object" &&
+          templateValue !== null &&
+          containsLiterals(templateValue)
+        ) {
           return false;
         }
       }
@@ -467,9 +470,7 @@ export function validateAllEvents(
  * Convert a real event to a template (auto-detect types)
  * Useful for "Create Schema from Event" feature
  */
-export function eventToTemplate(
-  data: Record<string, unknown>
-): TemplateObject {
+export function eventToTemplate(data: Record<string, unknown>): TemplateObject {
   const template: TemplateObject = {};
 
   for (const [key, value] of Object.entries(data)) {

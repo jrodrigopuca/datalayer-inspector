@@ -1,19 +1,19 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import type { DataLayerEvent } from "@shared/types";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
+  addEvent,
+  clearAllStates,
+  clearEvents,
+  getContainers,
+  getEvents,
   getOrCreateTabState,
   getTabState,
   hasTabState,
-  addEvent,
-  updateContainers,
-  setRecording,
-  clearEvents,
-  resetTabState,
   removeTabState,
-  getEvents,
-  getContainers,
-  clearAllStates,
+  resetTabState,
+  setRecording,
+  updateContainers,
 } from "./tab-manager";
-import type { DataLayerEvent } from "@shared/types";
 
 describe("tab-manager", () => {
   beforeEach(() => {

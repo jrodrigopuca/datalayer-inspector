@@ -2,16 +2,16 @@
  * Schemas slice - manages validation schemas
  */
 
-import type { StateCreator } from "zustand";
 import type {
-  Schema,
   CreateSchemaInput,
-  UpdateSchemaInput,
-  EventValidation,
   DataLayerEvent,
+  EventValidation,
+  Schema,
+  UpdateSchemaInput,
 } from "@shared/types";
 import { createSchema } from "@shared/types";
 import { validateEvent } from "@shared/validators";
+import type { StateCreator } from "zustand";
 
 export interface SchemasSlice {
   /** All validation schemas */
@@ -32,7 +32,10 @@ export interface SchemasSlice {
   /** Validate all events (full re-validation, use sparingly) */
   validateEvents: (events: readonly DataLayerEvent[]) => void;
   /** Validate only new events (incremental, preferred) */
-  validateNewEvents: (allEvents: readonly DataLayerEvent[], newEventIds: Set<string>) => void;
+  validateNewEvents: (
+    allEvents: readonly DataLayerEvent[],
+    newEventIds: Set<string>
+  ) => void;
   getValidation: (eventId: string) => EventValidation | undefined;
   clearValidations: () => void;
   /** Invalidate all validations (call when schemas change) */
@@ -80,10 +83,11 @@ export const createSchemasSlice: StateCreator<
       _schemaVersion: state._schemaVersion + 1,
     })),
 
-  setSchemas: (schemas) => set((state) => ({ 
-    schemas,
-    _schemaVersion: state._schemaVersion + 1,
-  })),
+  setSchemas: (schemas) =>
+    set((state) => ({
+      schemas,
+      _schemaVersion: state._schemaVersion + 1,
+    })),
 
   toggleSchemaEnabled: (id) =>
     set((state) => ({
@@ -106,13 +110,13 @@ export const createSchemasSlice: StateCreator<
 
   validateNewEvents: (allEvents, newEventIds) => {
     const { schemas, validations: existingValidations } = get();
-    
+
     // If no new events, nothing to do
     if (newEventIds.size === 0) return;
-    
+
     // Create new map with existing validations
     const validations = new Map(existingValidations);
-    
+
     // Only validate new events
     for (const event of allEvents) {
       if (newEventIds.has(event.id)) {
@@ -128,6 +132,6 @@ export const createSchemasSlice: StateCreator<
   },
 
   clearValidations: () => set({ validations: new Map() }),
-  
+
   invalidateValidations: () => set({ validations: new Map() }),
 });

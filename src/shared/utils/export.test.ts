@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DataLayerEvent } from "../types";
 import {
   createExportPayload,
-  serializeExport,
   generateExportFilename,
+  serializeExport,
   transformEventForExport,
 } from "./export";
-import type { DataLayerEvent } from "../types";
 
 // Fixed date for predictable tests
 const FIXED_DATE = new Date("2024-03-15T12:00:00.000Z");
@@ -13,7 +13,9 @@ const FIXED_TIMESTAMP = FIXED_DATE.getTime();
 const FIXED_ISO = FIXED_DATE.toISOString();
 
 // Mock event factory
-function createMockEvent(overrides: Partial<DataLayerEvent> = {}): DataLayerEvent {
+function createMockEvent(
+  overrides: Partial<DataLayerEvent> = {}
+): DataLayerEvent {
   return {
     id: "test-id-123",
     timestamp: FIXED_TIMESTAMP,
@@ -178,9 +180,13 @@ describe("generateExportFilename", () => {
   });
 
   it("handles domains with multiple dots", () => {
-    const filename = generateExportFilename("https://sub.domain.example.co.uk/path");
+    const filename = generateExportFilename(
+      "https://sub.domain.example.co.uk/path"
+    );
 
-    expect(filename).toBe("datalayer-sub-domain-example-co-uk-2024-03-15T10-30-45.json");
+    expect(filename).toBe(
+      "datalayer-sub-domain-example-co-uk-2024-03-15T10-30-45.json"
+    );
   });
 
   it("handles invalid URLs gracefully", () => {

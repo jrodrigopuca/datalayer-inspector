@@ -1,15 +1,15 @@
 /**
  * StatusBar component - bottom status bar
- * 
+ *
  * Shows connection status, event counts, and keyboard hints
  * Recording status is shown in Toolbar to avoid duplication
  */
 
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { cn } from "@/lib/utils";
 import { usePanelStore } from "../../store";
 import { selectConnectionInfo, selectEventCounts } from "../../store/selectors";
-import { cn } from "@/lib/utils";
 
 export function StatusBar() {
   const { containers, errorMessage } = usePanelStore(
@@ -68,11 +68,13 @@ export function StatusBar() {
               <span className="text-event-custom">{counts.custom}</span>)
             </button>
           )}
-          
+
           {/* Color legend popup */}
           {showLegend && (
             <div className="absolute bottom-full left-0 mb-1 p-2 bg-panel-bg border border-panel-border rounded shadow-lg z-10">
-              <p className="text-gray-300 font-medium mb-1.5">Event Categories</p>
+              <p className="text-gray-300 font-medium mb-1.5">
+                Event Categories
+              </p>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-event-gtm" />
@@ -82,7 +84,9 @@ export function StatusBar() {
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-event-ecommerce" />
                   <span className="text-event-ecommerce">Ecommerce</span>
-                  <span className="text-gray-500">— purchase, view_item, etc.</span>
+                  <span className="text-gray-500">
+                    — purchase, view_item, etc.
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-event-custom" />
@@ -101,7 +105,9 @@ export function StatusBar() {
 
         {/* Container count */}
         {containers.length > 0 && (
-          <span>{containers.length} container{containers.length !== 1 ? "s" : ""}</span>
+          <span>
+            {containers.length} container{containers.length !== 1 ? "s" : ""}
+          </span>
         )}
       </div>
 

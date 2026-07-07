@@ -7,9 +7,9 @@
  * Runs at: document_start
  */
 
-import { injectPageScript } from "./injector";
-import { startRelay, setEnabled } from "./relay";
 import { CLIENT_REQUEST_TYPE, CLIENT_RESPONSE_TYPE } from "@shared/types";
+import { injectPageScript } from "./injector";
+import { setEnabled, startRelay } from "./relay";
 
 /**
  * Initialize content script
@@ -40,7 +40,7 @@ async function checkIfEnabled(): Promise<boolean> {
     const response = await chrome.runtime.sendMessage({
       type: CLIENT_REQUEST_TYPE.GET_SETTINGS,
     });
-    
+
     if (response?.type === CLIENT_RESPONSE_TYPE.SETTINGS) {
       return response.payload.enabled ?? true;
     }
@@ -52,4 +52,6 @@ async function checkIfEnabled(): Promise<boolean> {
 }
 
 // Initialize immediately
-init();
+init().catch((error: unknown) => {
+  console.error("[Strata] Content script init failed:", error);
+});

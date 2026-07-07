@@ -2,7 +2,7 @@
  * Button component
  */
 
-import { forwardRef, type ButtonHTMLAttributes } from "react";
+import { type ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
 const BUTTON_VARIANT = {
@@ -46,7 +46,13 @@ const sizeStyles: Record<ButtonSize, string> = {
 };
 
 function Button(
-  { className, variant = "default", size = "md", disabled, ...props }: ButtonProps,
+  {
+    className,
+    variant = "default",
+    size = "md",
+    disabled,
+    ...props
+  }: ButtonProps,
   ref: React.ForwardedRef<HTMLButtonElement>
 ) {
   return (
@@ -69,5 +75,5 @@ function Button(
 const ForwardedButton = forwardRef(Button);
 ForwardedButton.displayName = "Button";
 
-export { ForwardedButton as Button, BUTTON_VARIANT, BUTTON_SIZE };
-export type { ButtonProps, ButtonVariant, ButtonSize };
+export type { ButtonProps, ButtonSize, ButtonVariant };
+export { BUTTON_SIZE, BUTTON_VARIANT, ForwardedButton as Button };

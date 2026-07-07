@@ -2,9 +2,9 @@
  * ValidationErrors component - shows validation errors for a specific event
  */
 
-import { usePanelStore } from "../../store";
 import { useValidation } from "../../hooks";
-import { Button, ErrorIcon, CloseIcon, CheckIcon } from "../common";
+import { usePanelStore } from "../../store";
+import { Button, CheckIcon, CloseIcon, ErrorIcon } from "../common";
 
 interface ValidationErrorsProps {
   eventId: string;
@@ -39,7 +39,12 @@ export function ValidationErrors({ eventId }: ValidationErrorsProps) {
             {event.eventName ?? "(push)"}
           </span>
         </div>
-        <Button size="sm" variant="ghost" onClick={showEventDetail} title="Back">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={showEventDetail}
+          title="Back"
+        >
           <CloseIcon className="w-4 h-4" />
         </Button>
       </div>
@@ -81,15 +86,24 @@ export function ValidationErrors({ eventId }: ValidationErrorsProps) {
                   </span>
                 </div>
                 <div className="space-y-1.5">
-                  {result.errors.map((error, idx) => (
-                    <div key={idx} className="text-xs">
+                  {result.errors.map((error) => (
+                    <div
+                      key={`${error.path}:${error.message}`}
+                      className="text-xs"
+                    >
                       <code className="text-yellow-400">{error.path}</code>
-                      <span className="text-gray-400 ml-2">{error.message}</span>
+                      <span className="text-gray-400 ml-2">
+                        {error.message}
+                      </span>
                       {error.expected && error.actual && (
                         <div className="mt-0.5 pl-2 text-gray-500">
-                          Expected: <span className="text-green-400">{error.expected}</span>
+                          Expected:{" "}
+                          <span className="text-green-400">
+                            {error.expected}
+                          </span>
                           {" → "}
-                          Got: <span className="text-red-400">{error.actual}</span>
+                          Got:{" "}
+                          <span className="text-red-400">{error.actual}</span>
                         </div>
                       )}
                     </div>

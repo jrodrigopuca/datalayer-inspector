@@ -2,12 +2,12 @@
  * SchemaEditor component - create or edit validation schemas
  */
 
-import { useState, useEffect } from "react";
-import { usePanelStore } from "../../store";
-import { useSchemas } from "../../hooks";
-import { Button, SchemaIcon, JsonEditor } from "../common";
-import { cn } from "@/lib/utils";
 import type { TemplateObject } from "@shared/types";
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
+import { useSchemas } from "../../hooks";
+import { usePanelStore } from "../../store";
+import { Button, JsonEditor, SchemaIcon } from "../common";
 
 interface SchemaEditorProps {
   /** Schema ID to edit, or null for new schema */
@@ -143,9 +143,7 @@ export function SchemaEditor({ schemaId }: SchemaEditorProps) {
               "w-full px-2 py-1.5 text-sm rounded border bg-panel-bg text-gray-100",
               "focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent",
               "placeholder:text-gray-600",
-              name.trim() === ""
-                ? "border-red-500/50"
-                : "border-panel-border"
+              name.trim() === "" ? "border-red-500/50" : "border-panel-border"
             )}
           />
         </div>
@@ -235,7 +233,8 @@ function TypePlaceholdersHelp() {
           </span>
         </div>
         <p className="text-2xs text-gray-500 mt-1">
-          Literal values must match exactly. Enum values without quotes: <code className="text-event-gtm">@enum(USD, EUR)</code>
+          Literal values must match exactly. Enum values without quotes:{" "}
+          <code className="text-event-gtm">@enum(USD, EUR)</code>
         </p>
       </div>
     </div>

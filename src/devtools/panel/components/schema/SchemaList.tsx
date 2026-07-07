@@ -2,31 +2,35 @@
  * SchemaList component - displays all validation schemas
  */
 
+import type { Schema } from "@shared/types";
 import { useRef, useState } from "react";
-import { usePanelStore } from "../../store";
 import { useSchemas } from "../../hooks";
+import { usePanelStore } from "../../store";
 import {
   Button,
-  Toggle,
-  ConfirmDialog,
-  SchemaIcon,
-  PlusIcon,
   CloseIcon,
+  ConfirmDialog,
   EditIcon,
-  TrashIcon,
-  ImportIcon,
   ExportIcon,
+  ImportIcon,
+  PlusIcon,
+  SchemaIcon,
+  Toggle,
+  TrashIcon,
 } from "../common";
-import type { Schema } from "@shared/types";
 
 export function SchemaList() {
-  const { schemas, toggleSchema, deleteSchema, importSchemas, exportSchemas } = useSchemas();
+  const { schemas, toggleSchema, deleteSchema, importSchemas, exportSchemas } =
+    useSchemas();
   const showSchemaEditor = usePanelStore((s) => s.showSchemaEditor);
   const showEventDetail = usePanelStore((s) => s.showEventDetail);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Confirm dialog state
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const enabledCount = schemas.filter((s) => s.enabled).length;
 
@@ -258,9 +262,7 @@ function EmptyState({ onCreateNew }: EmptyStateProps) {
 /**
  * Extract event name from schema template
  */
-function getSchemaEventName(
-  template: Record<string, unknown>
-): string | null {
+function getSchemaEventName(template: Record<string, unknown>): string | null {
   const eventValue = template.event;
   if (typeof eventValue === "string" && !eventValue.startsWith("@")) {
     return eventValue;

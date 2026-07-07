@@ -269,12 +269,12 @@ export function createSchema(input: CreateSchemaInput): Schema {
     createdAt: now,
     updatedAt: now,
   };
-  
+
   // Only add description if provided
   if (input.description !== undefined) {
     return { ...schema, description: input.description };
   }
-  
+
   return schema;
 }
 
@@ -282,7 +282,7 @@ export function createSchema(input: CreateSchemaInput): Schema {
  * Get event name from template (looks for "event" key)
  */
 export function getSchemaEventName(schema: Schema): string | null {
-  const eventValue = schema.template["event"];
+  const eventValue = schema.template.event;
   if (typeof eventValue === "string" && !isTypePlaceholder(eventValue)) {
     return eventValue;
   }

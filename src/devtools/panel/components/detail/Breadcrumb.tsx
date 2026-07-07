@@ -21,15 +21,20 @@ export function Breadcrumb({ path, onNavigate }: BreadcrumbProps) {
   return (
     <div className="flex items-center gap-1 text-sm text-gray-400 px-2 py-1 overflow-x-auto">
       <button
+        type="button"
         onClick={() => onNavigate(-1)}
         className="text-gray-200 hover:text-brand-primary"
       >
         root
       </button>
       {path.map((segment, index) => (
-        <span key={index} className="flex items-center gap-1">
+        <span
+          key={path.slice(0, index + 1).join(".")}
+          className="flex items-center gap-1"
+        >
           <ChevronIcon className="w-3 h-3" />
           <button
+            type="button"
             onClick={() => onNavigate(index)}
             className={
               index === path.length - 1

@@ -16,6 +16,7 @@ export function QuickActions({
   return (
     <div className="flex gap-2 p-3 border-t border-panel-border">
       <button
+        type="button"
         onClick={onToggleRecording}
         className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${
           isRecording
@@ -26,6 +27,7 @@ export function QuickActions({
         {isRecording ? "Pause" : "Record"}
       </button>
       <button
+        type="button"
         onClick={onClear}
         className="flex-1 py-1.5 text-xs font-medium rounded bg-panel-surface text-gray-300 hover:bg-panel-border transition-colors"
       >

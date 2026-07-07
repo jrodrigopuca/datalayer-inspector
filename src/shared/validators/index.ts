@@ -3,15 +3,15 @@
  */
 
 export {
-  isPageToContentMessage,
-  isContentToBackgroundMessage,
   isClientToBackgroundRequest,
+  isContentToBackgroundMessage,
+  isPageToContentMessage,
 } from "./message-validators";
 
 export {
+  eventToTemplate,
+  schemaMatchesEvent,
+  validateAllEvents,
   validateEvent,
   validateEventAgainstSchema,
-  validateAllEvents,
-  schemaMatchesEvent,
-  eventToTemplate,
 } from "./schema-validator";

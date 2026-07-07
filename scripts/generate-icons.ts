@@ -3,10 +3,10 @@
  * Run with: npx tsx scripts/generate-icons.ts
  */
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import sharp from "sharp";
-import { readFileSync, writeFileSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ICONS_DIR = join(__dirname, "../src/assets/icons");
@@ -23,10 +23,7 @@ async function generateIcons() {
     try {
       const svgBuffer = readFileSync(svgPath);
 
-      await sharp(svgBuffer)
-        .resize(size, size)
-        .png()
-        .toFile(pngPath);
+      await sharp(svgBuffer).resize(size, size).png().toFile(pngPath);
 
       console.log(`✓ Generated icon-${size}.png`);
     } catch (error) {
@@ -37,4 +34,6 @@ async function generateIcons() {
   console.log("\nDone!");
 }
 
-generateIcons();
+generateIcons().catch((error: unknown) => {
+  console.error("✗ Icon generation failed:", error);
+});

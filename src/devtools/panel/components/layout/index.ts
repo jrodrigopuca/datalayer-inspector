@@ -2,7 +2,7 @@
  * Layout components index
  */
 
-export { Toolbar } from "./Toolbar";
+export { RightPanel } from "./RightPanel";
 export { SplitPane } from "./SplitPane";
 export { StatusBar } from "./StatusBar";
-export { RightPanel } from "./RightPanel";
+export { Toolbar } from "./Toolbar";

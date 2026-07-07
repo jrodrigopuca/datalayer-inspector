@@ -2,9 +2,9 @@
  * useSearch hook - search and filter functionality
  */
 
+import { TIMING } from "@shared/constants";
 import { useEffect, useRef } from "react";
 import { usePanelStore } from "../store";
-import { TIMING } from "@shared/constants";
 
 /**
  * Get search state and actions

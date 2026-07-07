@@ -8,7 +8,8 @@ export const TEST_FRAMEWORK = {
   CYPRESS: "cypress",
 } as const;
 
-export type TestFramework = (typeof TEST_FRAMEWORK)[keyof typeof TEST_FRAMEWORK];
+export type TestFramework =
+  (typeof TEST_FRAMEWORK)[keyof typeof TEST_FRAMEWORK];
 
 /** Assertion style for generated tests */
 export const ASSERTION_STYLE = {
@@ -18,7 +19,8 @@ export const ASSERTION_STYLE = {
   TYPE_ONLY: "type-only",
 } as const;
 
-export type AssertionStyle = (typeof ASSERTION_STYLE)[keyof typeof ASSERTION_STYLE];
+export type AssertionStyle =
+  (typeof ASSERTION_STYLE)[keyof typeof ASSERTION_STYLE];
 
 /** Options for test generation */
 export interface TestGeneratorOptions {

@@ -3,10 +3,10 @@
  */
 
 import type { DataLayerEvent, EventValidation } from "@shared/types";
-import { EventBadge, getEventCategory } from "./EventBadge";
+import { cn } from "@/lib/utils";
 import { usePanelStore } from "../../store";
 import { CheckIcon, XIcon } from "../common";
-import { cn } from "@/lib/utils";
+import { EventBadge, getEventCategory } from "./EventBadge";
 
 interface EventItemProps {
   event: DataLayerEvent;
@@ -34,7 +34,9 @@ function formatTime(timestamp: number): string {
 function getTimezoneAbbr(): string {
   const date = new Date();
   // Try to get timezone abbreviation from toLocaleTimeString
-  const timeString = date.toLocaleTimeString("en-US", { timeZoneName: "short" });
+  const timeString = date.toLocaleTimeString("en-US", {
+    timeZoneName: "short",
+  });
   const match = timeString.match(/\s([A-Z]{2,5}|UTC[+-]\d+)$/);
   if (match?.[1]) {
     return match[1];
@@ -45,7 +47,9 @@ function getTimezoneAbbr(): string {
   const absOffset = Math.abs(offset);
   const hours = Math.floor(absOffset / 60);
   const minutes = absOffset % 60;
-  return minutes ? `UTC${sign}${hours}:${minutes.toString().padStart(2, "0")}` : `UTC${sign}${hours}`;
+  return minutes
+    ? `UTC${sign}${hours}:${minutes.toString().padStart(2, "0")}`
+    : `UTC${sign}${hours}`;
 }
 
 /**
@@ -80,7 +84,13 @@ function getBorderColor(eventName: string | null): string {
   }
 }
 
-export function EventItem({ event, isSelected, onClick, onCreateSchema, validation }: EventItemProps) {
+export function EventItem({
+  event,
+  isSelected,
+  onClick,
+  onCreateSchema,
+  validation,
+}: EventItemProps) {
   const displayName = event.eventName ?? "(push)";
   const isGTMInternal = event.eventName?.startsWith("gtm.");
 
@@ -90,9 +100,18 @@ export function EventItem({ event, isSelected, onClick, onCreateSchema, validati
   }
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: row contains interactive badges; nesting them inside a real <button> would be invalid HTML
     <div
       data-event-id={event.id}
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       onContextMenu={handleContextMenu}
       className={cn(
         "h-12 px-2 py-1.5 border-l-4 cursor-pointer transition-colors",
@@ -105,7 +124,7 @@ export function EventItem({ event, isSelected, onClick, onCreateSchema, validati
     >
       {/* Row 1: Timestamp + badges */}
       <div className="flex items-center justify-between">
-        <span 
+        <span
           className="text-2xs text-gray-500 font-mono"
           title={formatFullTimestamp(event.timestamp)}
         >
@@ -113,10 +132,7 @@ export function EventItem({ event, isSelected, onClick, onCreateSchema, validati
         </span>
         <div className="flex items-center gap-1">
           {validation && (
-            <ValidationBadge
-              validation={validation}
-              eventId={event.id}
-            />
+            <ValidationBadge validation={validation} eventId={event.id} />
           )}
           {event.source !== "dataLayer" && (
             <span className="text-2xs text-gray-500 font-mono">

@@ -4,19 +4,19 @@
 
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { usePanelStore, RIGHT_PANEL_VIEW, MODAL_TYPE } from "../../store";
-import { selectEventCounts, selectConnectionInfo } from "../../store/selectors";
+import { cn } from "@/lib/utils";
 import { useCommands, useExport, useSchemas } from "../../hooks";
-import { 
-  Button, 
-  ConfirmDialog,
+import { MODAL_TYPE, RIGHT_PANEL_VIEW, usePanelStore } from "../../store";
+import { selectConnectionInfo, selectEventCounts } from "../../store/selectors";
+import {
+  Button,
   ClearIcon,
+  ConfirmDialog,
+  EvidenceIcon,
   ExportIcon,
   SchemaIcon,
   TestIcon,
-  EvidenceIcon,
 } from "../common";
-import { cn } from "@/lib/utils";
 
 export function Toolbar() {
   const { isRecording, containers, rightPanelView, settings } = usePanelStore(
@@ -41,7 +41,8 @@ export function Toolbar() {
   // Confirm dialog state for clear
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const isSchemaView = rightPanelView.type === RIGHT_PANEL_VIEW.SCHEMA_LIST ||
+  const isSchemaView =
+    rightPanelView.type === RIGHT_PANEL_VIEW.SCHEMA_LIST ||
     rightPanelView.type === RIGHT_PANEL_VIEW.SCHEMA_EDITOR;
 
   function handleClearClick(): void {
@@ -51,7 +52,7 @@ export function Toolbar() {
   }
 
   function handleClearConfirm(): void {
-    clearEvents();
+    void clearEvents();
     setShowClearConfirm(false);
   }
 
@@ -61,7 +62,7 @@ export function Toolbar() {
       <Button
         variant={isRecording ? "primary" : "ghost"}
         size="sm"
-        onClick={toggleRecording}
+        onClick={() => void toggleRecording()}
         title={isRecording ? "Pause recording" : "Resume recording"}
       >
         <span
@@ -169,7 +170,7 @@ export function Toolbar() {
         role="switch"
         aria-checked={settings.enabled}
         aria-label={settings.enabled ? "Disable extension" : "Enable extension"}
-        onClick={toggleEnabled}
+        onClick={() => void toggleEnabled()}
         className={cn(
           "relative w-9 h-5 rounded-full transition-colors",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary",
@@ -192,7 +193,13 @@ export function Toolbar() {
           isConnected && "bg-green-500",
           !isConnected && !isLoading && "bg-red-500"
         )}
-        title={isConnected ? "Connected" : isLoading ? "Connecting..." : "Disconnected"}
+        title={
+          isConnected
+            ? "Connected"
+            : isLoading
+              ? "Connecting..."
+              : "Disconnected"
+        }
       />
 
       {/* Clear confirmation dialog */}

@@ -2,8 +2,8 @@
  * Events slice - manages captured dataLayer events
  */
 
-import type { StateCreator } from "zustand";
 import type { DataLayerEvent, EventId } from "@shared/types";
+import type { StateCreator } from "zustand";
 
 export interface EventsSlice {
   /** All captured events for current tab */
@@ -21,26 +21,30 @@ export interface EventsSlice {
   setContainers: (containers: readonly string[]) => void;
 }
 
-export const createEventsSlice: StateCreator<EventsSlice, [], [], EventsSlice> =
-  (set) => ({
-    events: [],
-    selectedEventId: null,
-    containers: [],
+export const createEventsSlice: StateCreator<
+  EventsSlice,
+  [],
+  [],
+  EventsSlice
+> = (set) => ({
+  events: [],
+  selectedEventId: null,
+  containers: [],
 
-    setEvents: (events) => set({ events }),
+  setEvents: (events) => set({ events }),
 
-    addEvent: (event) =>
-      set((state) => ({
-        events: [...state.events, event],
-      })),
+  addEvent: (event) =>
+    set((state) => ({
+      events: [...state.events, event],
+    })),
 
-    clearEvents: () =>
-      set({
-        events: [],
-        selectedEventId: null,
-      }),
+  clearEvents: () =>
+    set({
+      events: [],
+      selectedEventId: null,
+    }),
 
-    selectEvent: (id) => set({ selectedEventId: id }),
+  selectEvent: (id) => set({ selectedEventId: id }),
 
-    setContainers: (containers) => set({ containers }),
-  });
+  setContainers: (containers) => set({ containers }),
+});

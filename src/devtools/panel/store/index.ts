@@ -8,13 +8,13 @@ import { create } from "zustand";
 
 import {
   createEventsSlice,
-  createUISlice,
-  createSettingsSlice,
   createSchemasSlice,
+  createSettingsSlice,
+  createUISlice,
   type EventsSlice,
-  type UISlice,
-  type SettingsSlice,
   type SchemasSlice,
+  type SettingsSlice,
+  type UISlice,
 } from "./slices";
 
 export type PanelStore = EventsSlice & UISlice & SettingsSlice & SchemasSlice;
@@ -26,15 +26,20 @@ export const usePanelStore = create<PanelStore>()((...args) => ({
   ...createSchemasSlice(...args),
 }));
 
-// Export type for use with useShallow
-export type { EventsSlice, UISlice, SettingsSlice, SchemasSlice };
-
-// Re-export constants
-export { VIEW_MODE, CONNECTION_STATE, RIGHT_PANEL_VIEW, MODAL_TYPE } from "./slices";
 export type {
-  ViewMode,
   ConnectionState,
+  ModalType,
   RightPanelView,
   RightPanelViewType,
-  ModalType,
+  ViewMode,
 } from "./slices";
+
+// Re-export constants
+export {
+  CONNECTION_STATE,
+  MODAL_TYPE,
+  RIGHT_PANEL_VIEW,
+  VIEW_MODE,
+} from "./slices";
+// Export type for use with useShallow
+export type { EventsSlice, SchemasSlice, SettingsSlice, UISlice };

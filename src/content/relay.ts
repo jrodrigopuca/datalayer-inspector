@@ -7,18 +7,18 @@
  * IMPORTANT: This is a security boundary - validate all incoming messages
  */
 
-import { isPageToContentMessage } from "@shared/validators";
-import {
-  PAGE_MESSAGE_TYPE,
-  CONTENT_MESSAGE_TYPE,
-  BACKGROUND_TO_CONTENT_TYPE,
-} from "@shared/types";
 import type {
-  PageToContentMessage,
+  BackgroundToContentMessage,
   ContentToBackgroundMessage,
   DataLayerEvent,
-  BackgroundToContentMessage,
+  PageToContentMessage,
 } from "@shared/types";
+import {
+  BACKGROUND_TO_CONTENT_TYPE,
+  CONTENT_MESSAGE_TYPE,
+  PAGE_MESSAGE_TYPE,
+} from "@shared/types";
+import { isPageToContentMessage } from "@shared/validators";
 
 /** Whether the extension is currently enabled */
 let isEnabled = true;

@@ -4,18 +4,18 @@
  * Quick summary view accessible from browser toolbar
  */
 
-import { useState, useEffect } from "react";
-import { EventSummary, ContainerList, QuickActions } from "./components";
 import {
-  PORT_NAME,
+  BACKGROUND_MESSAGE_TYPE,
+  type BackgroundToClientMessage,
   CLIENT_REQUEST_TYPE,
   CLIENT_RESPONSE_TYPE,
-  BACKGROUND_MESSAGE_TYPE,
-  type TabState,
-  type BackgroundToClientMessage,
   type ClientToBackgroundRequest,
   type ClientToBackgroundResponse,
+  PORT_NAME,
+  type TabState,
 } from "@shared/types";
+import { useEffect, useState } from "react";
+import { ContainerList, EventSummary, QuickActions } from "./components";
 
 const POPUP_STATE = {
   LOADING: "loading",
@@ -43,7 +43,7 @@ export default function App() {
 
   useEffect(() => {
     // Load settings first
-    loadSettings();
+    void loadSettings();
 
     // Get current tab
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -103,9 +103,7 @@ export default function App() {
 
           case BACKGROUND_MESSAGE_TYPE.CONTAINERS_UPDATED:
             setTabState((prev) =>
-              prev
-                ? { ...prev, containers: message.payload.containers }
-                : null
+              prev ? { ...prev, containers: message.payload.containers } : null
             );
             break;
 
@@ -116,7 +114,7 @@ export default function App() {
       });
 
       // Request initial state
-      requestTabState(tabId);
+      void requestTabState(tabId);
     } catch (error) {
       console.error("[Strata Popup] Connection failed:", error);
       setState(POPUP_STATE.NO_DATALAYER);
@@ -161,35 +159,48 @@ export default function App() {
   async function handleClear(): Promise<void> {
     if (!tabId) return;
 
-    await sendRequest({
-      type: CLIENT_REQUEST_TYPE.CLEAR_EVENTS,
-      payload: { tabId },
-    });
+    try {
+      await sendRequest({
+        type: CLIENT_REQUEST_TYPE.CLEAR_EVENTS,
+        payload: { tabId },
+      });
 
-    setTabState((prev) => (prev ? { ...prev, events: [] } : null));
+      setTabState((prev) => (prev ? { ...prev, events: [] } : null));
+    } catch (error) {
+      console.error("[Strata Popup] Failed to clear events:", error);
+    }
   }
 
   async function handleToggleRecording(): Promise<void> {
     if (!tabId || !tabState) return;
 
-    await sendRequest({
-      type: CLIENT_REQUEST_TYPE.SET_RECORDING,
-      payload: { tabId, isRecording: !tabState.isRecording },
-    });
+    try {
+      await sendRequest({
+        type: CLIENT_REQUEST_TYPE.SET_RECORDING,
+        payload: { tabId, isRecording: !tabState.isRecording },
+      });
 
-    setTabState((prev) =>
-      prev ? { ...prev, isRecording: !prev.isRecording } : null
-    );
+      setTabState((prev) =>
+        prev ? { ...prev, isRecording: !prev.isRecording } : null
+      );
+    } catch (error) {
+      console.error("[Strata Popup] Failed to toggle recording:", error);
+    }
   }
 
   async function handleToggleEnabled(): Promise<void> {
     const newEnabled = !isEnabled;
-    setIsEnabled(newEnabled);
 
-    await sendRequest({
-      type: CLIENT_REQUEST_TYPE.UPDATE_SETTINGS,
-      payload: { enabled: newEnabled },
-    });
+    try {
+      await sendRequest({
+        type: CLIENT_REQUEST_TYPE.UPDATE_SETTINGS,
+        payload: { enabled: newEnabled },
+      });
+
+      setIsEnabled(newEnabled);
+    } catch (error) {
+      console.error("[Strata Popup] Failed to update settings:", error);
+    }
   }
 
   // Header with global toggle (always visible)
@@ -203,7 +214,7 @@ export default function App() {
         role="switch"
         aria-checked={isEnabled}
         aria-label={isEnabled ? "Disable extension" : "Enable extension"}
-        onClick={handleToggleEnabled}
+        onClick={() => void handleToggleEnabled()}
         className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
           isEnabled ? "bg-brand-primary" : "bg-gray-600"
         }`}
@@ -224,9 +235,7 @@ export default function App() {
   // Footer with version and DevTools hint (always visible)
   const footer = (
     <div className="px-3 py-1.5 text-2xs text-center border-t border-panel-border">
-      <span className="text-gray-500">
-        {devToolsShortcut} → Strata panel
-      </span>
+      <span className="text-gray-500">{devToolsShortcut} → Strata panel</span>
       <span className="text-gray-600 mx-1.5">·</span>
       <span className="text-gray-600">v{getExtensionVersion()}</span>
     </div>
@@ -311,7 +320,7 @@ export default function App() {
           role="switch"
           aria-checked={isEnabled}
           aria-label={isEnabled ? "Disable extension" : "Enable extension"}
-          onClick={handleToggleEnabled}
+          onClick={() => void handleToggleEnabled()}
           className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
             isEnabled ? "bg-brand-primary" : "bg-gray-600"
           }`}
@@ -332,8 +341,8 @@ export default function App() {
 
       {/* Quick actions */}
       <QuickActions
-        onClear={handleClear}
-        onToggleRecording={handleToggleRecording}
+        onClear={() => void handleClear()}
+        onToggleRecording={() => void handleToggleRecording()}
         isRecording={tabState.isRecording}
       />
 

@@ -33,7 +33,7 @@ export function ContainerList({ containers }: ContainerListProps) {
           </span>
         ))}
         {hiddenCount > 0 && (
-          <span 
+          <span
             className="px-1.5 py-0.5 text-2xs text-gray-500"
             title={containers.slice(MAX_VISIBLE_CONTAINERS).join(", ")}
           >

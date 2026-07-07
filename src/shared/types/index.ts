@@ -6,98 +6,88 @@
 
 // Core event types
 export type {
-  EventId,
   DataLayerEvent,
-  TabState,
+  EventId,
   GTMContainer,
   MutableTabState,
+  TabState,
 } from "./events";
 
-export { toReadonlyTabState, createInitialTabState } from "./events";
-
-// Settings types
-export type { Theme, UserSettings, SettingsUpdate } from "./settings";
-
-export { THEME, DEFAULT_SETTINGS } from "./settings";
-
-// Schema types
-export type {
-  TypePlaceholder,
-  TemplateValue,
-  TemplateObject,
-  TemplateArray,
-  Schema,
-  MutableSchema,
-  CreateSchemaInput,
-  UpdateSchemaInput,
-  ValidationError,
-  ValidationResult,
-  EventValidation,
-  ParsedPlaceholder,
-} from "./schema";
-
-export {
-  TYPE_PLACEHOLDER,
-  TYPE_PLACEHOLDERS,
-  isTypePlaceholder,
-  isExtendedPlaceholder,
-  parsePlaceholder,
-  createSchema,
-  getSchemaEventName,
-} from "./schema";
-
-// Message types
-export type {
-  PortName,
-  PageMessageType,
-  PageEventCapturedPayload,
-  PageContainersDetectedPayload,
-  PageInitializedPayload,
-  PageToContentMessage,
-  ContentMessageType,
-  ContentToBackgroundMessage,
-  BackgroundMessageType,
-  TabResetReason,
-  BackgroundToClientMessage,
-  ClientRequestType,
-  ClientToBackgroundRequest,
-  ClientResponseType,
-  ClientToBackgroundResponse,
-  BackgroundToContentMessage,
-} from "./messages";
-
-export {
-  MESSAGE_SOURCE,
-  PORT_NAME,
-  PAGE_MESSAGE_TYPE,
-  CONTENT_MESSAGE_TYPE,
-  BACKGROUND_MESSAGE_TYPE,
-  TAB_RESET_REASON,
-  CLIENT_REQUEST_TYPE,
-  CLIENT_RESPONSE_TYPE,
-  BACKGROUND_TO_CONTENT_TYPE,
-} from "./messages";
-
-// Test generator types
-export type {
-  TestFramework,
-  AssertionStyle,
-  TestGeneratorOptions,
-  GeneratedTest,
-} from "./test-generator";
-
-export { TEST_FRAMEWORK, ASSERTION_STYLE } from "./test-generator";
-
+export { createInitialTabState, toReadonlyTabState } from "./events";
 // Evidence export types
 export type {
-  EvidenceFormat,
   EventViewMode,
+  EvidenceFormat,
   EvidenceOptions,
   GeneratedEvidence,
 } from "./evidence";
-
 export {
-  EVIDENCE_FORMAT,
-  EVENT_VIEW_MODE,
   DEFAULT_EVIDENCE_OPTIONS,
+  EVENT_VIEW_MODE,
+  EVIDENCE_FORMAT,
 } from "./evidence";
+// Message types
+export type {
+  BackgroundMessageType,
+  BackgroundToClientMessage,
+  BackgroundToContentMessage,
+  ClientRequestType,
+  ClientResponseType,
+  ClientToBackgroundRequest,
+  ClientToBackgroundResponse,
+  ContentMessageType,
+  ContentToBackgroundMessage,
+  PageContainersDetectedPayload,
+  PageEventCapturedPayload,
+  PageInitializedPayload,
+  PageMessageType,
+  PageToContentMessage,
+  PortName,
+  TabResetReason,
+} from "./messages";
+export {
+  BACKGROUND_MESSAGE_TYPE,
+  BACKGROUND_TO_CONTENT_TYPE,
+  CLIENT_REQUEST_TYPE,
+  CLIENT_RESPONSE_TYPE,
+  CONTENT_MESSAGE_TYPE,
+  MESSAGE_SOURCE,
+  PAGE_MESSAGE_TYPE,
+  PORT_NAME,
+  TAB_RESET_REASON,
+} from "./messages";
+// Schema types
+export type {
+  CreateSchemaInput,
+  EventValidation,
+  MutableSchema,
+  ParsedPlaceholder,
+  Schema,
+  TemplateArray,
+  TemplateObject,
+  TemplateValue,
+  TypePlaceholder,
+  UpdateSchemaInput,
+  ValidationError,
+  ValidationResult,
+} from "./schema";
+export {
+  createSchema,
+  getSchemaEventName,
+  isExtendedPlaceholder,
+  isTypePlaceholder,
+  parsePlaceholder,
+  TYPE_PLACEHOLDER,
+  TYPE_PLACEHOLDERS,
+} from "./schema";
+// Settings types
+export type { SettingsUpdate, Theme, UserSettings } from "./settings";
+export { DEFAULT_SETTINGS, THEME } from "./settings";
+// Test generator types
+export type {
+  AssertionStyle,
+  GeneratedTest,
+  TestFramework,
+  TestGeneratorOptions,
+} from "./test-generator";
+export { ASSERTION_STYLE, TEST_FRAMEWORK } from "./test-generator";

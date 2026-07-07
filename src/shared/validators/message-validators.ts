@@ -5,16 +5,16 @@
  * conform to expected shapes before processing
  */
 
+import type {
+  ClientToBackgroundRequest,
+  ContentToBackgroundMessage,
+  PageToContentMessage,
+} from "../types";
 import {
+  CLIENT_REQUEST_TYPE,
+  CONTENT_MESSAGE_TYPE,
   MESSAGE_SOURCE,
   PAGE_MESSAGE_TYPE,
-  CONTENT_MESSAGE_TYPE,
-  CLIENT_REQUEST_TYPE,
-} from "../types";
-import type {
-  PageToContentMessage,
-  ContentToBackgroundMessage,
-  ClientToBackgroundRequest,
 } from "../types";
 
 /**

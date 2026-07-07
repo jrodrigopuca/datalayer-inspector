@@ -3,9 +3,9 @@
  */
 
 import { useEffect, useRef } from "react";
-import { Button } from "./Button";
-import { WarningIcon, InfoIcon } from "./Icons";
 import { cn } from "@/lib/utils";
+import { Button } from "./Button";
+import { InfoIcon, WarningIcon } from "./Icons";
 
 export interface ConfirmDialogProps {
   /** Whether the dialog is open */
@@ -57,12 +57,14 @@ export function ConfirmDialog({
       // Focus trap
       if (e.key === "Tab") {
         const focusableElements = dialogRef.current?.querySelectorAll(
-          'button:not([disabled])'
+          "button:not([disabled])"
         );
         if (!focusableElements || focusableElements.length === 0) return;
 
         const firstElement = focusableElements[0] as HTMLElement;
-        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+        const lastElement = focusableElements[
+          focusableElements.length - 1
+        ] as HTMLElement;
 
         if (e.shiftKey && document.activeElement === firstElement) {
           e.preventDefault();
@@ -81,7 +83,7 @@ export function ConfirmDialog({
   // Prevent body scroll when open
   useEffect(() => {
     if (!isOpen) return;
-    
+
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";

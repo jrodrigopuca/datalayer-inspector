@@ -2,12 +2,12 @@
  * SearchBar component
  */
 
-import { useState, useRef, useEffect } from "react";
+import { TIMING } from "@shared/constants";
+import { useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import { useSearch } from "../../hooks";
 import { usePanelStore } from "../../store";
-import { TIMING } from "@shared/constants";
-import { SearchIcon, CloseIcon } from "../common";
-import { cn } from "@/lib/utils";
+import { CloseIcon, SearchIcon } from "../common";
 
 const FILTER_OPTIONS = [
   { value: null, label: "All events" },
@@ -78,6 +78,7 @@ export function SearchBar() {
         />
         {inputValue.length > 0 && (
           <button
+            type="button"
             onClick={() => {
               setInputValue("");
               setSearchQuery("");
@@ -111,6 +112,7 @@ export function SearchBar() {
       {/* Clear all filters */}
       {hasFilters && (
         <button
+          type="button"
           onClick={clearSearch}
           className="text-xs text-gray-400 hover:text-gray-200"
         >

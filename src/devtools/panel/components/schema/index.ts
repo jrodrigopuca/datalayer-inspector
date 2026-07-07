@@ -2,6 +2,6 @@
  * Schema components index
  */
 
-export { SchemaList } from "./SchemaList";
 export { SchemaEditor } from "./SchemaEditor";
+export { SchemaList } from "./SchemaList";
 export { ValidationErrors } from "./ValidationErrors";

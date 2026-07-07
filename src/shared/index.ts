@@ -4,14 +4,11 @@
  * All shared types, constants, and utilities used across extension contexts
  */
 
-// Types
-export * from "./types";
-
 // Constants
 export * from "./constants";
-
-// Validators
-export * from "./validators";
-
+// Types
+export * from "./types";
 // Utilities
 export * from "./utils";
+// Validators
+export * from "./validators";

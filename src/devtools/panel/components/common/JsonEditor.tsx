@@ -1,12 +1,12 @@
 /**
  * JsonEditor component - textarea with JSON syntax highlighting
- * 
- * Uses an overlay technique: a transparent textarea on top of a 
+ *
+ * Uses an overlay technique: a transparent textarea on top of a
  * highlighted pre element. User types in the textarea, the pre
  * shows the syntax-highlighted version synced in real-time.
  */
 
-import { useRef, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface JsonEditorProps {
@@ -31,39 +31,39 @@ function highlightJson(json: string): string {
   // Token patterns (order matters - more specific first)
   const patterns: Array<{ regex: RegExp; className: string }> = [
     // Type placeholders (@string, @number?, @enum(a,b), etc.)
-    { 
-      regex: /"(@(?:string|number|boolean|array|object|any)\??)"/g, 
-      className: "text-purple-400" 
+    {
+      regex: /"(@(?:string|number|boolean|array|object|any)\??)"/g,
+      className: "text-purple-400",
     },
     // Enum placeholders with values
-    { 
-      regex: /"(@enum\([^"]*\))"/g, 
-      className: "text-purple-400" 
+    {
+      regex: /"(@enum\([^"]*\))"/g,
+      className: "text-purple-400",
     },
     // Property keys (before colon)
-    { 
-      regex: /"([^"\\]|\\.)*"(?=\s*:)/g, 
-      className: "text-sky-400" 
+    {
+      regex: /"([^"\\]|\\.)*"(?=\s*:)/g,
+      className: "text-sky-400",
     },
     // String values
-    { 
-      regex: /"([^"\\]|\\.)*"/g, 
-      className: "text-amber-300" 
+    {
+      regex: /"([^"\\]|\\.)*"/g,
+      className: "text-amber-300",
     },
     // Numbers
-    { 
-      regex: /\b(-?\d+\.?\d*(?:e[+-]?\d+)?)\b/gi, 
-      className: "text-emerald-400" 
+    {
+      regex: /\b(-?\d+\.?\d*(?:e[+-]?\d+)?)\b/gi,
+      className: "text-emerald-400",
     },
     // Booleans and null
-    { 
-      regex: /\b(true|false|null)\b/g, 
-      className: "text-rose-400" 
+    {
+      regex: /\b(true|false|null)\b/g,
+      className: "text-rose-400",
     },
     // Brackets and braces
-    { 
-      regex: /([{}\[\]])/g, 
-      className: "text-gray-400" 
+    {
+      regex: /([{}[\]])/g,
+      className: "text-gray-400",
     },
   ];
 
@@ -133,7 +133,7 @@ export function JsonEditor({
   const highlighted = highlightJson(value);
 
   return (
-    <div 
+    <div
       className={cn(
         "relative font-mono text-xs rounded border",
         "bg-panel-bg",
@@ -153,9 +153,10 @@ export function JsonEditor({
           "leading-[1.5]",
           "text-gray-100" // base text color
         )}
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: highlightJson escapes HTML entities before wrapping tokens in spans
         dangerouslySetInnerHTML={{ __html: highlighted || "&nbsp;" }}
       />
-      
+
       {/* Textarea (front, completely transparent - user types here) */}
       <textarea
         ref={textareaRef}

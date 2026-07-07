@@ -2,9 +2,9 @@
  * Settings slice - manages user preferences
  */
 
-import type { StateCreator } from "zustand";
-import type { UserSettings, Theme } from "@shared/types";
+import type { Theme, UserSettings } from "@shared/types";
 import { DEFAULT_SETTINGS } from "@shared/types";
+import type { StateCreator } from "zustand";
 
 export interface SettingsSlice {
   /** User settings */

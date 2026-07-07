@@ -1,5 +1,5 @@
+import { resolve } from "node:path";
 import { defineConfig } from "vite";
-import { resolve } from "path";
 
 /**
  * Separate Vite config for building the page script as a standalone IIFE bundle.

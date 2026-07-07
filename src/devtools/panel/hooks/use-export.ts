@@ -4,11 +4,11 @@
  * Provides functions to export all events or only filtered events
  */
 
+import { type ExportOptions, exportEventsAsJSON } from "@shared/utils";
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { usePanelStore } from "../store";
 import { selectFilteredEvents } from "../store/selectors";
-import { exportEventsAsJSON, type ExportOptions } from "@shared/utils";
 
 interface UseExportReturn {
   /** Export all captured events */

@@ -27,11 +27,7 @@ const variantStyles: Record<BadgeVariant, string> = {
   error: "bg-event-error/20 text-event-error",
 };
 
-function Badge({
-  className,
-  variant = "default",
-  ...props
-}: BadgeProps) {
+function Badge({ className, variant = "default", ...props }: BadgeProps) {
   return (
     <span
       className={cn(
@@ -44,5 +40,5 @@ function Badge({
   );
 }
 
-export { Badge, BADGE_VARIANT };
 export type { BadgeProps, BadgeVariant };
+export { BADGE_VARIANT, Badge };

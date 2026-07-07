@@ -5,7 +5,11 @@
  * Handles broadcasting events to connected clients.
  */
 
-import { PORT_NAME, type PortName, type BackgroundToClientMessage } from "@shared/types";
+import {
+  type BackgroundToClientMessage,
+  PORT_NAME,
+  type PortName,
+} from "@shared/types";
 
 interface ConnectedPort {
   port: chrome.runtime.Port;

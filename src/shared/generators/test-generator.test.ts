@@ -2,9 +2,13 @@
  * Test generator tests
  */
 
-import { describe, it, expect } from "vitest";
-import { generateTestCode, TEST_FRAMEWORK, ASSERTION_STYLE } from "./test-generator";
+import { describe, expect, it } from "vitest";
 import type { DataLayerEvent } from "../types";
+import {
+  ASSERTION_STYLE,
+  generateTestCode,
+  TEST_FRAMEWORK,
+} from "./test-generator";
 
 const mockEvent: DataLayerEvent = {
   id: "evt-1",
@@ -59,7 +63,9 @@ describe("generateTestCode", () => {
 
       expect(result.framework).toBe("playwright");
       expect(result.filename).toBe("datalayer-purchase-event-test.spec.ts");
-      expect(result.code).toContain('import { test, expect } from "@playwright/test"');
+      expect(result.code).toContain(
+        'import { test, expect } from "@playwright/test"'
+      );
       expect(result.code).toContain('test("purchase event test"');
       expect(result.code).toContain('e.event === "purchase"');
       expect(result.code).toContain("purchaseEvent");
@@ -75,8 +81,12 @@ describe("generateTestCode", () => {
         url: "https://example.com/checkout",
       });
 
-      expect(result.code).toContain('await page.goto("https://example.com/checkout")');
-      expect(result.code).toContain('await page.waitForLoadState("networkidle")');
+      expect(result.code).toContain(
+        'await page.goto("https://example.com/checkout")'
+      );
+      expect(result.code).toContain(
+        'await page.waitForLoadState("networkidle")'
+      );
     });
 
     it("generates exact value assertions", () => {
@@ -88,8 +98,12 @@ describe("generateTestCode", () => {
         testName: "test",
       });
 
-      expect(result.code).toContain('expect(purchaseEvent.ecommerce.transaction_id).toBe("T12345")');
-      expect(result.code).toContain("expect(purchaseEvent.ecommerce.value).toBe(99.99)");
+      expect(result.code).toContain(
+        'expect(purchaseEvent.ecommerce.transaction_id).toBe("T12345")'
+      );
+      expect(result.code).toContain(
+        "expect(purchaseEvent.ecommerce.value).toBe(99.99)"
+      );
       expect(result.code).toContain("toHaveLength(1)");
     });
 
@@ -102,8 +116,12 @@ describe("generateTestCode", () => {
         testName: "test",
       });
 
-      expect(result.code).toContain('expect(typeof purchaseEvent.ecommerce.transaction_id).toBe("string")');
-      expect(result.code).toContain('expect(typeof purchaseEvent.ecommerce.value).toBe("number")');
+      expect(result.code).toContain(
+        'expect(typeof purchaseEvent.ecommerce.transaction_id).toBe("string")'
+      );
+      expect(result.code).toContain(
+        'expect(typeof purchaseEvent.ecommerce.value).toBe("number")'
+      );
     });
   });
 
@@ -148,8 +166,12 @@ describe("generateTestCode", () => {
         testName: "test",
       });
 
-      expect(result.code).toContain('expect(purchaseEvent.ecommerce.transaction_id).to.equal("T12345")');
-      expect(result.code).toContain("expect(purchaseEvent.ecommerce.value).to.equal(99.99)");
+      expect(result.code).toContain(
+        'expect(purchaseEvent.ecommerce.transaction_id).to.equal("T12345")'
+      );
+      expect(result.code).toContain(
+        "expect(purchaseEvent.ecommerce.value).to.equal(99.99)"
+      );
       expect(result.code).toContain("to.have.length(1)");
     });
 
@@ -162,8 +184,12 @@ describe("generateTestCode", () => {
         testName: "test",
       });
 
-      expect(result.code).toContain('expect(purchaseEvent.ecommerce.transaction_id).to.be.a("string")');
-      expect(result.code).toContain('expect(purchaseEvent.ecommerce.value).to.be.a("number")');
+      expect(result.code).toContain(
+        'expect(purchaseEvent.ecommerce.transaction_id).to.be.a("string")'
+      );
+      expect(result.code).toContain(
+        'expect(purchaseEvent.ecommerce.value).to.be.a("number")'
+      );
     });
   });
 

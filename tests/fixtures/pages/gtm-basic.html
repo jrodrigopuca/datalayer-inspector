@@ -86,7 +86,7 @@
     // Wrap push to log
     const originalPush = Array.prototype.push;
     const _push = dataLayer.push.bind(dataLayer);
-    dataLayer.push = function(...args) {
+    dataLayer.push = (...args) => {
       args.forEach(arg => logEvent(arg));
       return _push(...args);
     };

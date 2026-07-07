@@ -2,9 +2,9 @@
  * JsonTreeView component - tree view of JSON data
  */
 
-import { TreeNode } from "./TreeNode";
 import { usePanelStore } from "../../store";
 import { Button } from "../common";
+import { TreeNode } from "./TreeNode";
 
 interface JsonTreeViewProps {
   data: Record<string, unknown>;

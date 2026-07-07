@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
-  interceptDataLayer,
-  setContainerIds,
-  resetState,
   getEventIndex,
+  interceptDataLayer,
+  resetState,
+  setContainerIds,
 } from "./interceptor";
 import type { CapturedEventData } from "./message-emitter";
 
@@ -37,7 +37,10 @@ describe("interceptor", () => {
 
       expect(capturedEvents).toHaveLength(1);
       expect(capturedEvents[0]?.eventName).toBe("test_event");
-      expect(capturedEvents[0]?.data).toEqual({ event: "test_event", value: 123 });
+      expect(capturedEvents[0]?.data).toEqual({
+        event: "test_event",
+        value: 123,
+      });
     });
 
     it("captures events with correct metadata", () => {
@@ -61,10 +64,7 @@ describe("interceptor", () => {
 
     it("processes existing events in array", () => {
       const win = window as unknown as Record<string, unknown[]>;
-      win.dataLayer = [
-        { event: "existing_1" },
-        { event: "existing_2" },
-      ];
+      win.dataLayer = [{ event: "existing_1" }, { event: "existing_2" }];
 
       const count = interceptDataLayer("dataLayer", onEvent);
 
@@ -140,7 +140,7 @@ describe("interceptor", () => {
 
       interceptDataLayer("dataLayer", onEvent);
 
-      win.dataLayer.push(function () {
+      win.dataLayer.push(() => {
         // GTM command
       });
 

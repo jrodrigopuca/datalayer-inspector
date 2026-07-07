@@ -5,10 +5,10 @@
  * Uses incremental validation for new events to avoid O(n) re-validation
  */
 
+import type { EventValidation } from "@shared/types";
 import { useEffect, useMemo, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { usePanelStore } from "../store";
-import type { EventValidation } from "@shared/types";
 
 interface UseValidationReturn {
   /** Get validation result for a specific event */
@@ -28,11 +28,11 @@ interface UseValidationReturn {
  * Hook for accessing validation results
  */
 export function useValidation(): UseValidationReturn {
-  const { 
-    events, 
-    schemas, 
-    validations, 
-    validateEvents, 
+  const {
+    events,
+    schemas,
+    validations,
+    validateEvents,
     validateNewEvents,
     getValidation,
     _schemaVersion,
@@ -55,30 +55,30 @@ export function useValidation(): UseValidationReturn {
   // Re-validate when events or schemas change
   useEffect(() => {
     if (events.length === 0 || schemas.length === 0) return;
-    
+
     const schemaChanged = prevSchemaVersionRef.current !== _schemaVersion;
-    
+
     if (schemaChanged) {
       // Schema changed - full re-validation needed
       validateEvents(events);
       prevSchemaVersionRef.current = _schemaVersion;
-      prevEventIdsRef.current = new Set(events.map(e => e.id));
+      prevEventIdsRef.current = new Set(events.map((e) => e.id));
     } else {
       // Find new events (not previously validated)
-      const currentIds = new Set(events.map(e => e.id));
+      const currentIds = new Set(events.map((e) => e.id));
       const newEventIds = new Set<string>();
-      
+
       for (const id of currentIds) {
         if (!prevEventIdsRef.current.has(id)) {
           newEventIds.add(id);
         }
       }
-      
+
       if (newEventIds.size > 0) {
         // Only validate new events
         validateNewEvents(events, newEventIds);
       }
-      
+
       prevEventIdsRef.current = currentIds;
     }
   }, [events, schemas, _schemaVersion, validateEvents, validateNewEvents]);
@@ -121,7 +121,9 @@ export function useValidation(): UseValidationReturn {
 /**
  * Hook to get validation for a single event
  */
-export function useEventValidation(eventId: string): EventValidation | undefined {
+export function useEventValidation(
+  eventId: string
+): EventValidation | undefined {
   const getValidation = usePanelStore((s) => s.getValidation);
   return getValidation(eventId);
 }

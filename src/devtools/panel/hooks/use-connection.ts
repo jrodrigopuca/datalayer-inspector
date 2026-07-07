@@ -8,18 +8,18 @@
  * - Initial state sync
  */
 
-import { useEffect, useRef } from "react";
-import { usePanelStore, CONNECTION_STATE } from "../store";
+import { LIMITS } from "@shared/constants";
 import {
-  PORT_NAME,
   BACKGROUND_MESSAGE_TYPE,
+  type BackgroundToClientMessage,
   CLIENT_REQUEST_TYPE,
   CLIENT_RESPONSE_TYPE,
-  type BackgroundToClientMessage,
   type ClientToBackgroundRequest,
   type ClientToBackgroundResponse,
+  PORT_NAME,
 } from "@shared/types";
-import { LIMITS } from "@shared/constants";
+import { useEffect, useRef } from "react";
+import { CONNECTION_STATE, usePanelStore } from "../store";
 
 export function useConnection(): void {
   const portRef = useRef<chrome.runtime.Port | null>(null);
@@ -56,7 +56,7 @@ export function useConnection(): void {
         port.onDisconnect.addListener(handleDisconnect);
 
         // Request initial state
-        requestInitialState(tabId);
+        void requestInitialState(tabId);
 
         setConnectionState(CONNECTION_STATE.CONNECTED);
         reconnectAttemptsRef.current = 0;

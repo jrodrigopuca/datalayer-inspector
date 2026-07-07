@@ -124,7 +124,7 @@ function interceptArray(
   // Intercept push
   const originalPush = arr.push.bind(arr);
 
-  arr.push = function (...items: unknown[]): number {
+  arr.push = (...items: unknown[]): number => {
     for (const item of items) {
       if (isValidPushItem(item)) {
         const event = createCapturedEvent(
@@ -191,8 +191,7 @@ function createCapturedEvent(
   state.eventIndex++;
 
   // Extract event name if present
-  const eventName =
-    typeof data.event === "string" ? data.event : null;
+  const eventName = typeof data.event === "string" ? data.event : null;
 
   // Safely serialize data (handle circular refs)
   const safeData = safeSerialize(data);

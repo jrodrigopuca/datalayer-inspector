@@ -191,7 +191,10 @@ export type ClientToBackgroundRequest =
     }
   | {
       readonly type: typeof CLIENT_REQUEST_TYPE.SET_RECORDING;
-      readonly payload: { readonly tabId: number; readonly isRecording: boolean };
+      readonly payload: {
+        readonly tabId: number;
+        readonly isRecording: boolean;
+      };
     }
   | {
       readonly type: typeof CLIENT_REQUEST_TYPE.GET_TAB_STATE;

@@ -4,8 +4,8 @@
  * Shows the actual event name (like in dataLayer), with color based on category
  */
 
-import { Badge } from "../common";
 import { EVENT_PATTERNS } from "@shared/constants";
+import { Badge } from "../common";
 
 interface EventBadgeProps {
   eventName: string | null;

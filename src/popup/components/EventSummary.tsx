@@ -2,8 +2,8 @@
  * EventSummary component - shows event count and last event
  */
 
-import type { DataLayerEvent } from "@shared/types";
 import { EVENT_PATTERNS } from "@shared/constants";
+import type { DataLayerEvent } from "@shared/types";
 
 interface EventSummaryProps {
   events: readonly DataLayerEvent[];
@@ -43,7 +43,9 @@ export function EventSummary({ events }: EventSummaryProps) {
           <div className="text-gray-500">GTM</div>
         </div>
         <div className="text-center">
-          <div className="text-event-ecommerce font-medium">{ecommerceCount}</div>
+          <div className="text-event-ecommerce font-medium">
+            {ecommerceCount}
+          </div>
           <div className="text-gray-500">Ecommerce</div>
         </div>
         <div className="text-center">

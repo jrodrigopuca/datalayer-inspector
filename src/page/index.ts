@@ -10,13 +10,13 @@
  * - No global pollution
  */
 
-import { interceptDataLayer, setContainerIds } from "./interceptor";
 import {
   detectContainers,
   getContainerIds,
   shouldRedetectContainers,
 } from "./container-detector";
-import { emitEvent, emitContainers, emitInitialized } from "./message-emitter";
+import { interceptDataLayer, setContainerIds } from "./interceptor";
+import { emitContainers, emitEvent, emitInitialized } from "./message-emitter";
 
 /**
  * Configuration passed via data attribute on script tag

@@ -9,15 +9,15 @@
  * - Long-lived port connections
  */
 
-import { registerPort } from "./port-manager";
+import { PORT_NAME } from "@shared/types";
 import {
-  handleContentMessage,
   handleClientRequest,
-  handleTabRemoved,
+  handleContentMessage,
   handleTabNavigation,
+  handleTabRemoved,
   toggleExtensionEnabled,
 } from "./message-handler";
-import { PORT_NAME } from "@shared/types";
+import { registerPort } from "./port-manager";
 import * as tabManager from "./tab-manager";
 
 /**
@@ -55,7 +55,9 @@ function setupMessageListeners(): void {
     }
 
     // Otherwise treat as content script message (no response needed)
-    handleContentMessage(message, sender);
+    handleContentMessage(message, sender).catch((error: unknown) => {
+      console.error("[Strata] Failed to handle content message:", error);
+    });
     return false;
   });
 }
@@ -178,10 +180,15 @@ function setupTabListeners(): void {
  * Set up keyboard shortcut commands
  */
 function setupCommandListener(): void {
-  chrome.commands.onCommand.addListener(async (command) => {
+  chrome.commands.onCommand.addListener((command) => {
     if (command === "toggle-recording") {
-      await toggleExtensionEnabled();
-      console.log("[Strata] Extension toggled via keyboard shortcut");
+      toggleExtensionEnabled()
+        .then(() => {
+          console.log("[Strata] Extension toggled via keyboard shortcut");
+        })
+        .catch((error: unknown) => {
+          console.error("[Strata] Failed to toggle extension:", error);
+        });
     }
   });
 }

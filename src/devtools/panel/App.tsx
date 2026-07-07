@@ -4,18 +4,18 @@
  * Main application component for the DevTools panel
  */
 
-import { useConnection, useKeyboard } from "./hooks";
-import { usePanelStore, MODAL_TYPE } from "./store";
 import {
-  Toolbar,
-  SplitPane,
-  StatusBar,
   EventList,
+  ExportEvidenceModal,
+  ExportTestModal,
   RightPanel,
   SearchBar,
-  ExportTestModal,
-  ExportEvidenceModal,
+  SplitPane,
+  StatusBar,
+  Toolbar,
 } from "./components";
+import { useConnection, useKeyboard } from "./hooks";
+import { MODAL_TYPE, usePanelStore } from "./store";
 
 export default function App() {
   // Initialize connection with service worker

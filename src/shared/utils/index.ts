@@ -2,18 +2,17 @@
  * Shared utilities - Public API
  */
 
-export {
-  exportEventsAsJSON,
-  createExportPayload,
-  serializeExport,
-  generateExportFilename,
-  downloadFile,
-  transformEventForExport,
-} from "./export";
-
 export type {
-  ExportOptions,
-  ExportPayload,
   ExportedEventClean,
   ExportedEventRaw,
+  ExportOptions,
+  ExportPayload,
+} from "./export";
+export {
+  createExportPayload,
+  downloadFile,
+  exportEventsAsJSON,
+  generateExportFilename,
+  serializeExport,
+  transformEventForExport,
 } from "./export";

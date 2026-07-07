@@ -7,12 +7,12 @@
  * Uses chrome.storage.session for persistence to survive service worker dormancy.
  */
 
+import { LIMITS, STORAGE_KEYS } from "@shared/constants";
 import {
   createInitialTabState,
-  type MutableTabState,
   type DataLayerEvent,
+  type MutableTabState,
 } from "@shared/types";
-import { LIMITS, STORAGE_KEYS } from "@shared/constants";
 
 /**
  * In-memory storage of tab states

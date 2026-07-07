@@ -5,29 +5,28 @@
  * from DevTools panels and popups.
  */
 
-import {
-  isContentToBackgroundMessage,
-  isClientToBackgroundRequest,
-} from "@shared/validators";
-import {
-  CONTENT_MESSAGE_TYPE,
-  CLIENT_REQUEST_TYPE,
-  CLIENT_RESPONSE_TYPE,
-  BACKGROUND_MESSAGE_TYPE,
-  TAB_RESET_REASON,
-  BACKGROUND_TO_CONTENT_TYPE,
-  toReadonlyTabState,
-} from "@shared/types";
 import type {
-  ContentToBackgroundMessage,
   ClientToBackgroundRequest,
   ClientToBackgroundResponse,
+  ContentToBackgroundMessage,
   GTMContainer,
 } from "@shared/types";
-
-import * as tabManager from "./tab-manager";
+import {
+  BACKGROUND_MESSAGE_TYPE,
+  BACKGROUND_TO_CONTENT_TYPE,
+  CLIENT_REQUEST_TYPE,
+  CLIENT_RESPONSE_TYPE,
+  CONTENT_MESSAGE_TYPE,
+  TAB_RESET_REASON,
+  toReadonlyTabState,
+} from "@shared/types";
+import {
+  isClientToBackgroundRequest,
+  isContentToBackgroundMessage,
+} from "@shared/validators";
 import * as portManager from "./port-manager";
 import * as storage from "./storage";
+import * as tabManager from "./tab-manager";
 
 /**
  * Handle message from content script

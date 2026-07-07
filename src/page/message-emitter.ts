@@ -6,8 +6,8 @@
  * CRITICAL: This runs in page context - fail silently on errors
  */
 
-import { MESSAGE_SOURCE, PAGE_MESSAGE_TYPE } from "@shared/types";
 import type { GTMContainer } from "@shared/types";
+import { MESSAGE_SOURCE, PAGE_MESSAGE_TYPE } from "@shared/types";
 
 /**
  * Captured event data to emit

@@ -9,9 +9,9 @@
  * These tests verify the full dataLayer capture flow from page to DevTools.
  */
 
-import { test as base, chromium, type BrowserContext } from "@playwright/test";
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { type BrowserContext, test as base, chromium } from "@playwright/test";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -29,7 +29,7 @@ export const test = base.extend<{
   context: BrowserContext;
   extensionId: string;
 }>({
-  // eslint-disable-next-line no-empty-pattern
+  // biome-ignore lint/correctness/noEmptyPattern: Playwright fixtures require an empty destructuring pattern
   context: async ({}, use) => {
     const context = await chromium.launchPersistentContext("", {
       headless: false,

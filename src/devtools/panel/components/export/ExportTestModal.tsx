@@ -2,21 +2,25 @@
  * ExportTestModal component - Generate test code from events
  */
 
-import { useState } from "react";
-import { 
-  Button, 
-  CodeIcon, 
-  CloseIcon, 
-  CopyIcon, 
-  DownloadIcon, 
-  CheckIcon 
-} from "../common";
-import { usePanelStore } from "../../store";
-import { useFocusTrap } from "../../hooks";
 import { generateTestCode } from "@shared/generators";
-import { TEST_FRAMEWORK, ASSERTION_STYLE } from "@shared/types";
-import type { TestFramework, AssertionStyle, DataLayerEvent } from "@shared/types";
+import type {
+  AssertionStyle,
+  DataLayerEvent,
+  TestFramework,
+} from "@shared/types";
+import { ASSERTION_STYLE, TEST_FRAMEWORK } from "@shared/types";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useFocusTrap } from "../../hooks";
+import { usePanelStore } from "../../store";
+import {
+  Button,
+  CheckIcon,
+  CloseIcon,
+  CodeIcon,
+  CopyIcon,
+  DownloadIcon,
+} from "../common";
 
 interface ExportTestModalProps {
   events: readonly DataLayerEvent[];
@@ -26,8 +30,12 @@ interface ExportTestModalProps {
 export function ExportTestModal({ events, onClose }: ExportTestModalProps) {
   const currentUrl = usePanelStore((s) => s.events[0]?.url ?? "");
 
-  const [framework, setFramework] = useState<TestFramework>(TEST_FRAMEWORK.PLAYWRIGHT);
-  const [assertionStyle, setAssertionStyle] = useState<AssertionStyle>(ASSERTION_STYLE.TYPE_ONLY);
+  const [framework, setFramework] = useState<TestFramework>(
+    TEST_FRAMEWORK.PLAYWRIGHT
+  );
+  const [assertionStyle, setAssertionStyle] = useState<AssertionStyle>(
+    ASSERTION_STYLE.TYPE_ONLY
+  );
   const [includeNavigation, setIncludeNavigation] = useState(true);
   const [includeWaits, setIncludeWaits] = useState(true);
   const [testName, setTestName] = useState("dataLayer events test");
@@ -72,11 +80,7 @@ export function ExportTestModal({ events, onClose }: ExportTestModalProps) {
       aria-labelledby="export-test-modal-title"
     >
       {/* Backdrop */}
-      <div
-        className="absolute inset-0"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
 
       {/* Modal content */}
       <div
@@ -87,7 +91,9 @@ export function ExportTestModal({ events, onClose }: ExportTestModalProps) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-panel-border">
           <div className="flex items-center gap-2">
             <CodeIcon className="w-5 h-5 text-brand-primary" />
-            <h2 id="export-test-modal-title" className="text-sm font-medium">Export as Test Code</h2>
+            <h2 id="export-test-modal-title" className="text-sm font-medium">
+              Export as Test Code
+            </h2>
             <span className="text-xs text-gray-500">
               {events.length} event{events.length !== 1 ? "s" : ""}
             </span>
@@ -101,7 +107,9 @@ export function ExportTestModal({ events, onClose }: ExportTestModalProps) {
         <div className="px-4 py-3 border-b border-panel-border space-y-3">
           {/* Framework */}
           <div className="flex items-center gap-4">
-            <label className="text-xs font-medium text-gray-400 w-24">Framework</label>
+            <span className="text-xs font-medium text-gray-400 w-24">
+              Framework
+            </span>
             <div className="flex gap-2">
               <ToggleButton
                 active={framework === TEST_FRAMEWORK.PLAYWRIGHT}
@@ -120,7 +128,9 @@ export function ExportTestModal({ events, onClose }: ExportTestModalProps) {
 
           {/* Assertion style */}
           <div className="flex items-center gap-4">
-            <label className="text-xs font-medium text-gray-400 w-24">Assertions</label>
+            <span className="text-xs font-medium text-gray-400 w-24">
+              Assertions
+            </span>
             <div className="flex gap-2">
               <ToggleButton
                 active={assertionStyle === ASSERTION_STYLE.TYPE_ONLY}
@@ -139,8 +149,14 @@ export function ExportTestModal({ events, onClose }: ExportTestModalProps) {
 
           {/* Test name */}
           <div className="flex items-center gap-4">
-            <label className="text-xs font-medium text-gray-400 w-24">Test name</label>
+            <label
+              htmlFor="test-name-input"
+              className="text-xs font-medium text-gray-400 w-24"
+            >
+              Test name
+            </label>
             <input
+              id="test-name-input"
               type="text"
               value={testName}
               onChange={(e) => setTestName(e.target.value)}
@@ -180,9 +196,11 @@ export function ExportTestModal({ events, onClose }: ExportTestModalProps) {
 
         {/* Footer */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-panel-border">
-          <span className="text-xs text-gray-500">{generatedCode.filename}</span>
+          <span className="text-xs text-gray-500">
+            {generatedCode.filename}
+          </span>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={handleCopy}>
+            <Button size="sm" variant="ghost" onClick={() => void handleCopy()}>
               {copied ? (
                 <>
                   <CheckIcon className="w-4 h-4 mr-1 text-green-400" />

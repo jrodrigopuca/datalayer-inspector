@@ -6,7 +6,7 @@
  * - Capturing events from different dataLayer arrays
  */
 
-import { test, expect, getFixtureUrl } from "./fixtures";
+import { expect, getFixtureUrl, test } from "./fixtures";
 
 test.describe("Multi-Container Support", () => {
   test("TC-E2E-MULTI-001: Should detect multiple GTM containers", async ({

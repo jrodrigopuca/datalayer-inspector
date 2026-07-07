@@ -1,15 +1,15 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  isPageToContentMessage,
-  isContentToBackgroundMessage,
-  isClientToBackgroundRequest,
-} from "./message-validators";
-import {
+  CLIENT_REQUEST_TYPE,
+  CONTENT_MESSAGE_TYPE,
   MESSAGE_SOURCE,
   PAGE_MESSAGE_TYPE,
-  CONTENT_MESSAGE_TYPE,
-  CLIENT_REQUEST_TYPE,
 } from "../types";
+import {
+  isClientToBackgroundRequest,
+  isContentToBackgroundMessage,
+  isPageToContentMessage,
+} from "./message-validators";
 
 describe("isPageToContentMessage", () => {
   it("returns false for non-objects", () => {

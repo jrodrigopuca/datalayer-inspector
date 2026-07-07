@@ -8,9 +8,9 @@ import { jsPDF } from "jspdf";
 import type { DataLayerEvent } from "../types/events";
 import type { EvidenceOptions, GeneratedEvidence } from "../types/evidence";
 import {
-  EVIDENCE_FORMAT,
-  EVENT_VIEW_MODE,
   DEFAULT_EVIDENCE_OPTIONS,
+  EVENT_VIEW_MODE,
+  EVIDENCE_FORMAT,
 } from "../types/evidence";
 
 /**
@@ -184,7 +184,7 @@ function generatePNG(
     const firstEvent = events[0];
     if (firstEvent) {
       const url = firstEvent.url;
-      const truncatedUrl = url.length > 80 ? url.slice(0, 80) + "..." : url;
+      const truncatedUrl = url.length > 80 ? `${url.slice(0, 80)}...` : url;
       ctx.fillText(`URL: ${truncatedUrl}`, padding, y + 12);
       y += 18;
     }
@@ -242,7 +242,7 @@ function generatePNG(
       // Badge background
       ctx.font = "bold 9px system-ui, -apple-system, sans-serif";
       const badgeWidth = ctx.measureText(badgeText).width + 10;
-      ctx.fillStyle = badgeColor + "30"; // 30 = ~19% opacity in hex
+      ctx.fillStyle = `${badgeColor}30`; // 30 = ~19% opacity in hex
       roundRect(ctx, badgeX, y + 6, badgeWidth, 14, 3);
       ctx.fill();
 
@@ -299,7 +299,7 @@ function renderSyntaxHighlightedLine(
   maxWidth: number
 ): void {
   // Truncate if too long
-  const truncatedLine = line.length > 95 ? line.slice(0, 95) + "..." : line;
+  const truncatedLine = line.length > 95 ? `${line.slice(0, 95)}...` : line;
 
   // Parse and colorize JSON tokens
   const tokens = tokenizeLine(truncatedLine);
@@ -333,7 +333,7 @@ function tokenizeLine(line: string): Array<{ text: string; color: string }> {
     // Null
     { regex: /\bnull\b/, color: COLORS.null },
     // Brackets and braces
-    { regex: /[{}\[\]]/, color: COLORS.bracket },
+    { regex: /[{}[\]]/, color: COLORS.bracket },
   ];
 
   let remaining = line;
@@ -343,7 +343,7 @@ function tokenizeLine(line: string): Array<{ text: string; color: string }> {
 
     // Check for key pattern first (special handling)
     const keyMatch = remaining.match(/^(\s*)("[\w$]+")(:\s*)/);
-    if (keyMatch && keyMatch[0]) {
+    if (keyMatch?.[0]) {
       const whitespace = keyMatch[1] ?? "";
       const key = keyMatch[2] ?? "";
       const colon = keyMatch[3] ?? "";
@@ -365,7 +365,7 @@ function tokenizeLine(line: string): Array<{ text: string; color: string }> {
     // Check other patterns
     for (const { regex, color } of patterns.slice(1)) {
       const match = remaining.match(new RegExp(`^(${regex.source})`));
-      if (match && match[0]) {
+      if (match?.[0]) {
         tokens.push({ text: match[0], color });
         remaining = remaining.slice(match[0].length);
         matched = true;
@@ -377,7 +377,7 @@ function tokenizeLine(line: string): Array<{ text: string; color: string }> {
     if (!matched) {
       // Check for whitespace or punctuation
       const wsMatch = remaining.match(/^[\s,]+/);
-      if (wsMatch && wsMatch[0]) {
+      if (wsMatch?.[0]) {
         tokens.push({ text: wsMatch[0], color: COLORS.text });
         remaining = remaining.slice(wsMatch[0].length);
       } else {
@@ -463,7 +463,7 @@ function generatePDF(
     const firstEvent = events[0];
     if (firstEvent) {
       const url = firstEvent.url;
-      const truncatedUrl = url.length > 70 ? url.slice(0, 70) + "..." : url;
+      const truncatedUrl = url.length > 70 ? `${url.slice(0, 70)}...` : url;
       doc.text(`URL: ${truncatedUrl}`, margin, y);
       y += lineHeight;
     }
@@ -559,7 +559,7 @@ function generatePDF(
       for (const line of jsonLines) {
         checkPageBreak(lineHeight);
         const truncatedLine =
-          line.length > 100 ? line.slice(0, 100) + "..." : line;
+          line.length > 100 ? `${line.slice(0, 100)}...` : line;
         renderPDFSyntaxLine(doc, truncatedLine, margin + 4, y);
         y += fontSize.code * 0.4;
       }
@@ -605,7 +605,7 @@ function renderPDFSyntaxLine(
  */
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (result && result[1] && result[2] && result[3]) {
+  if (result?.[1] && result[2] && result[3]) {
     return {
       r: parseInt(result[1], 16),
       g: parseInt(result[2], 16),

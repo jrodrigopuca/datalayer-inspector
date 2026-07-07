@@ -7,7 +7,7 @@
  * - Event capture across route changes
  */
 
-import { test, expect, getFixtureUrl } from "./fixtures";
+import { expect, getFixtureUrl, test } from "./fixtures";
 
 test.describe("SPA Navigation", () => {
   test("TC-E2E-NAV-001: Should capture initial page view on SPA load", async ({
@@ -171,7 +171,9 @@ test.describe("SPA Navigation", () => {
     expect(checkoutEvent).toBeDefined();
   });
 
-  test("TC-E2E-NAV-006: Should handle URL hash changes", async ({ context }) => {
+  test("TC-E2E-NAV-006: Should handle URL hash changes", async ({
+    context,
+  }) => {
     const page = await context.newPage();
     await page.goto(getFixtureUrl("spa-navigation.html"));
     await page.waitForTimeout(500);

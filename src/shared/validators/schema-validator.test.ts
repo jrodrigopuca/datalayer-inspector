@@ -1,12 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+import type { DataLayerEvent, Schema, TemplateObject } from "../types";
+import { TYPE_PLACEHOLDER } from "../types";
 import {
+  eventToTemplate,
+  schemaMatchesEvent,
   validateEvent,
   validateEventAgainstSchema,
-  schemaMatchesEvent,
-  eventToTemplate,
 } from "./schema-validator";
-import type { Schema, DataLayerEvent, TemplateObject } from "../types";
-import { TYPE_PLACEHOLDER } from "../types";
 
 // Helper to create mock events
 function createMockEvent(
@@ -235,7 +235,9 @@ describe("validateEventAgainstSchema - type placeholders", () => {
     const invalidEvent = createMockEvent({ name: 123 }, "test");
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 
   it("validates @number placeholder", () => {
@@ -244,7 +246,9 @@ describe("validateEventAgainstSchema - type placeholders", () => {
     const invalidEvent = createMockEvent({ price: "29.99" }, "test");
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 
   it("validates @boolean placeholder", () => {
@@ -253,7 +257,9 @@ describe("validateEventAgainstSchema - type placeholders", () => {
     const invalidEvent = createMockEvent({ active: "true" }, "test");
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 
   it("validates @array placeholder", () => {
@@ -262,7 +268,9 @@ describe("validateEventAgainstSchema - type placeholders", () => {
     const invalidEvent = createMockEvent({ items: "not an array" }, "test");
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 
   it("validates @object placeholder", () => {
@@ -271,23 +279,35 @@ describe("validateEventAgainstSchema - type placeholders", () => {
     const invalidEvent = createMockEvent({ user: [1, 2] }, "test");
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 
   it("validates @any placeholder (accepts anything)", () => {
     const schema = createMockSchema({ event: "test", data: "@any" });
 
     expect(
-      validateEventAgainstSchema(createMockEvent({ data: "string" }, "test"), schema).status
+      validateEventAgainstSchema(
+        createMockEvent({ data: "string" }, "test"),
+        schema
+      ).status
     ).toBe("pass");
     expect(
-      validateEventAgainstSchema(createMockEvent({ data: 123 }, "test"), schema).status
+      validateEventAgainstSchema(createMockEvent({ data: 123 }, "test"), schema)
+        .status
     ).toBe("pass");
     expect(
-      validateEventAgainstSchema(createMockEvent({ data: null }, "test"), schema).status
+      validateEventAgainstSchema(
+        createMockEvent({ data: null }, "test"),
+        schema
+      ).status
     ).toBe("pass");
     expect(
-      validateEventAgainstSchema(createMockEvent({ data: { nested: true } }, "test"), schema).status
+      validateEventAgainstSchema(
+        createMockEvent({ data: { nested: true } }, "test"),
+        schema
+      ).status
     ).toBe("pass");
   });
 });
@@ -299,7 +319,9 @@ describe("validateEventAgainstSchema - literal values", () => {
     const invalidEvent = createMockEvent({ direction: "horizontal" }, "scroll");
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 
   it("validates exact number match", () => {
@@ -308,7 +330,9 @@ describe("validateEventAgainstSchema - literal values", () => {
     const invalidEvent = createMockEvent({ threshold: 50 }, "scroll");
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 
   it("validates exact boolean match", () => {
@@ -317,7 +341,9 @@ describe("validateEventAgainstSchema - literal values", () => {
     const invalidEvent = createMockEvent({ enabled: false }, "test");
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 
   it("validates null literal", () => {
@@ -326,7 +352,9 @@ describe("validateEventAgainstSchema - literal values", () => {
     const invalidEvent = createMockEvent({ error: "some error" }, "test");
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 });
 
@@ -477,23 +505,36 @@ describe("validateEventAgainstSchema - optional fields", () => {
 
     // String
     expect(
-      validateEventAgainstSchema(createMockEvent({ data: "text" }, "test"), schema).status
+      validateEventAgainstSchema(
+        createMockEvent({ data: "text" }, "test"),
+        schema
+      ).status
     ).toBe("pass");
     // Number
     expect(
-      validateEventAgainstSchema(createMockEvent({ data: 123 }, "test"), schema).status
+      validateEventAgainstSchema(createMockEvent({ data: 123 }, "test"), schema)
+        .status
     ).toBe("pass");
     // Boolean
     expect(
-      validateEventAgainstSchema(createMockEvent({ data: true }, "test"), schema).status
+      validateEventAgainstSchema(
+        createMockEvent({ data: true }, "test"),
+        schema
+      ).status
     ).toBe("pass");
     // Object
     expect(
-      validateEventAgainstSchema(createMockEvent({ data: { nested: true } }, "test"), schema).status
+      validateEventAgainstSchema(
+        createMockEvent({ data: { nested: true } }, "test"),
+        schema
+      ).status
     ).toBe("pass");
     // Array
     expect(
-      validateEventAgainstSchema(createMockEvent({ data: [1, 2, 3] }, "test"), schema).status
+      validateEventAgainstSchema(
+        createMockEvent({ data: [1, 2, 3] }, "test"),
+        schema
+      ).status
     ).toBe("pass");
   });
 
@@ -516,7 +557,10 @@ describe("validateEventAgainstSchema - enum values", () => {
       event: "consent",
       consent_type: "@enum(analytics, marketing, functional)",
     });
-    const validEvent = createMockEvent({ consent_type: "analytics" }, "consent");
+    const validEvent = createMockEvent(
+      { consent_type: "analytics" },
+      "consent"
+    );
 
     const result = validateEventAgainstSchema(validEvent, schema);
     expect(result.status).toBe("pass");
@@ -539,7 +583,10 @@ describe("validateEventAgainstSchema - enum values", () => {
       event: "consent",
       consent_type: "@enum(analytics, marketing, functional)",
     });
-    const invalidEvent = createMockEvent({ consent_type: "advertising" }, "consent");
+    const invalidEvent = createMockEvent(
+      { consent_type: "advertising" },
+      "consent"
+    );
 
     const result = validateEventAgainstSchema(invalidEvent, schema);
     expect(result.status).toBe("fail");
@@ -560,7 +607,9 @@ describe("validateEventAgainstSchema - enum values", () => {
     const invalidEvent = createMockEvent({ status: "inactive" }, "test");
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 
   it("enum values are trimmed (whitespace handling)", () => {
@@ -594,8 +643,12 @@ describe("validateEventAgainstSchema - enum values", () => {
     expect(schemaMatchesEvent(schema, eventAdvertising)).toBe(true);
 
     // But validation differs
-    expect(validateEventAgainstSchema(eventAnalytics, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(eventAdvertising, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(eventAnalytics, schema).status).toBe(
+      "pass"
+    );
+    expect(validateEventAgainstSchema(eventAdvertising, schema).status).toBe(
+      "fail"
+    );
   });
 
   it("handles numeric enum values as strings", () => {
@@ -630,7 +683,9 @@ describe("validateEventAgainstSchema - nested objects", () => {
     );
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 
   it("reports error with correct path for nested fields", () => {
@@ -641,10 +696,7 @@ describe("validateEventAgainstSchema - nested objects", () => {
       },
     });
 
-    const event = createMockEvent(
-      { ecommerce: { currency: 123 } },
-      "purchase"
-    );
+    const event = createMockEvent({ ecommerce: { currency: 123 } }, "purchase");
     const result = validateEventAgainstSchema(event, schema);
 
     expect(result.errors[0]!.path).toBe("ecommerce.currency");
@@ -699,7 +751,9 @@ describe("validateEventAgainstSchema - arrays", () => {
     );
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 
   it("reports correct path for array item errors", () => {
@@ -730,8 +784,12 @@ describe("validateEventAgainstSchema - arrays", () => {
     const invalidEvent = createMockEvent({ items: "not array" }, "test");
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(alsoValidEvent, schema).status).toBe("pass");
-    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe("fail");
+    expect(validateEventAgainstSchema(alsoValidEvent, schema).status).toBe(
+      "pass"
+    );
+    expect(validateEventAgainstSchema(invalidEvent, schema).status).toBe(
+      "fail"
+    );
   });
 });
 
@@ -781,8 +839,14 @@ describe("validateEvent - multiple schemas", () => {
 
   it("validates against all matching schemas", () => {
     const schemas = [
-      createMockSchema({ event: "test", field1: "@string" }, { id: "1", name: "Schema 1" }),
-      createMockSchema({ event: "test", field2: "@number" }, { id: "2", name: "Schema 2" }),
+      createMockSchema(
+        { event: "test", field1: "@string" },
+        { id: "1", name: "Schema 1" }
+      ),
+      createMockSchema(
+        { event: "test", field2: "@number" },
+        { id: "2", name: "Schema 2" }
+      ),
     ];
 
     const event = createMockEvent({ field1: "hello", field2: 123 }, "test");
@@ -798,7 +862,10 @@ describe("validateEvent - multiple schemas", () => {
       createMockSchema({ event: "test", field2: "@number" }, { id: "2" }),
     ];
 
-    const event = createMockEvent({ field1: "hello", field2: "not a number" }, "test");
+    const event = createMockEvent(
+      { field1: "hello", field2: "not a number" },
+      "test"
+    );
     const result = validateEvent(event, schemas);
 
     expect(result.status).toBe("fail");
@@ -806,8 +873,14 @@ describe("validateEvent - multiple schemas", () => {
 
   it("ignores disabled schemas", () => {
     const schemas = [
-      createMockSchema({ event: "test", field1: "@string" }, { id: "1", enabled: true }),
-      createMockSchema({ event: "test", field2: "@number" }, { id: "2", enabled: false }),
+      createMockSchema(
+        { event: "test", field1: "@string" },
+        { id: "1", enabled: true }
+      ),
+      createMockSchema(
+        { event: "test", field2: "@number" },
+        { id: "2", enabled: false }
+      ),
     ];
 
     const event = createMockEvent({ field1: "hello" }, "test");
@@ -922,7 +995,7 @@ describe("real-world example: gtm.scrollDepth", () => {
     );
 
     expect(validateEventAgainstSchema(validEvent, schema).status).toBe("pass");
-    
+
     const result = validateEventAgainstSchema(invalidUnits, schema);
     expect(result.status).toBe("fail");
     expect(result.errors[0]!.path).toBe("gtm.scrollUnits");

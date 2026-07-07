@@ -7,7 +7,7 @@
  * - Handling pages without GTM
  */
 
-import { test, expect, getFixtureUrl } from "./fixtures";
+import { expect, getFixtureUrl, test } from "./fixtures";
 
 test.describe("DataLayer Capture", () => {
   test("TC-E2E-001: Should capture dataLayer.push events", async ({
@@ -35,8 +35,9 @@ test.describe("DataLayer Capture", () => {
 
     // Verify the add_to_cart event exists
     const hasAddToCart = await page.evaluate(() => {
-      const dl = (window as unknown as { dataLayer?: Array<{ event?: string }> })
-        .dataLayer;
+      const dl = (
+        window as unknown as { dataLayer?: Array<{ event?: string }> }
+      ).dataLayer;
       return dl?.some((e) => e.event === "add_to_cart");
     });
 
@@ -54,8 +55,9 @@ test.describe("DataLayer Capture", () => {
 
     // Check that pre-existing events are in dataLayer
     const preloadedEvents = await page.evaluate(() => {
-      const dl = (window as unknown as { dataLayer?: Array<{ event?: string }> })
-        .dataLayer;
+      const dl = (
+        window as unknown as { dataLayer?: Array<{ event?: string }> }
+      ).dataLayer;
       return dl?.filter((e) => e.event).map((e) => e.event);
     });
 
@@ -80,10 +82,10 @@ test.describe("DataLayer Capture", () => {
 
     // No dataLayer should exist initially
     const hasDataLayer = await page.evaluate(() => {
-      return typeof (window as unknown as { dataLayer?: unknown }).dataLayer !==
+      return (
+        typeof (window as unknown as { dataLayer?: unknown }).dataLayer !==
         "undefined"
-        ? true
-        : false;
+      );
     });
 
     // Initially no dataLayer
@@ -116,16 +118,23 @@ test.describe("DataLayer Capture", () => {
     // Push multiple events at once
     await page.evaluate(() => {
       const dl = (window as unknown as { dataLayer?: unknown[] }).dataLayer;
-      dl?.push({ event: "multi_1" }, { event: "multi_2" }, { event: "multi_3" });
+      dl?.push(
+        { event: "multi_1" },
+        { event: "multi_2" },
+        { event: "multi_3" }
+      );
     });
 
     await page.waitForTimeout(200);
 
     // Verify all events were captured
     const events = await page.evaluate(() => {
-      const dl = (window as unknown as { dataLayer?: Array<{ event?: string }> })
-        .dataLayer;
-      return dl?.filter((e) => e.event?.startsWith("multi_")).map((e) => e.event);
+      const dl = (
+        window as unknown as { dataLayer?: Array<{ event?: string }> }
+      ).dataLayer;
+      return dl
+        ?.filter((e) => e.event?.startsWith("multi_"))
+        .map((e) => e.event);
     });
 
     expect(events).toContain("multi_1");

@@ -3,10 +3,10 @@
  */
 
 import { useEffect } from "react";
-import { useEventSelection } from "./use-events";
-import { useCommands } from "./use-connection";
-import { useExport } from "./use-export";
 import { usePanelStore } from "../store";
+import { useCommands } from "./use-connection";
+import { useEventSelection } from "./use-events";
+import { useExport } from "./use-export";
 
 /**
  * Register global keyboard shortcuts
@@ -37,17 +37,19 @@ export function useKeyboard(): void {
           case "k":
             event.preventDefault();
             // Focus search
-            document.querySelector<HTMLInputElement>('[data-search-input]')?.focus();
+            document
+              .querySelector<HTMLInputElement>("[data-search-input]")
+              ?.focus();
             return;
 
           case "l":
             event.preventDefault();
-            clearEvents();
+            void clearEvents();
             return;
 
           case "r":
             event.preventDefault();
-            toggleRecording();
+            void toggleRecording();
             return;
 
           case "e":
@@ -82,7 +84,9 @@ export function useKeyboard(): void {
         // Quick search
         case "/":
           event.preventDefault();
-          document.querySelector<HTMLInputElement>('[data-search-input]')?.focus();
+          document
+            .querySelector<HTMLInputElement>("[data-search-input]")
+            ?.focus();
           break;
       }
     }
@@ -92,5 +96,14 @@ export function useKeyboard(): void {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectNext, selectPrevious, selectEvent, clearEvents, toggleRecording, exportAll, canExport, setSearchQuery]);
+  }, [
+    selectNext,
+    selectPrevious,
+    selectEvent,
+    clearEvents,
+    toggleRecording,
+    exportAll,
+    canExport,
+    setSearchQuery,
+  ]);
 }

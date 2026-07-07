@@ -2,28 +2,28 @@
  * ExportEvidenceModal component - Generate PNG/PDF evidence from events
  */
 
-import { useState, useMemo } from "react";
+import { generateEvidence } from "@shared/generators";
+import type {
+  DataLayerEvent,
+  EventViewMode,
+  EvidenceFormat,
+} from "@shared/types";
+import {
+  DEFAULT_EVIDENCE_OPTIONS,
+  EVENT_VIEW_MODE,
+  EVIDENCE_FORMAT,
+} from "@shared/types";
+import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
+import { useFocusTrap } from "../../hooks";
+import { usePanelStore } from "../../store";
 import {
   Button,
-  EvidenceIcon,
   CloseIcon,
   DownloadIcon,
+  EvidenceIcon,
   SpinnerIcon,
 } from "../common";
-import { usePanelStore } from "../../store";
-import { useFocusTrap } from "../../hooks";
-import { generateEvidence } from "@shared/generators";
-import {
-  EVIDENCE_FORMAT,
-  EVENT_VIEW_MODE,
-  DEFAULT_EVIDENCE_OPTIONS,
-} from "@shared/types";
-import type {
-  EvidenceFormat,
-  EventViewMode,
-  DataLayerEvent,
-} from "@shared/types";
-import { cn } from "@/lib/utils";
 
 interface ExportEvidenceModalProps {
   events: readonly DataLayerEvent[];
@@ -188,9 +188,9 @@ export function ExportEvidenceModal({
         <div className="px-4 py-4 space-y-4 overflow-y-auto">
           {/* Format */}
           <div className="flex items-center gap-4">
-            <label className="text-xs font-medium text-gray-400 w-28">
+            <span className="text-xs font-medium text-gray-400 w-28">
               Format
-            </label>
+            </span>
             <div className="flex gap-2">
               <ToggleButton
                 active={format === EVIDENCE_FORMAT.PDF}
@@ -209,10 +209,14 @@ export function ExportEvidenceModal({
 
           {/* Scenario name */}
           <div className="flex items-center gap-4">
-            <label className="text-xs font-medium text-gray-400 w-28">
+            <label
+              htmlFor="evidence-scenario-name"
+              className="text-xs font-medium text-gray-400 w-28"
+            >
               Scenario name
             </label>
             <input
+              id="evidence-scenario-name"
               type="text"
               value={scenarioName}
               onChange={(e) => setScenarioName(e.target.value)}
@@ -222,9 +226,9 @@ export function ExportEvidenceModal({
 
           {/* View options */}
           <div className="flex items-center gap-4">
-            <label className="text-xs font-medium text-gray-400 w-28">
+            <span className="text-xs font-medium text-gray-400 w-28">
               Event view
-            </label>
+            </span>
             <div className="flex gap-2">
               <ToggleButton
                 active={eventViewMode === EVENT_VIEW_MODE.EXPANDED}
@@ -298,9 +302,9 @@ export function ExportEvidenceModal({
 
           {/* Include options */}
           <div className="space-y-2 pt-2 border-t border-panel-border">
-            <label className="text-xs font-medium text-gray-400">
+            <span className="text-xs font-medium text-gray-400">
               Include in header
-            </label>
+            </span>
             <div className="flex flex-wrap gap-4">
               <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
                 <input
@@ -390,7 +394,7 @@ export function ExportEvidenceModal({
           <Button
             size="sm"
             variant="primary"
-            onClick={handleGenerate}
+            onClick={() => void handleGenerate()}
             disabled={isGenerating || events.length === 0}
           >
             {isGenerating ? (

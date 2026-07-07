@@ -45,9 +45,11 @@ export const EVENT_PATTERNS = {
   /** GTM internal events */
   GTM: /^gtm\./,
   /** GA4 recommended ecommerce events */
-  ECOMMERCE: /^(add_to_cart|remove_from_cart|view_item|view_item_list|select_item|begin_checkout|add_payment_info|add_shipping_info|purchase|refund|view_cart|select_promotion|view_promotion)$/,
+  ECOMMERCE:
+    /^(add_to_cart|remove_from_cart|view_item|view_item_list|select_item|begin_checkout|add_payment_info|add_shipping_info|purchase|refund|view_cart|select_promotion|view_promotion)$/,
   /** GA4 recommended engagement events */
-  ENGAGEMENT: /^(login|sign_up|share|search|select_content|page_view|screen_view|scroll|file_download|video_start|video_progress|video_complete)$/,
+  ENGAGEMENT:
+    /^(login|sign_up|share|search|select_content|page_view|screen_view|scroll|file_download|video_start|video_progress|video_complete)$/,
 } as const;
 
 /**

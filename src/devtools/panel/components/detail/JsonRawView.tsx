@@ -3,8 +3,8 @@
  */
 
 import { useState } from "react";
-import { Button, CopyIcon, CheckIcon } from "../common";
 import { cn } from "@/lib/utils";
+import { Button, CheckIcon, CopyIcon } from "../common";
 
 interface JsonRawViewProps {
   data: Record<string, unknown>;
@@ -29,7 +29,7 @@ export function JsonRawView({ data }: JsonRawViewProps) {
     <div className="h-full flex flex-col">
       {/* Actions */}
       <div className="flex items-center gap-2 px-2 py-1 border-b border-panel-border">
-        <Button size="sm" variant="ghost" onClick={handleCopy}>
+        <Button size="sm" variant="ghost" onClick={() => void handleCopy()}>
           {copied ? (
             <>
               <CheckIcon className="w-4 h-4 mr-1 text-green-400" />

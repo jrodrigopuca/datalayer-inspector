@@ -2,10 +2,10 @@
  * useEvents hook - access to events with filtering
  */
 
+import type { DataLayerEvent, EventId } from "@shared/types";
 import { useShallow } from "zustand/react/shallow";
 import { usePanelStore } from "../store";
 import { selectFilteredEvents, selectSelectedEvent } from "../store/selectors";
-import type { DataLayerEvent, EventId } from "@shared/types";
 
 /**
  * Get all filtered events

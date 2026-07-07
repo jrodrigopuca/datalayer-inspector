@@ -2,7 +2,7 @@
  * SplitPane component - resizable split view
  */
 
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface SplitPaneProps {
@@ -69,6 +69,7 @@ export function SplitPane({
       </div>
 
       {/* Drag handle */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: mouse-only drag affordance; pane width is cosmetic and both panes stay reachable without it */}
       <div
         className={cn(
           "w-1 bg-panel-border cursor-col-resize hover:bg-brand-primary/50 transition-colors",
