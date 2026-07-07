@@ -18,3 +18,8 @@ export {
   serializeExport,
   transformEventForExport,
 } from "./export";
+export {
+  formatTriggerFull,
+  formatTriggerShort,
+  isUserInteractionTrigger,
+} from "./trigger-format";

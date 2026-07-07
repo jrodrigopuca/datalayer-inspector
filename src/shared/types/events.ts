@@ -5,6 +5,34 @@
 /** Unique identifier for each dataLayer push */
 export type EventId = string;
 
+/** What kind of interaction (or lack thereof) preceded a push */
+export const TRIGGER_TYPE = {
+  CLICK: "click",
+  SUBMIT: "submit",
+  CHANGE: "change",
+  KEYBOARD: "keyboard",
+  PAGE_LOAD: "page-load",
+  SCRIPT: "script",
+} as const;
+
+export type TriggerType = (typeof TRIGGER_TYPE)[keyof typeof TRIGGER_TYPE];
+
+/**
+ * Best-effort attribution of what caused a dataLayer push.
+ *
+ * Heuristic: a push shortly after a user interaction is attributed to it
+ * (same approach GTM triggers use). "script" means no recent interaction.
+ */
+export interface EventTrigger {
+  readonly type: TriggerType;
+  /** Human-readable target, e.g. 'button "Add to cart"' (never input values) */
+  readonly label: string | null;
+  /** Compact selector of the target, e.g. "#add-to-cart" */
+  readonly selector: string | null;
+  /** Milliseconds between the interaction (or nav start) and the push */
+  readonly sinceMs: number | null;
+}
+
 /**
  * Represents a single push to the dataLayer
  */
@@ -25,6 +53,8 @@ export interface DataLayerEvent {
   readonly source: string;
   /** Sequential event number in tab session (1-based) */
   readonly index: number;
+  /** Best-effort attribution of what caused this push */
+  readonly trigger?: EventTrigger;
 }
 
 /**

@@ -2,6 +2,7 @@
  * DetailView component - main detail panel showing selected event
  */
 
+import { formatTriggerFull, isUserInteractionTrigger } from "@shared/utils";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useSelectedEvent } from "../../hooks";
@@ -123,19 +124,36 @@ export function DetailView() {
       </div>
 
       {/* Event metadata */}
-      <div className="flex items-center gap-3 px-2 py-1 text-2xs text-gray-400 border-b border-panel-border">
-        <span>
-          <strong className="text-gray-300">Event:</strong>{" "}
-          {selectedEvent.eventName ?? "(none)"}
-        </span>
-        <span>
-          <strong className="text-gray-300">Index:</strong> #
-          {selectedEvent.index}
-        </span>
-        <span>
-          <strong className="text-gray-300">Source:</strong>{" "}
-          {selectedEvent.source}
-        </span>
+      <div className="flex items-center flex-wrap gap-x-2 gap-y-1 px-2 py-1.5 text-2xs text-gray-400 border-b border-panel-border">
+        {/* What caused this event - the analyst's first question */}
+        {selectedEvent.trigger && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 px-1.5 py-0.5 rounded min-w-0",
+              isUserInteractionTrigger(selectedEvent.trigger)
+                ? "bg-brand-primary/15 text-brand-primary"
+                : "bg-panel-surface text-gray-400"
+            )}
+            title={formatTriggerFull(selectedEvent.trigger)}
+          >
+            <span aria-hidden="true">⤷</span>
+            <span className="truncate">
+              {formatTriggerFull(selectedEvent.trigger)}
+            </span>
+          </span>
+        )}
+
+        <span className="text-gray-600">#{selectedEvent.index}</span>
+
+        {/* Source array name - only relevant when it's not the default */}
+        {selectedEvent.source !== "dataLayer" && (
+          <span
+            className="px-1.5 py-0.5 rounded bg-panel-surface font-mono"
+            title="Captured from a non-default dataLayer array"
+          >
+            {selectedEvent.source}
+          </span>
+        )}
       </div>
 
       {/* Content */}

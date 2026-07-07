@@ -41,6 +41,12 @@ export function SchemaList() {
     name: string;
   } | null>(null);
 
+  // Import result feedback (visible, not console-only)
+  const [importFeedback, setImportFeedback] = useState<{
+    kind: "success" | "error";
+    message: string;
+  } | null>(null);
+
   const enabledCount = schemas.filter((s) => s.enabled).length;
 
   function handleDeleteClick(id: string, name: string): void {
@@ -88,12 +94,41 @@ export function SchemaList() {
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const data = JSON.parse(evt.target?.result as string) as Schema[];
-        if (Array.isArray(data)) {
-          importSchemas(data);
+        const data: unknown = JSON.parse(evt.target?.result as string);
+
+        if (!Array.isArray(data)) {
+          setImportFeedback({
+            kind: "error",
+            message: "Invalid file: expected a JSON array of schemas",
+          });
+          return;
         }
+
+        const valid = data.filter(isImportableSchema);
+        if (valid.length === 0) {
+          setImportFeedback({
+            kind: "error",
+            message:
+              "No valid schemas found in the file (each needs id, name and template)",
+          });
+          return;
+        }
+
+        importSchemas(valid);
+        const skipped = data.length - valid.length;
+        setImportFeedback({
+          kind: "success",
+          message:
+            skipped > 0
+              ? `Imported ${valid.length} schemas (${skipped} invalid entries skipped)`
+              : `Imported ${valid.length} schema${valid.length !== 1 ? "s" : ""}`,
+        });
       } catch (err) {
         console.error("[Strata] Failed to import schemas:", err);
+        setImportFeedback({
+          kind: "error",
+          message: "Could not read the file: it is not valid JSON",
+        });
       }
     };
     reader.readAsText(file);
@@ -166,6 +201,27 @@ export function SchemaList() {
         onChange={handleFileChange}
         className="hidden"
       />
+
+      {/* Import feedback */}
+      {importFeedback && (
+        <div
+          className={
+            importFeedback.kind === "error"
+              ? "flex items-center justify-between px-3 py-1.5 text-xs text-event-error bg-event-error/10 border-b border-event-error/30"
+              : "flex items-center justify-between px-3 py-1.5 text-xs text-valid bg-valid/10 border-b border-valid/30"
+          }
+        >
+          <span>{importFeedback.message}</span>
+          <button
+            type="button"
+            onClick={() => setImportFeedback(null)}
+            className="text-gray-500 hover:text-gray-300 ml-2"
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Coverage: which expected events never fired */}
       {hasEvents && coverage.enabledCount > 0 && (
@@ -315,6 +371,21 @@ function EmptyState({ onCreateNew }: EmptyStateProps) {
         Create your first schema
       </Button>
     </div>
+  );
+}
+
+/**
+ * Minimal shape check for imported schema entries
+ */
+function isImportableSchema(value: unknown): value is Schema {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.template === "object" &&
+    candidate.template !== null &&
+    !Array.isArray(candidate.template)
   );
 }
 

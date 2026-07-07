@@ -3,7 +3,12 @@
  */
 
 import type { DataLayerEvent, EventValidation } from "@shared/types";
-import { getEventCategory } from "@shared/utils";
+import {
+  formatTriggerFull,
+  formatTriggerShort,
+  getEventCategory,
+  isUserInteractionTrigger,
+} from "@shared/utils";
 import { cn } from "@/lib/utils";
 import { usePanelStore } from "../../store";
 import { CheckIcon, XIcon } from "../common";
@@ -158,33 +163,38 @@ export function EventItem({
         </div>
       </div>
 
-      {/* Row 2: Time metadata + index */}
-      <div className="flex items-center justify-between gap-2 mt-0.5 min-w-0 text-2xs font-mono">
-        <span className="flex items-baseline gap-1.5 min-w-0">
-          <span
-            className="text-gray-500 flex-shrink-0"
-            title={formatFullTimestamp(event.timestamp)}
-          >
-            {formatTime(event.timestamp)}
-          </span>
-          {deltaMs !== null && deltaMs !== undefined && (
-            <span
-              className="text-gray-600 flex-shrink-0"
-              title="Time since previous event"
-            >
-              {formatDelta(deltaMs)}
-            </span>
-          )}
-          {event.source !== "dataLayer" && (
-            <span
-              className="text-gray-500 truncate min-w-0"
-              title={`Source: ${event.source}`}
-            >
-              {event.source}
-            </span>
-          )}
+      {/* Row 2: Time metadata + trigger */}
+      <div className="flex items-baseline gap-1.5 mt-0.5 min-w-0 text-2xs font-mono">
+        <span
+          className="text-gray-500 flex-shrink-0"
+          title={formatFullTimestamp(event.timestamp)}
+        >
+          {formatTime(event.timestamp)}
         </span>
-        <span className="text-gray-600 flex-shrink-0">#{event.index}</span>
+        {deltaMs !== null && deltaMs !== undefined && (
+          <span
+            className="text-gray-600 flex-shrink-0"
+            title="Time since previous event"
+          >
+            {formatDelta(deltaMs)}
+          </span>
+        )}
+        {event.source !== "dataLayer" && (
+          <span
+            className="text-gray-500 truncate max-w-24"
+            title={`Source: ${event.source}`}
+          >
+            {event.source}
+          </span>
+        )}
+        {event.trigger && isUserInteractionTrigger(event.trigger) && (
+          <span
+            className="ml-auto text-brand-primary/80 truncate min-w-0"
+            title={`Triggered by ${formatTriggerFull(event.trigger)}`}
+          >
+            ⤷ {formatTriggerShort(event.trigger)}
+          </span>
+        )}
       </div>
     </div>
   );

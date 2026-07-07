@@ -1,17 +1,27 @@
 /**
- * Evidence generator - Creates PNG/PDF evidence from dataLayer events
+ * Evidence generator - Creates PDF evidence from dataLayer events
  *
- * Uses Canvas API for PNG and jsPDF for PDF (no html2canvas dependency)
+ * PDF-only by design: PDF paginates, so captures of any length work.
+ * (PNG was removed: single-canvas rendering silently fails beyond the
+ * browser's ~32k px canvas limit, which long sessions always exceed.)
  */
 
 import { jsPDF } from "jspdf";
 import type { DataLayerEvent } from "../types/events";
 import type { EvidenceOptions, GeneratedEvidence } from "../types/evidence";
-import {
-  DEFAULT_EVIDENCE_OPTIONS,
-  EVENT_VIEW_MODE,
-  EVIDENCE_FORMAT,
-} from "../types/evidence";
+import { DEFAULT_EVIDENCE_OPTIONS, EVENT_VIEW_MODE } from "../types/evidence";
+import { formatTriggerFull } from "../utils/trigger-format";
+
+/**
+ * Trigger line for an event, or null when disabled/absent
+ */
+function getTriggerLine(
+  event: DataLayerEvent,
+  options: EvidenceOptions
+): string | null {
+  if (!options.includeTrigger || !event.trigger) return null;
+  return `Trigger: ${formatTriggerFull(event.trigger)}`;
+}
 
 /**
  * Determine if an event should be expanded based on view mode
@@ -30,30 +40,15 @@ function shouldExpandEvent(
   }
 }
 
-/** Colors for the evidence document */
+/** Syntax highlighting colors (VS Code dark theme inspired) */
 const COLORS = {
-  background: "#1e1e1e",
-  surface: "#252526",
-  border: "#3c3c3c",
   text: "#cccccc",
-  textMuted: "#808080",
-  textBright: "#ffffff",
-  accent: "#007acc",
-  eventName: "#4ec9b0",
-  timestamp: "#dcdcaa",
-  // Syntax highlighting (VS Code dark theme inspired)
   key: "#9cdcfe",
   string: "#ce9178",
   number: "#b5cea8",
   boolean: "#569cd6",
   null: "#569cd6",
   bracket: "#ffd700",
-  // Brand
-  brand: "#3B82F6",
-  // Validation status
-  validPass: "#4ade80", // green-400
-  validFail: "#f87171", // red-400
-  validNone: "#a1a1aa", // zinc-400
 };
 
 /** PDF configuration */
@@ -79,239 +74,7 @@ export async function generateEvidence(
 ): Promise<GeneratedEvidence> {
   const opts: EvidenceOptions = { ...DEFAULT_EVIDENCE_OPTIONS, ...options };
 
-  if (opts.format === EVIDENCE_FORMAT.PNG) {
-    return generatePNG(events, opts);
-  }
   return generatePDF(events, opts);
-}
-
-/**
- * Generate PNG evidence using Canvas API
- */
-function generatePNG(
-  events: readonly DataLayerEvent[],
-  options: EvidenceOptions
-): GeneratedEvidence {
-  const padding = 20;
-  const width = 800;
-  const lineHeightPx = 14;
-  const eventHeaderHeight = 30;
-  const eventPadding = 15;
-  const collapsedEventHeight = 40;
-  const brandingHeight = 40;
-
-  // Pre-calculate JSON lines for each event to determine total height
-  const eventData = events.map((event) => {
-    const jsonStr = JSON.stringify(event.data, null, 2);
-    const lines = jsonStr.split("\n");
-    const isExpanded = shouldExpandEvent(event, options);
-    return {
-      event,
-      jsonLines: lines,
-      isExpanded,
-      height: isExpanded
-        ? eventHeaderHeight + lines.length * lineHeightPx + eventPadding * 2
-        : collapsedEventHeight,
-    };
-  });
-
-  // Calculate total canvas height
-  const headerHeight = 100; // Title + metadata
-  const eventsHeaderHeight = 30;
-  const totalEventsHeight = eventData.reduce(
-    (sum, e) => sum + e.height + 10,
-    0
-  );
-  const height =
-    brandingHeight +
-    headerHeight +
-    eventsHeaderHeight +
-    totalEventsHeight +
-    padding * 2;
-
-  // Create canvas
-  const canvas = document.createElement("canvas");
-  canvas.width = width * 2; // 2x for retina
-  canvas.height = height * 2;
-  const ctx = canvas.getContext("2d")!;
-  ctx.scale(2, 2);
-
-  // Background
-  ctx.fillStyle = COLORS.background;
-  ctx.fillRect(0, 0, width, height);
-
-  // === BRANDING HEADER ===
-  let y = padding;
-
-  // Logo "S" in blue rounded square
-  const logoSize = 24;
-  ctx.fillStyle = COLORS.brand;
-  roundRect(ctx, padding, y - 2, logoSize, logoSize, 4);
-  ctx.fill();
-
-  // "S" letter
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 16px system-ui, -apple-system, sans-serif";
-  ctx.fillText("S", padding + 7, y + 16);
-
-  // "Strata" text
-  ctx.fillStyle = COLORS.textBright;
-  ctx.font = "bold 14px system-ui, -apple-system, sans-serif";
-  ctx.fillText("Strata", padding + logoSize + 8, y + 15);
-
-  // "dataLayer Inspector" subtitle
-  ctx.fillStyle = COLORS.textMuted;
-  ctx.font = "11px system-ui, -apple-system, sans-serif";
-  ctx.fillText("dataLayer Inspector", padding + logoSize + 60, y + 15);
-
-  y += brandingHeight;
-
-  // === SCENARIO HEADER ===
-  ctx.fillStyle = COLORS.textBright;
-  ctx.font = "bold 18px system-ui, -apple-system, sans-serif";
-  ctx.fillText(options.scenarioName, padding, y + 18);
-  y += 30;
-
-  ctx.fillStyle = COLORS.textMuted;
-  ctx.font = "12px system-ui, -apple-system, sans-serif";
-
-  if (options.includeTimestamp) {
-    ctx.fillText(`Generated: ${new Date().toLocaleString()}`, padding, y + 12);
-    y += 18;
-  }
-
-  if (options.includeUrl && events.length > 0) {
-    const firstEvent = events[0];
-    if (firstEvent) {
-      const url = firstEvent.url;
-      const truncatedUrl = url.length > 80 ? `${url.slice(0, 80)}...` : url;
-      ctx.fillText(`URL: ${truncatedUrl}`, padding, y + 12);
-      y += 18;
-    }
-  }
-
-  if (options.includeContainers && events.length > 0) {
-    const containers = [...new Set(events.flatMap((e) => e.containerIds))];
-    if (containers.length > 0) {
-      ctx.fillText(`Containers: ${containers.join(", ")}`, padding, y + 12);
-      y += 18;
-    }
-  }
-
-  y += 10;
-
-  // Events header
-  ctx.fillStyle = COLORS.textMuted;
-  ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
-  ctx.fillText(
-    `${events.length} event${events.length !== 1 ? "s" : ""} captured`,
-    padding,
-    y + 11
-  );
-  y += 25;
-
-  // Render each event
-  for (const {
-    event,
-    jsonLines,
-    height: cardHeight,
-    isExpanded,
-  } of eventData) {
-    // Get validation status for this event
-    const validation = options.validations?.get(event.id);
-    const validationStatus = validation?.status ?? "none";
-
-    // Event card background
-    ctx.fillStyle = COLORS.surface;
-    roundRect(ctx, padding, y, width - padding * 2, cardHeight, 4);
-    ctx.fill();
-
-    // Event header
-    ctx.fillStyle = COLORS.eventName;
-    ctx.font = "bold 12px monospace";
-    const eventLabel = event.eventName ?? "(no event name)";
-    ctx.fillText(eventLabel, padding + 10, y + 18);
-
-    // Validation badge (if enabled and has validation)
-    if (options.includeValidation && validationStatus !== "none") {
-      const badgeX = padding + 10 + ctx.measureText(eventLabel).width + 10;
-      const badgeText = validationStatus === "pass" ? "✓ PASS" : "✗ FAIL";
-      const badgeColor =
-        validationStatus === "pass" ? COLORS.validPass : COLORS.validFail;
-
-      // Badge background
-      ctx.font = "bold 9px system-ui, -apple-system, sans-serif";
-      const badgeWidth = ctx.measureText(badgeText).width + 10;
-      ctx.fillStyle = `${badgeColor}30`; // 30 = ~19% opacity in hex
-      roundRect(ctx, badgeX, y + 6, badgeWidth, 14, 3);
-      ctx.fill();
-
-      // Badge text
-      ctx.fillStyle = badgeColor;
-      ctx.fillText(badgeText, badgeX + 5, y + 16);
-    }
-
-    // Timestamp
-    ctx.fillStyle = COLORS.timestamp;
-    ctx.font = "11px monospace";
-    const time = new Date(event.timestamp).toLocaleTimeString();
-    ctx.fillText(time, width - padding - 80, y + 18);
-
-    if (isExpanded) {
-      // Render JSON with syntax highlighting
-      ctx.font = "10px monospace";
-      let lineY = y + 35;
-      for (const line of jsonLines) {
-        renderSyntaxHighlightedLine(
-          ctx,
-          line,
-          padding + 10,
-          lineY,
-          width - padding * 2 - 20
-        );
-        lineY += lineHeightPx;
-      }
-    }
-
-    y += cardHeight + 10;
-  }
-
-  // Convert to blob
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => {
-      resolve({
-        blob: blob!,
-        filename: generateFilename(options.scenarioName, "png"),
-        mimeType: "image/png",
-      });
-    }, "image/png");
-  }) as unknown as GeneratedEvidence;
-}
-
-/**
- * Render a JSON line with syntax highlighting on canvas
- */
-function renderSyntaxHighlightedLine(
-  ctx: CanvasRenderingContext2D,
-  line: string,
-  x: number,
-  y: number,
-  maxWidth: number
-): void {
-  // Truncate if too long
-  const truncatedLine = line.length > 95 ? `${line.slice(0, 95)}...` : line;
-
-  // Parse and colorize JSON tokens
-  const tokens = tokenizeLine(truncatedLine);
-  let currentX = x;
-
-  for (const token of tokens) {
-    ctx.fillStyle = token.color;
-    ctx.fillText(token.text, currentX, y);
-    currentX += ctx.measureText(token.text).width;
-
-    if (currentX > x + maxWidth) break;
-  }
 }
 
 /**
@@ -500,9 +263,12 @@ function generatePDF(
     // Calculate space needed for this event
     const jsonStr = isExpanded ? JSON.stringify(event.data, null, 2) : "";
     const jsonLines = jsonStr.split("\n");
-    const eventSpace = isExpanded
-      ? lineHeight * 2 + jsonLines.length * (fontSize.code * 0.4) + lineHeight
-      : lineHeight * 2;
+    const triggerLine = getTriggerLine(event, options);
+    const triggerSpace = triggerLine ? lineHeight : 0;
+    const eventSpace =
+      (isExpanded
+        ? lineHeight * 2 + jsonLines.length * (fontSize.code * 0.4) + lineHeight
+        : lineHeight * 2) + triggerSpace;
 
     checkPageBreak(eventSpace);
 
@@ -550,6 +316,19 @@ function generatePDF(
     doc.setTextColor(150, 150, 150);
     doc.text(time, pageWidth - margin - 25, y + 1);
     y += lineHeight + 2;
+
+    // Trigger attribution line (optional)
+    if (triggerLine) {
+      doc.setFontSize(fontSize.code);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(120, 120, 120);
+      const truncatedTrigger =
+        triggerLine.length > 110
+          ? `${triggerLine.slice(0, 110)}...`
+          : triggerLine;
+      doc.text(truncatedTrigger, margin + 4, y);
+      y += lineHeight;
+    }
 
     if (isExpanded) {
       // Event data with syntax highlighting
@@ -613,30 +392,6 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
     };
   }
   return { r: 128, g: 128, b: 128 }; // Default gray
-}
-
-/**
- * Draw rounded rectangle on canvas
- */
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number
-): void {
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
 }
 
 /**

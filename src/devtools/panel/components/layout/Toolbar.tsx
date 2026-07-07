@@ -286,7 +286,7 @@ function ExportMenu({
           <MenuItem
             icon={<EvidenceIcon className="w-4 h-4" />}
             label="Evidence…"
-            description="PDF / PNG for QA reports"
+            description="PDF for QA reports"
             onClick={() => pick(onExportEvidence)}
           />
         </div>

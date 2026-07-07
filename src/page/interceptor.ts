@@ -14,6 +14,8 @@
  * CRITICAL: This runs in page context - errors must not break the page
  */
 
+import { LIMITS } from "@shared/constants";
+import { resolveTrigger } from "./interaction-tracker";
 import type { CapturedEventData } from "./message-emitter";
 
 /**
@@ -196,15 +198,18 @@ function createCapturedEvent(
   // Safely serialize data (handle circular refs)
   const safeData = safeSerialize(data);
 
+  const timestamp = Date.now();
+
   return {
     id: generateId(),
-    timestamp: Date.now(),
+    timestamp,
     url: window.location.href,
     eventName,
     data: safeData,
     containerIds: [...state.containerIds],
     sourceName,
     index: state.eventIndex,
+    trigger: resolveTrigger(timestamp),
   };
 }
 
@@ -255,6 +260,19 @@ function safeSerialize(data: Record<string, unknown>): Record<string, unknown> {
 
       return value;
     });
+
+    // Oversized payloads would break messaging and session-storage
+    // persistence downstream - replace with an explicit marker instead
+    // of failing silently later.
+    if (jsonString.length > LIMITS.MAX_EVENT_PAYLOAD_SIZE) {
+      return {
+        __truncated__: true,
+        event: typeof data.event === "string" ? data.event : null,
+        note: `Payload exceeded the ${Math.round(
+          LIMITS.MAX_EVENT_PAYLOAD_SIZE / 1000
+        )}KB capture limit (was ~${Math.round(jsonString.length / 1000)}KB)`,
+      };
+    }
 
     return JSON.parse(jsonString) as Record<string, unknown>;
   } catch {

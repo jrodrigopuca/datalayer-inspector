@@ -12,7 +12,7 @@ import type {
   UpdateSchemaInput,
 } from "@shared/types";
 import { eventToTemplate } from "@shared/validators";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { usePanelStore } from "../store";
 
@@ -59,6 +59,11 @@ export function useSchemas(): UseSchemasReturn {
     }))
   );
 
+  // Guards against overwriting stored schemas before the initial load
+  // completes (or if it failed). Once loaded, ALL states persist -
+  // including the empty list, so deleting the last schema sticks.
+  const hasLoadedRef = useRef(false);
+
   // Load schemas from storage on mount
   useEffect(() => {
     async function loadSchemas(): Promise<void> {
@@ -68,7 +73,9 @@ export function useSchemas(): UseSchemasReturn {
         if (Array.isArray(stored)) {
           setSchemas(stored as Schema[]);
         }
+        hasLoadedRef.current = true;
       } catch (error) {
+        // Keep hasLoadedRef false: never overwrite storage we couldn't read
         console.error("[Strata] Failed to load schemas:", error);
       }
     }
@@ -78,6 +85,8 @@ export function useSchemas(): UseSchemasReturn {
 
   // Save schemas to storage when they change
   useEffect(() => {
+    if (!hasLoadedRef.current) return;
+
     async function saveSchemas(): Promise<void> {
       try {
         await chrome.storage.local.set({ [STORAGE_KEY]: schemas });
@@ -86,10 +95,7 @@ export function useSchemas(): UseSchemasReturn {
       }
     }
 
-    // Only save if we have schemas (avoid clearing on initial load)
-    if (schemas.length > 0) {
-      void saveSchemas();
-    }
+    void saveSchemas();
   }, [schemas]);
 
   const addSchema = useCallback(

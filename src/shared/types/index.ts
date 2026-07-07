@@ -8,12 +8,18 @@
 export type {
   DataLayerEvent,
   EventId,
+  EventTrigger,
   GTMContainer,
   MutableTabState,
   TabState,
+  TriggerType,
 } from "./events";
 
-export { createInitialTabState, toReadonlyTabState } from "./events";
+export {
+  createInitialTabState,
+  TRIGGER_TYPE,
+  toReadonlyTabState,
+} from "./events";
 // Evidence export types
 export type {
   EventViewMode,

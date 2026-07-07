@@ -1,12 +1,15 @@
 /**
- * Types for evidence export (PNG/PDF)
+ * Types for evidence export (PDF)
  */
 
 import type { EventValidation } from "./schema";
 
-/** Evidence export format */
+/**
+ * Evidence export format.
+ * PDF only: it paginates, so captures of any length work. PNG was removed
+ * because single-canvas rendering fails beyond the browser canvas limit.
+ */
 export const EVIDENCE_FORMAT = {
-  PNG: "png",
   PDF: "pdf",
 } as const;
 
@@ -41,6 +44,8 @@ export interface EvidenceOptions {
   includeContainers: boolean;
   /** Include schema validation status */
   includeValidation: boolean;
+  /** Include trigger attribution per event ("Click on 'Add to cart'") */
+  includeTrigger: boolean;
   /** Validation results per event (Map<eventId, EventValidation>) */
   validations?: Map<string, EventValidation>;
 }
@@ -57,6 +62,7 @@ export const DEFAULT_EVIDENCE_OPTIONS: Omit<
   includeUrl: true,
   includeContainers: true,
   includeValidation: true,
+  includeTrigger: true,
 };
 
 /** Generated evidence result */

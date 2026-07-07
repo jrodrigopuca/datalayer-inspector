@@ -6,7 +6,7 @@
  * CRITICAL: This runs in page context - fail silently on errors
  */
 
-import type { GTMContainer } from "@shared/types";
+import type { EventTrigger, GTMContainer } from "@shared/types";
 import { MESSAGE_SOURCE, PAGE_MESSAGE_TYPE } from "@shared/types";
 
 /**
@@ -21,6 +21,7 @@ export interface CapturedEventData {
   readonly containerIds: readonly string[];
   readonly sourceName: string;
   readonly index: number;
+  readonly trigger?: EventTrigger;
 }
 
 /**

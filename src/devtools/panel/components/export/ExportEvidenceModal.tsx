@@ -1,18 +1,10 @@
 /**
- * ExportEvidenceModal component - Generate PNG/PDF evidence from events
+ * ExportEvidenceModal component - Generate PDF evidence from events
  */
 
 import { generateEvidence } from "@shared/generators";
-import type {
-  DataLayerEvent,
-  EventViewMode,
-  EvidenceFormat,
-} from "@shared/types";
-import {
-  DEFAULT_EVIDENCE_OPTIONS,
-  EVENT_VIEW_MODE,
-  EVIDENCE_FORMAT,
-} from "@shared/types";
+import type { DataLayerEvent, EventViewMode } from "@shared/types";
+import { DEFAULT_EVIDENCE_OPTIONS, EVENT_VIEW_MODE } from "@shared/types";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useFocusTrap } from "../../hooks";
@@ -24,6 +16,7 @@ import {
   EvidenceIcon,
   SpinnerIcon,
 } from "../common";
+import { CustomEventPicker } from "./CustomEventPicker";
 
 interface ExportEvidenceModalProps {
   events: readonly DataLayerEvent[];
@@ -39,7 +32,6 @@ export function ExportEvidenceModal({
   const schemas = usePanelStore((s) => s.schemas);
   const hasSchemas = schemas.length > 0;
 
-  const [format, setFormat] = useState<EvidenceFormat>(EVIDENCE_FORMAT.PDF);
   const [scenarioName, setScenarioName] = useState(
     DEFAULT_EVIDENCE_OPTIONS.scenarioName
   );
@@ -61,7 +53,11 @@ export function ExportEvidenceModal({
   const [includeValidation, setIncludeValidation] = useState(
     DEFAULT_EVIDENCE_OPTIONS.includeValidation
   );
+  const [includeTrigger, setIncludeTrigger] = useState(
+    DEFAULT_EVIDENCE_OPTIONS.includeTrigger
+  );
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   // Focus trap
   const containerRef = useFocusTrap<HTMLDivElement>({
@@ -105,10 +101,10 @@ export function ExportEvidenceModal({
 
   async function handleGenerate(): Promise<void> {
     setIsGenerating(true);
+    setGenerateError(null);
     try {
       const shouldIncludeValidation = includeValidation && hasSchemas;
       const options = {
-        format,
         scenarioName,
         eventViewMode,
         ...(eventViewMode === EVENT_VIEW_MODE.CUSTOM && {
@@ -118,6 +114,7 @@ export function ExportEvidenceModal({
         includeUrl,
         includeContainers,
         includeValidation: shouldIncludeValidation,
+        includeTrigger,
         ...(shouldIncludeValidation && { validations }),
       };
       const evidence = await generateEvidence(events, options);
@@ -133,6 +130,11 @@ export function ExportEvidenceModal({
       onClose();
     } catch (error) {
       console.error("Failed to generate evidence:", error);
+      setGenerateError(
+        error instanceof Error
+          ? error.message
+          : "Failed to generate the evidence document."
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -186,27 +188,6 @@ export function ExportEvidenceModal({
 
         {/* Options */}
         <div className="px-4 py-4 space-y-4 overflow-y-auto">
-          {/* Format */}
-          <div className="flex items-center gap-4">
-            <span className="text-xs font-medium text-gray-400 w-28">
-              Format
-            </span>
-            <div className="flex gap-2">
-              <ToggleButton
-                active={format === EVIDENCE_FORMAT.PDF}
-                onClick={() => setFormat(EVIDENCE_FORMAT.PDF)}
-              >
-                PDF
-              </ToggleButton>
-              <ToggleButton
-                active={format === EVIDENCE_FORMAT.PNG}
-                onClick={() => setFormat(EVIDENCE_FORMAT.PNG)}
-              >
-                PNG
-              </ToggleButton>
-            </div>
-          </div>
-
           {/* Scenario name */}
           <div className="flex items-center gap-4">
             <label
@@ -253,58 +234,18 @@ export function ExportEvidenceModal({
 
           {/* Custom event selection */}
           {eventViewMode === EVENT_VIEW_MODE.CUSTOM && (
-            <div className="ml-32 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500">
-                  {customExpandedEvents.size} of {events.length} expanded
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={selectAllEvents}
-                    className="text-xs text-brand-primary hover:text-brand-primary/80"
-                  >
-                    Select all
-                  </button>
-                  <span className="text-gray-600">|</span>
-                  <button
-                    type="button"
-                    onClick={deselectAllEvents}
-                    className="text-xs text-brand-primary hover:text-brand-primary/80"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-              <div className="max-h-40 overflow-y-auto border border-panel-border rounded bg-panel-surface p-2 space-y-1">
-                {events.map((event) => (
-                  <label
-                    key={event.id}
-                    className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer hover:bg-panel-bg/50 px-1 py-0.5 rounded"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={customExpandedEvents.has(event.id)}
-                      onChange={() => toggleCustomEvent(event.id)}
-                      className="rounded border-panel-border bg-panel-bg"
-                    />
-                    <span className="text-event-name font-mono truncate flex-1">
-                      {event.eventName ?? "(no event name)"}
-                    </span>
-                    <span className="text-gray-500 text-[10px]">
-                      {new Date(event.timestamp).toLocaleTimeString()}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            <CustomEventPicker
+              events={events}
+              selectedIds={customExpandedEvents}
+              onToggle={toggleCustomEvent}
+              onSelectAll={selectAllEvents}
+              onClear={deselectAllEvents}
+            />
           )}
 
           {/* Include options */}
           <div className="space-y-2 pt-2 border-t border-panel-border">
-            <span className="text-xs font-medium text-gray-400">
-              Include in header
-            </span>
+            <span className="text-xs font-medium text-gray-400">Include</span>
             <div className="flex flex-wrap gap-4">
               <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
                 <input
@@ -355,6 +296,18 @@ export function ExportEvidenceModal({
                 />
                 Validation status
               </label>
+              <label
+                className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer"
+                title='Show what caused each event, e.g. Click on "Add to cart"'
+              >
+                <input
+                  type="checkbox"
+                  checked={includeTrigger}
+                  onChange={(e) => setIncludeTrigger(e.target.checked)}
+                  className="rounded border-panel-border bg-panel-surface"
+                />
+                Trigger attribution
+              </label>
             </div>
           </div>
         </div>
@@ -363,7 +316,7 @@ export function ExportEvidenceModal({
         <div className="px-4 py-3 bg-panel-surface border-t border-panel-border">
           <div className="text-xs text-gray-400">
             <span className="font-medium text-gray-300">Preview: </span>
-            {events.length} events will be exported as {format.toUpperCase()}
+            {events.length} events will be exported as PDF
             {eventViewMode === EVENT_VIEW_MODE.EXPANDED &&
               " with full event data"}
             {eventViewMode === EVENT_VIEW_MODE.COLLAPSED && " in summary view"}
@@ -386,6 +339,13 @@ export function ExportEvidenceModal({
           </div>
         </div>
 
+        {/* Generation error */}
+        {generateError && (
+          <div className="px-4 py-2 text-xs text-event-error bg-event-error/10 border-t border-event-error/30">
+            {generateError}
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-panel-border">
           <Button size="sm" variant="ghost" onClick={onClose}>
@@ -405,7 +365,7 @@ export function ExportEvidenceModal({
             ) : (
               <>
                 <DownloadIcon className="w-4 h-4 mr-1" />
-                Generate {format.toUpperCase()}
+                Generate PDF
               </>
             )}
           </Button>

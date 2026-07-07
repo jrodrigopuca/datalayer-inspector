@@ -112,6 +112,7 @@ function transformMessage(
         containerIds: [...payload.containerIds],
         source: payload.sourceName,
         index: payload.index,
+        ...(payload.trigger && { trigger: payload.trigger }),
       };
 
       return {

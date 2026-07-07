@@ -1,8 +1,5 @@
 /**
- * Tests for evidence generator
- *
- * Note: PNG generation requires Canvas API which isn't fully available in JSDOM.
- * These tests focus on the PDF generation and helper functions.
+ * Tests for evidence generator (PDF)
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -170,20 +167,47 @@ describe("generateEvidence", () => {
 
       expect(result.blob).toBeInstanceOf(Blob);
     });
-  });
 
-  describe("PNG generation", () => {
-    // Note: PNG generation uses Canvas API which isn't fully available in JSDOM
-    // These tests verify the function handles the format correctly
+    it("generates with trigger attribution enabled", async () => {
+      const events = [
+        createMockEvent({
+          trigger: {
+            type: "click",
+            label: 'button "Add to cart"',
+            selector: "#add-to-cart",
+            sinceMs: 130,
+          },
+        }),
+        // Event without trigger data must not break rendering
+        createMockEvent({ id: "evt-2" }),
+      ];
 
-    it("attempts PNG generation when format is PNG", async () => {
-      const events = [createMockEvent()];
+      const result = await generateEvidence(events, {
+        format: EVIDENCE_FORMAT.PDF,
+        includeTrigger: true,
+      });
 
-      // This will throw because JSDOM doesn't have full Canvas support
-      // but we can verify it tries the right path
-      await expect(
-        generateEvidence(events, { format: EVIDENCE_FORMAT.PNG })
-      ).rejects.toThrow();
+      expect(result.blob).toBeInstanceOf(Blob);
+    });
+
+    it("generates without trigger attribution when disabled", async () => {
+      const events = [
+        createMockEvent({
+          trigger: {
+            type: "click",
+            label: 'button "Add to cart"',
+            selector: "#add-to-cart",
+            sinceMs: 130,
+          },
+        }),
+      ];
+
+      const result = await generateEvidence(events, {
+        format: EVIDENCE_FORMAT.PDF,
+        includeTrigger: false,
+      });
+
+      expect(result.blob).toBeInstanceOf(Blob);
     });
   });
 

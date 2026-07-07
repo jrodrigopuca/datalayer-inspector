@@ -39,7 +39,7 @@ Perfect for catching tracking issues before they reach production.
 
 • JSON: Export events for debugging or documentation
 • Test Assertions: Generate Playwright or Cypress test code
-• Evidence: Create PNG or PDF screenshots for QA reports
+• Evidence: Create PDF documents for QA reports
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

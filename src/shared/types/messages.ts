@@ -4,7 +4,12 @@
  * Pattern: Each boundary has its own message types to maintain type safety
  */
 
-import type { DataLayerEvent, GTMContainer, TabState } from "./events";
+import type {
+  DataLayerEvent,
+  EventTrigger,
+  GTMContainer,
+  TabState,
+} from "./events";
 import type { UserSettings } from "./settings";
 
 // ============================================================================
@@ -44,6 +49,7 @@ export interface PageEventCapturedPayload {
   readonly containerIds: readonly string[];
   readonly sourceName: string;
   readonly index: number;
+  readonly trigger?: EventTrigger;
 }
 
 export interface PageContainersDetectedPayload {

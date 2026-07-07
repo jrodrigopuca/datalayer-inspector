@@ -62,6 +62,28 @@ describe("interceptor", () => {
       expect(captured?.index).toBe(1);
     });
 
+    it("replaces oversized payloads with an explicit truncation marker", () => {
+      const win = window as unknown as Record<string, unknown[]>;
+      win.dataLayer = [];
+
+      interceptDataLayer("dataLayer", onEvent);
+
+      // ~200KB payload - twice the 100KB capture limit
+      win.dataLayer.push({
+        event: "huge_event",
+        blob: "x".repeat(200_000),
+      });
+
+      const captured = capturedEvents[0];
+      expect(captured).toBeDefined();
+      expect(captured?.eventName).toBe("huge_event");
+      expect(captured?.data.__truncated__).toBe(true);
+      expect(captured?.data.event).toBe("huge_event");
+      expect(String(captured?.data.note)).toContain("capture limit");
+      // The original giant blob must NOT travel through messaging
+      expect(JSON.stringify(captured?.data).length).toBeLessThan(1000);
+    });
+
     it("processes existing events in array", () => {
       const win = window as unknown as Record<string, unknown[]>;
       win.dataLayer = [{ event: "existing_1" }, { event: "existing_2" }];

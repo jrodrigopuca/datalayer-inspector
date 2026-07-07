@@ -15,6 +15,7 @@ import {
   getContainerIds,
   shouldRedetectContainers,
 } from "./container-detector";
+import { startInteractionTracking } from "./interaction-tracker";
 import { interceptDataLayer, setContainerIds } from "./interceptor";
 import { emitContainers, emitEvent, emitInitialized } from "./message-emitter";
 
@@ -58,6 +59,9 @@ function init(): void {
   try {
     const config = readConfig();
     let totalExistingEvents = 0;
+
+    // Track user interactions so pushes can be attributed to them
+    startInteractionTracking();
 
     // Detect initial containers
     const initialContainers = detectContainers();
