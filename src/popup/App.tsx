@@ -75,6 +75,14 @@ export default function App() {
     try {
       const port = chrome.runtime.connect({ name: PORT_NAME.POPUP });
 
+      // Reading lastError on disconnect marks it as handled
+      port.onDisconnect.addListener(() => {
+        const lastError = chrome.runtime.lastError;
+        if (lastError) {
+          console.debug("[Strata Popup] Port disconnected:", lastError.message);
+        }
+      });
+
       // Send init message
       port.postMessage({ type: "INIT", tabId });
 

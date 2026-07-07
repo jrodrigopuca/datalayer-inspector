@@ -96,6 +96,13 @@ export function useConnection(): void {
     }
 
     function handleDisconnect(): void {
+      // Reading lastError marks it as handled (avoids
+      // "Unchecked runtime.lastError" noise in the console)
+      const lastError = chrome.runtime.lastError;
+      if (lastError) {
+        console.debug("[Strata] Port disconnected:", lastError.message);
+      }
+
       portRef.current = null;
       setConnectionState(CONNECTION_STATE.DISCONNECTED);
       scheduleReconnect();
@@ -114,7 +121,10 @@ export function useConnection(): void {
       }, LIMITS.RECONNECT_DELAY);
     }
 
-    async function requestInitialState(tabId: number): Promise<void> {
+    async function requestInitialState(
+      tabId: number,
+      attempt = 0
+    ): Promise<void> {
       try {
         // Request tab state
         const stateResponse = await sendRequest({
@@ -140,7 +150,15 @@ export function useConnection(): void {
           updateSettings(settingsResponse.payload);
         }
       } catch (error) {
+        // The service worker may still be starting up - retry briefly
+        if (attempt < 2) {
+          setTimeout(() => {
+            void requestInitialState(tabId, attempt + 1);
+          }, 500);
+          return;
+        }
         console.error("[Strata] Failed to fetch initial state:", error);
+        setErrorMessage("Could not reach the extension service worker");
       }
     }
 

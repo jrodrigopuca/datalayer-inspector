@@ -1,6 +1,6 @@
 # Privacy Policy for Strata
 
-**Last updated:** March 2026
+**Last updated:** July 2026
 
 ## Overview
 
@@ -24,9 +24,13 @@ When you use Strata:
 
 1. **Event Capture**: The Extension intercepts `dataLayer.push()` calls on the current page. This data is stored temporarily in your browser's memory.
 
-2. **Schema Storage**: Validation schemas you create are stored locally using Chrome's `storage.local` API. This data never leaves your device.
+2. **Trigger Attribution**: To show what caused each dataLayer event, the Extension observes user interactions (clicks, form submits, field changes, Enter key) on the inspected page and records a short description of the interacted element (e.g. `button "Add to cart"`). It NEVER records what you type, input values, passwords, or any field content. This information stays in your browser's memory alongside the captured events and follows the same lifecycle.
 
-3. **Data Lifecycle**: All captured events are cleared when you close the browser tab or click "Clear". Schemas persist until you delete them.
+3. **Schema Storage**: Validation schemas you create are stored locally using Chrome's `storage.local` API. This data never leaves your device.
+
+4. **Settings**: Your preferences (monitored dataLayer names, display options) are stored using Chrome's `storage.sync` API, which Chrome may synchronize across your own browsers through your Google account. We have no access to this data.
+
+5. **Data Lifecycle**: All captured events are cleared when you close the browser tab or click "Clear". Schemas and settings persist until you delete them.
 
 ## Permissions Explained
 

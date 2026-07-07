@@ -7,6 +7,12 @@
  * - Request/response from DevTools panel and popup
  * - Tab lifecycle events
  * - Long-lived port connections
+ *
+ * MV3 RULE: all chrome.* event listeners MUST be registered synchronously
+ * at the top level. When a message wakes a dormant service worker, Chrome
+ * only delivers it to listeners registered in the first synchronous pass -
+ * registering after an await causes "Receiving end does not exist".
+ * Handlers that need restored state await the `ready` gate instead.
  */
 
 import { PORT_NAME } from "@shared/types";
@@ -22,53 +28,26 @@ import * as storage from "./storage";
 import * as tabManager from "./tab-manager";
 
 /**
- * Initialize service worker
+ * Async state restoration. Starts immediately; never rejects so the
+ * gate can be awaited unconditionally.
  */
-async function init(): Promise<void> {
-  // Restore tab states from session storage first (survives service worker dormancy)
-  await tabManager.restoreFromStorage();
+const ready: Promise<void> = (async () => {
+  try {
+    // Restore tab states from session storage (survives SW dormancy)
+    await tabManager.restoreFromStorage();
 
-  // Apply user-configured event limit and keep it in sync
-  const settings = await storage.getSettings();
-  tabManager.setMaxEventsPerTab(settings.maxEventsPerTab);
-  storage.onSettingsChanged((updated) => {
-    tabManager.setMaxEventsPerTab(updated.maxEventsPerTab);
-  });
+    // Apply user-configured event limit
+    const settings = await storage.getSettings();
+    tabManager.setMaxEventsPerTab(settings.maxEventsPerTab);
+  } catch (error) {
+    console.error("[Strata] State restore failed:", error);
+  }
+})();
 
-  setupMessageListeners();
-  setupPortListener();
-  setupTabListeners();
-  setupCommandListener();
-
-  console.log("[Strata] Service worker initialized");
-}
-
-/**
- * Set up message listeners
- */
-function setupMessageListeners(): void {
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    // Check if this is a client request (expects response)
-    if (isClientRequest(message)) {
-      handleClientRequest(message, sender)
-        .then(sendResponse)
-        .catch((error) => {
-          sendResponse({
-            type: "ERROR",
-            payload: { message: String(error) },
-          });
-        });
-      // Return true to indicate async response
-      return true;
-    }
-
-    // Otherwise treat as content script message (no response needed)
-    handleContentMessage(message, sender).catch((error: unknown) => {
-      console.error("[Strata] Failed to handle content message:", error);
-    });
-    return false;
-  });
-}
+// Keep the event limit in sync with settings changes
+storage.onSettingsChanged((updated) => {
+  tabManager.setMaxEventsPerTab(updated.maxEventsPerTab);
+});
 
 /**
  * Check if message is a client request (vs content script message)
@@ -94,112 +73,129 @@ function isClientRequest(message: unknown): boolean {
   return typeof type === "string" && clientTypes.includes(type);
 }
 
-/**
- * Set up long-lived port connections
- */
-function setupPortListener(): void {
-  chrome.runtime.onConnect.addListener((port) => {
-    // Validate port name
-    if (
-      !Object.values(PORT_NAME).includes(
-        port.name as (typeof PORT_NAME)[keyof typeof PORT_NAME]
-      )
-    ) {
-      console.warn(`[Strata] Unknown port: ${port.name}`);
+// ============================================================================
+// Listener registration - synchronous, top level (see MV3 RULE above)
+// ============================================================================
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Check if this is a client request (expects response)
+  if (isClientRequest(message)) {
+    ready
+      .then(() => handleClientRequest(message, sender))
+      .then(sendResponse)
+      .catch((error: unknown) => {
+        sendResponse({
+          type: "ERROR",
+          payload: { message: String(error) },
+        });
+      });
+    // Return true to indicate async response
+    return true;
+  }
+
+  // Otherwise treat as content script message (no response needed)
+  ready
+    .then(() => handleContentMessage(message, sender))
+    .catch((error: unknown) => {
+      console.error("[Strata] Failed to handle content message:", error);
+    });
+  return false;
+});
+
+chrome.runtime.onConnect.addListener((port) => {
+  // Validate port name
+  if (
+    !Object.values(PORT_NAME).includes(
+      port.name as (typeof PORT_NAME)[keyof typeof PORT_NAME]
+    )
+  ) {
+    console.warn(`[Strata] Unknown port: ${port.name}`);
+    return;
+  }
+
+  // Get tab ID from port sender or from first message
+  const senderTabId = port.sender?.tab?.id;
+
+  if (senderTabId !== undefined) {
+    // Content script or popup with tab context
+    registerPort(port, senderTabId);
+  } else {
+    // DevTools panel - get tabId from inspectedWindow
+    port.onMessage.addListener(function handleFirstMessage(message: unknown) {
+      if (
+        typeof message === "object" &&
+        message !== null &&
+        "tabId" in message &&
+        typeof (message as { tabId: unknown }).tabId === "number"
+      ) {
+        registerPort(port, (message as { tabId: number }).tabId);
+        port.onMessage.removeListener(handleFirstMessage);
+      }
+    });
+  }
+});
+
+// Tab closed
+chrome.tabs.onRemoved.addListener((tabId) => {
+  void ready.then(() => handleTabRemoved(tabId));
+});
+
+// Tab navigation (URL change) - only react to pathname changes, not hash/query
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (!changeInfo.url) return;
+  const newUrl = changeInfo.url;
+
+  void ready.then(() => {
+    const state = tabManager.getTabState(tabId);
+
+    // No previous state, let handleTabNavigation deal with it
+    if (!state?.url) {
+      void handleTabNavigation(tabId, newUrl);
       return;
     }
 
-    // Get tab ID from port sender or from first message
-    const senderTabId = port.sender?.tab?.id;
+    try {
+      const oldUrl = new URL(state.url);
+      const parsedNewUrl = new URL(newUrl);
 
-    if (senderTabId !== undefined) {
-      // Content script or popup with tab context
-      registerPort(port, senderTabId);
-    } else {
-      // DevTools panel - get tabId from inspectedWindow
-      port.onMessage.addListener(function handleFirstMessage(message: unknown) {
-        if (
-          typeof message === "object" &&
-          message !== null &&
-          "tabId" in message &&
-          typeof (message as { tabId: unknown }).tabId === "number"
-        ) {
-          registerPort(port, (message as { tabId: number }).tabId);
-          port.onMessage.removeListener(handleFirstMessage);
-        }
+      // Only trigger navigation for origin or pathname changes
+      // Ignore hash and query param changes (SPAs, anchors, etc.)
+      const hasSignificantChange =
+        oldUrl.origin !== parsedNewUrl.origin ||
+        oldUrl.pathname !== parsedNewUrl.pathname;
+
+      if (hasSignificantChange) {
+        void handleTabNavigation(tabId, newUrl);
+      } else {
+        // Just update URL without any reset logic
+        tabManager.updateTabUrl(tabId, newUrl);
+      }
+    } catch {
+      // Invalid URL, let handleTabNavigation deal with it
+      void handleTabNavigation(tabId, newUrl);
+    }
+  });
+});
+
+// Handle browser action click (if no popup)
+chrome.action.onClicked.addListener((tab) => {
+  if (tab.id !== undefined) {
+    // Could open DevTools or show a notification
+    console.log(`[Strata] Action clicked for tab ${tab.id}`);
+  }
+});
+
+// Keyboard shortcut commands
+chrome.commands.onCommand.addListener((command) => {
+  if (command === "toggle-recording") {
+    toggleExtensionEnabled()
+      .then(() => {
+        console.log("[Strata] Extension toggled via keyboard shortcut");
+      })
+      .catch((error: unknown) => {
+        console.error("[Strata] Failed to toggle extension:", error);
       });
-    }
-  });
-}
+  }
+});
 
-/**
- * Set up tab lifecycle listeners
- */
-function setupTabListeners(): void {
-  // Tab closed
-  chrome.tabs.onRemoved.addListener((tabId) => {
-    handleTabRemoved(tabId);
-  });
-
-  // Tab navigation (URL change) - only react to pathname changes, not hash/query
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-    if (changeInfo.url) {
-      const state = tabManager.getTabState(tabId);
-
-      // No previous state, let handleTabNavigation deal with it
-      if (!state?.url) {
-        void handleTabNavigation(tabId, changeInfo.url);
-        return;
-      }
-
-      try {
-        const oldUrl = new URL(state.url);
-        const newUrl = new URL(changeInfo.url);
-
-        // Only trigger navigation for origin or pathname changes
-        // Ignore hash and query param changes (SPAs, anchors, etc.)
-        const hasSignificantChange =
-          oldUrl.origin !== newUrl.origin ||
-          oldUrl.pathname !== newUrl.pathname;
-
-        if (hasSignificantChange) {
-          void handleTabNavigation(tabId, changeInfo.url);
-        } else {
-          // Just update URL without any reset logic
-          tabManager.updateTabUrl(tabId, changeInfo.url);
-        }
-      } catch {
-        // Invalid URL, let handleTabNavigation deal with it
-        void handleTabNavigation(tabId, changeInfo.url);
-      }
-    }
-  });
-
-  // Handle browser action click (if no popup)
-  chrome.action.onClicked.addListener((tab) => {
-    if (tab.id !== undefined) {
-      // Could open DevTools or show a notification
-      console.log(`[Strata] Action clicked for tab ${tab.id}`);
-    }
-  });
-}
-
-/**
- * Set up keyboard shortcut commands
- */
-function setupCommandListener(): void {
-  chrome.commands.onCommand.addListener((command) => {
-    if (command === "toggle-recording") {
-      toggleExtensionEnabled()
-        .then(() => {
-          console.log("[Strata] Extension toggled via keyboard shortcut");
-        })
-        .catch((error: unknown) => {
-          console.error("[Strata] Failed to toggle extension:", error);
-        });
-    }
-  });
-}
-
-// Initialize
-void init();
+console.log("[Strata] Service worker initialized");

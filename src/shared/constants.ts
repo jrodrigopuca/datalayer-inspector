@@ -4,9 +4,9 @@
 
 /**
  * Extension identification
+ * (version lives in manifest.json - read it via chrome.runtime.getManifest())
  */
 export const EXTENSION_NAME = "Strata" as const;
-export const EXTENSION_VERSION = "0.1.0" as const;
 
 /**
  * Performance limits
