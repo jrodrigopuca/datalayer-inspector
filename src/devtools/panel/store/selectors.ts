@@ -4,10 +4,13 @@
  * These compute values from store state without modifying it
  */
 
-import { EVENT_PATTERNS } from "@shared/constants";
 import type { DataLayerEvent } from "@shared/types";
+import { EVENT_CATEGORY, getEventCategory } from "@shared/utils";
 
 import type { PanelStore } from "./index";
+
+/** Filter value for events that failed schema validation */
+export const VALIDATION_FAILED_FILTER = "failed";
 
 /**
  * Cache for stringified event data (for search)
@@ -46,20 +49,10 @@ export function selectFilteredEvents(
   // Apply type filter
   if (state.activeFilter) {
     filtered = filtered.filter((event) => {
-      const eventName = event.eventName ?? "";
-      switch (state.activeFilter) {
-        case "gtm":
-          return EVENT_PATTERNS.GTM.test(eventName);
-        case "ecommerce":
-          return EVENT_PATTERNS.ECOMMERCE.test(eventName);
-        case "custom":
-          return (
-            !EVENT_PATTERNS.GTM.test(eventName) &&
-            !EVENT_PATTERNS.ECOMMERCE.test(eventName)
-          );
-        default:
-          return true;
+      if (state.activeFilter === VALIDATION_FAILED_FILTER) {
+        return state.validations.get(event.id)?.status === "fail";
       }
+      return getEventCategory(event.eventName) === state.activeFilter;
     });
   }
 
@@ -84,28 +77,42 @@ export function selectEventCounts(state: PanelStore): {
   total: number;
   gtm: number;
   ecommerce: number;
+  engagement: number;
+  error: number;
   custom: number;
 } {
-  let gtm = 0;
-  let ecommerce = 0;
-  let custom = 0;
+  const counts = { gtm: 0, ecommerce: 0, engagement: 0, error: 0, custom: 0 };
 
   for (const event of state.events) {
-    const eventName = event.eventName ?? "";
-    if (EVENT_PATTERNS.GTM.test(eventName)) {
-      gtm++;
-    } else if (EVENT_PATTERNS.ECOMMERCE.test(eventName)) {
-      ecommerce++;
-    } else {
-      custom++;
-    }
+    counts[getEventCategory(event.eventName)]++;
   }
 
   return {
     total: state.events.length,
-    gtm,
-    ecommerce,
-    custom,
+    ...counts,
+  };
+}
+
+/**
+ * Get validation summary (pass/fail counts across validated events)
+ */
+export function selectValidationSummary(state: PanelStore): {
+  passed: number;
+  failed: number;
+  hasSchemas: boolean;
+} {
+  let passed = 0;
+  let failed = 0;
+
+  for (const validation of state.validations.values()) {
+    if (validation.status === "pass") passed++;
+    else if (validation.status === "fail") failed++;
+  }
+
+  return {
+    passed,
+    failed,
+    hasSchemas: state.schemas.some((s) => s.enabled),
   };
 }
 
@@ -130,3 +137,6 @@ export function selectConnectionInfo(state: PanelStore): {
     hasError: state.connectionState === "error",
   };
 }
+
+// Re-exported so UI code can build category filters without importing shared internals
+export { EVENT_CATEGORY };

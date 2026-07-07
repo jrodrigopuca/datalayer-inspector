@@ -11,43 +11,58 @@ import { CLIENT_REQUEST_TYPE, CLIENT_RESPONSE_TYPE } from "@shared/types";
 import { injectPageScript } from "./injector";
 import { setEnabled, startRelay } from "./relay";
 
+interface ContentConfig {
+  enabled: boolean;
+  dataLayerNames: string[];
+}
+
+const DEFAULT_CONFIG: ContentConfig = {
+  enabled: true,
+  dataLayerNames: ["dataLayer"],
+};
+
 /**
  * Initialize content script
  */
 async function init(): Promise<void> {
-  // Check if extension is enabled before doing anything
-  const isEnabled = await checkIfEnabled();
-  setEnabled(isEnabled);
+  // Load configuration (enabled state + monitored dataLayer names)
+  const config = await loadConfig();
+  setEnabled(config.enabled);
 
   // Start listening for messages (including enable/disable commands)
   startRelay();
 
   // Only inject page script if enabled
-  if (isEnabled) {
-    // Inject page script with default configuration
-    // TODO: Load configuration from storage/settings
+  if (config.enabled) {
     injectPageScript({
-      dataLayerNames: ["dataLayer"],
+      dataLayerNames: config.dataLayerNames,
     });
   }
 }
 
 /**
- * Check if extension is enabled
+ * Load configuration from extension settings
  */
-async function checkIfEnabled(): Promise<boolean> {
+async function loadConfig(): Promise<ContentConfig> {
   try {
     const response = await chrome.runtime.sendMessage({
       type: CLIENT_REQUEST_TYPE.GET_SETTINGS,
     });
 
     if (response?.type === CLIENT_RESPONSE_TYPE.SETTINGS) {
-      return response.payload.enabled ?? true;
+      const { enabled, dataLayerNames } = response.payload;
+      return {
+        enabled: enabled ?? true,
+        dataLayerNames:
+          Array.isArray(dataLayerNames) && dataLayerNames.length > 0
+            ? dataLayerNames
+            : DEFAULT_CONFIG.dataLayerNames,
+      };
     }
-    return true;
+    return DEFAULT_CONFIG;
   } catch {
-    // If we can't reach background, assume enabled
-    return true;
+    // If we can't reach background, assume defaults
+    return DEFAULT_CONFIG;
   }
 }
 

@@ -13,7 +13,10 @@ const FILTER_OPTIONS = [
   { value: null, label: "All events" },
   { value: "gtm", label: "GTM only" },
   { value: "ecommerce", label: "Ecommerce" },
+  { value: "engagement", label: "Engagement" },
   { value: "custom", label: "Custom" },
+  { value: "error", label: "Errors" },
+  { value: "failed", label: "✗ Validation failed" },
 ] as const;
 
 export function SearchBar() {

@@ -2,8 +2,8 @@
  * EventSummary component - shows event count and last event
  */
 
-import { EVENT_PATTERNS } from "@shared/constants";
 import type { DataLayerEvent } from "@shared/types";
+import { getEventCategory } from "@shared/utils";
 
 interface EventSummaryProps {
   events: readonly DataLayerEvent[];
@@ -12,20 +12,10 @@ interface EventSummaryProps {
 export function EventSummary({ events }: EventSummaryProps) {
   const lastEvent = events.length > 0 ? events[events.length - 1] : null;
 
-  // Count by category
-  let gtmCount = 0;
-  let ecommerceCount = 0;
-  let customCount = 0;
-
+  // Count by category (same categorization as the DevTools panel)
+  const counts = { gtm: 0, ecommerce: 0, engagement: 0, error: 0, custom: 0 };
   for (const event of events) {
-    const eventName = event.eventName ?? "";
-    if (EVENT_PATTERNS.GTM.test(eventName)) {
-      gtmCount++;
-    } else if (EVENT_PATTERNS.ECOMMERCE.test(eventName)) {
-      ecommerceCount++;
-    } else {
-      customCount++;
-    }
+    counts[getEventCategory(event.eventName)]++;
   }
 
   return (
@@ -39,18 +29,26 @@ export function EventSummary({ events }: EventSummaryProps) {
       {/* Category breakdown */}
       <div className="flex justify-around text-xs mb-3">
         <div className="text-center">
-          <div className="text-event-gtm font-medium">{gtmCount}</div>
+          <div className="text-event-gtm font-medium">{counts.gtm}</div>
           <div className="text-gray-500">GTM</div>
         </div>
         <div className="text-center">
           <div className="text-event-ecommerce font-medium">
-            {ecommerceCount}
+            {counts.ecommerce}
           </div>
-          <div className="text-gray-500">Ecommerce</div>
+          <div className="text-gray-500">Ecom</div>
         </div>
         <div className="text-center">
-          <div className="text-event-custom font-medium">{customCount}</div>
-          <div className="text-gray-500">Custom</div>
+          <div className="text-event-engagement font-medium">
+            {counts.engagement}
+          </div>
+          <div className="text-gray-500">Engage</div>
+        </div>
+        <div className="text-center">
+          <div className="text-event-custom font-medium">
+            {counts.custom + counts.error}
+          </div>
+          <div className="text-gray-500">Other</div>
         </div>
       </div>
 
@@ -58,7 +56,10 @@ export function EventSummary({ events }: EventSummaryProps) {
       {lastEvent && (
         <div className="border-t border-panel-border pt-2">
           <div className="text-2xs text-gray-500 mb-1">Last event</div>
-          <div className="text-sm font-mono text-gray-200 truncate">
+          <div
+            className="text-sm font-mono text-gray-200 truncate"
+            title={lastEvent.eventName ?? "(push)"}
+          >
             {lastEvent.eventName ?? "(push)"}
           </div>
           <div className="text-2xs text-gray-500">

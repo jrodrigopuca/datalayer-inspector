@@ -8,6 +8,7 @@ import type { StateCreator } from "zustand";
 export const VIEW_MODE = {
   TREE: "tree",
   RAW: "raw",
+  PARAMS: "params",
 } as const;
 
 export type ViewMode = (typeof VIEW_MODE)[keyof typeof VIEW_MODE];
@@ -46,6 +47,7 @@ export const MODAL_TYPE = {
   NONE: "none",
   EXPORT_TEST: "export-test",
   EXPORT_EVIDENCE: "export-evidence",
+  SETTINGS: "settings",
 } as const;
 
 export type ModalType = (typeof MODAL_TYPE)[keyof typeof MODAL_TYPE];
@@ -61,8 +63,6 @@ export interface UISlice {
   searchQuery: string;
   /** Active filter (event type) */
   activeFilter: string | null;
-  /** Whether auto-scroll is enabled */
-  autoScroll: boolean;
   /** Error message if any */
   errorMessage: string | null;
   /** Current tab ID */
@@ -80,12 +80,12 @@ export interface UISlice {
   setIsRecording: (isRecording: boolean) => void;
   setSearchQuery: (query: string) => void;
   setActiveFilter: (filter: string | null) => void;
-  setAutoScroll: (enabled: boolean) => void;
   setErrorMessage: (message: string | null) => void;
   setTabId: (tabId: number | null) => void;
   togglePath: (path: string) => void;
   expandPath: (path: string) => void;
   collapsePath: (path: string) => void;
+  setExpandedPaths: (paths: Set<string>) => void;
   resetExpandedPaths: () => void;
   setRightPanelView: (view: RightPanelView) => void;
   showEventDetail: () => void;
@@ -102,7 +102,6 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   isRecording: true,
   searchQuery: "",
   activeFilter: null,
-  autoScroll: true,
   errorMessage: null,
   tabId: null,
   expandedPaths: new Set(),
@@ -118,8 +117,6 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 
   setActiveFilter: (activeFilter) => set({ activeFilter }),
-
-  setAutoScroll: (autoScroll) => set({ autoScroll }),
 
   setErrorMessage: (errorMessage) => set({ errorMessage }),
 
@@ -149,6 +146,8 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
       newPaths.delete(path);
       return { expandedPaths: newPaths };
     }),
+
+  setExpandedPaths: (expandedPaths) => set({ expandedPaths }),
 
   resetExpandedPaths: () => set({ expandedPaths: new Set() }),
 

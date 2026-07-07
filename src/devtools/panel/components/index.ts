@@ -14,5 +14,7 @@ export * from "./layout";
 export * from "./schema";
 // Search
 export * from "./search";
+// Settings
+export * from "./settings";
 // Timeline
 export * from "./timeline";

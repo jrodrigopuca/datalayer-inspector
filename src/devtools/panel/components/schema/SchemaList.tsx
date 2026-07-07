@@ -2,9 +2,10 @@
  * SchemaList component - displays all validation schemas
  */
 
+import { GA4_ECOMMERCE_PRESETS } from "@shared/presets";
 import type { Schema } from "@shared/types";
 import { useRef, useState } from "react";
-import { useSchemas } from "../../hooks";
+import { useCoverage, useSchemas } from "../../hooks";
 import { usePanelStore } from "../../store";
 import {
   Button,
@@ -20,10 +21,18 @@ import {
 } from "../common";
 
 export function SchemaList() {
-  const { schemas, toggleSchema, deleteSchema, importSchemas, exportSchemas } =
-    useSchemas();
+  const {
+    schemas,
+    addSchema,
+    toggleSchema,
+    deleteSchema,
+    importSchemas,
+    exportSchemas,
+  } = useSchemas();
   const showSchemaEditor = usePanelStore((s) => s.showSchemaEditor);
   const showEventDetail = usePanelStore((s) => s.showEventDetail);
+  const hasEvents = usePanelStore((s) => s.events.length > 0);
+  const coverage = useCoverage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Confirm dialog state
@@ -62,6 +71,16 @@ export function SchemaList() {
     fileInputRef.current?.click();
   }
 
+  function handleLoadGA4Presets(): void {
+    // Skip presets whose name already exists to keep the action idempotent
+    const existingNames = new Set(schemas.map((s) => s.name));
+    for (const preset of GA4_ECOMMERCE_PRESETS) {
+      if (!existingNames.has(preset.name)) {
+        addSchema(preset);
+      }
+    }
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>): void {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -94,6 +113,14 @@ export function SchemaList() {
           </span>
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleLoadGA4Presets}
+            title="Load GA4 ecommerce presets (view_item, add_to_cart, purchase…)"
+          >
+            GA4
+          </Button>
           <Button
             size="sm"
             variant="ghost"
@@ -139,6 +166,38 @@ export function SchemaList() {
         onChange={handleFileChange}
         className="hidden"
       />
+
+      {/* Coverage: which expected events never fired */}
+      {hasEvents && coverage.enabledCount > 0 && (
+        <div className="px-3 py-2 border-b border-panel-border bg-panel-surface/50">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-gray-400">Coverage:</span>
+            <span
+              className={
+                coverage.missing.length === 0
+                  ? "text-valid font-medium"
+                  : "text-warning font-medium"
+              }
+            >
+              {coverage.firedCount}/{coverage.enabledCount} fired
+            </span>
+          </div>
+          {coverage.missing.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1 mt-1.5">
+              <span className="text-2xs text-gray-500">Never fired:</span>
+              {coverage.missing.map((schema) => (
+                <span
+                  key={schema.id}
+                  className="px-1.5 py-0.5 text-2xs font-mono bg-warning/15 text-warning rounded"
+                  title={schema.description ?? schema.name}
+                >
+                  {schema.name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Schema list */}
       <div className="flex-1 overflow-y-auto">

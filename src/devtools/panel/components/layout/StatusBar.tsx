@@ -1,7 +1,7 @@
 /**
  * StatusBar component - bottom status bar
  *
- * Shows connection status, event counts, and keyboard hints
+ * Shows connection status, event counts, validation summary and keyboard hints
  * Recording status is shown in Toolbar to avoid duplication
  */
 
@@ -9,7 +9,12 @@ import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
 import { usePanelStore } from "../../store";
-import { selectConnectionInfo, selectEventCounts } from "../../store/selectors";
+import {
+  selectConnectionInfo,
+  selectEventCounts,
+  selectValidationSummary,
+  VALIDATION_FAILED_FILTER,
+} from "../../store/selectors";
 
 export function StatusBar() {
   const { containers, errorMessage } = usePanelStore(
@@ -20,11 +25,20 @@ export function StatusBar() {
   );
 
   const counts = usePanelStore(useShallow(selectEventCounts));
+  const validation = usePanelStore(useShallow(selectValidationSummary));
   const { isConnected, isLoading, hasError } = usePanelStore(
     useShallow(selectConnectionInfo)
   );
+  const activeFilter = usePanelStore((s) => s.activeFilter);
+  const setActiveFilter = usePanelStore((s) => s.setActiveFilter);
 
   const [showLegend, setShowLegend] = useState(false);
+
+  const failedFilterActive = activeFilter === VALIDATION_FAILED_FILTER;
+
+  function toggleFailedFilter(): void {
+    setActiveFilter(failedFilterActive ? null : VALIDATION_FAILED_FILTER);
+  }
 
   return (
     <div className="flex items-center px-2 py-1 text-2xs text-gray-400 bg-panel-surface border-t border-panel-border">
@@ -65,7 +79,16 @@ export function StatusBar() {
               {" / "}
               <span className="text-event-ecommerce">{counts.ecommerce}</span>
               {" / "}
-              <span className="text-event-custom">{counts.custom}</span>)
+              <span className="text-event-engagement">{counts.engagement}</span>
+              {" / "}
+              <span className="text-event-custom">{counts.custom}</span>
+              {counts.error > 0 && (
+                <>
+                  {" / "}
+                  <span className="text-event-error">{counts.error}</span>
+                </>
+              )}
+              )
             </button>
           )}
 
@@ -89,6 +112,13 @@ export function StatusBar() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-event-engagement" />
+                  <span className="text-event-engagement">Engagement</span>
+                  <span className="text-gray-500">
+                    — page_view, login, search, etc.
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-event-custom" />
                   <span className="text-event-custom">Custom</span>
                   <span className="text-gray-500">— your custom events</span>
@@ -102,6 +132,34 @@ export function StatusBar() {
             </div>
           )}
         </div>
+
+        {/* Validation summary (only when schemas are active) */}
+        {validation.hasSchemas && (
+          <button
+            type="button"
+            onClick={toggleFailedFilter}
+            title={
+              failedFilterActive
+                ? "Show all events"
+                : "Show only events that failed validation"
+            }
+            className={cn(
+              "flex items-center gap-1.5 px-1.5 py-0.5 rounded transition-colors",
+              failedFilterActive
+                ? "bg-event-error/20 ring-1 ring-event-error/50"
+                : "hover:bg-panel-bg"
+            )}
+          >
+            <span className="text-valid">✓ {validation.passed}</span>
+            <span
+              className={cn(
+                validation.failed > 0 ? "text-event-error" : "text-gray-500"
+              )}
+            >
+              ✗ {validation.failed}
+            </span>
+          </button>
+        )}
 
         {/* Container count */}
         {containers.length > 0 && (
@@ -122,7 +180,7 @@ export function StatusBar() {
         )}
 
         {/* Keyboard shortcut hint */}
-        <span className="text-gray-500">
+        <span className="hidden sm:inline text-gray-500">
           <kbd className="px-1 py-0.5 bg-panel-bg rounded text-gray-400">/</kbd>
           <span className="ml-1">search</span>
         </span>

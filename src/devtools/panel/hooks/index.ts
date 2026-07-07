@@ -3,6 +3,8 @@
  */
 
 export { useCommands, useConnection } from "./use-connection";
+export type { SchemaCoverage } from "./use-coverage";
+export { useCoverage } from "./use-coverage";
 export {
   useEvent,
   useEventSelection,

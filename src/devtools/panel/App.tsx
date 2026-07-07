@@ -10,6 +10,7 @@ import {
   ExportTestModal,
   RightPanel,
   SearchBar,
+  SettingsModal,
   SplitPane,
   StatusBar,
   Toolbar,
@@ -56,6 +57,9 @@ export default function App() {
       )}
       {activeModal === MODAL_TYPE.EXPORT_EVIDENCE && (
         <ExportEvidenceModal events={events} onClose={closeModal} />
+      )}
+      {activeModal === MODAL_TYPE.SETTINGS && (
+        <SettingsModal onClose={closeModal} />
       )}
     </div>
   );

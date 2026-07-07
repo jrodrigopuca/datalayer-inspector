@@ -254,12 +254,30 @@ export function getContainers(tabId: number): readonly string[] {
 }
 
 /**
+ * Configurable event limit (kept in sync with the maxEventsPerTab setting).
+ * Defaults to the built-in limit until settings are loaded.
+ */
+let maxEventsPerTab: number = LIMITS.MAX_EVENTS_PER_TAB;
+
+/**
+ * Update the per-tab event limit from user settings
+ */
+export function setMaxEventsPerTab(limit: number): void {
+  if (Number.isFinite(limit) && limit > 0) {
+    maxEventsPerTab = limit;
+  }
+}
+
+/**
  * Prune old events if over limit
+ *
+ * Prunes below the limit with some slack so we don't splice on every push.
  */
 function pruneEventsIfNeeded(state: MutableTabState): void {
-  if (state.events.length > LIMITS.MAX_EVENTS_PER_TAB) {
-    // Keep only the most recent events
-    const toRemove = state.events.length - LIMITS.MIN_EVENTS_AFTER_PRUNE;
+  if (state.events.length > maxEventsPerTab) {
+    const pruneSlack = Math.min(100, Math.floor(maxEventsPerTab / 5));
+    const keep = Math.max(1, maxEventsPerTab - pruneSlack);
+    const toRemove = state.events.length - keep;
     state.events.splice(0, toRemove);
   }
 }

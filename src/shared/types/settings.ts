@@ -27,6 +27,8 @@ export interface UserSettings {
   readonly maxEventsPerTab: number;
   /** Default expansion depth for JSON tree */
   readonly defaultExpandDepth: number;
+  /** Keep captured events across cross-origin navigations (like Network's "Preserve log") */
+  readonly preserveLog: boolean;
 }
 
 /**
@@ -39,6 +41,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   autoScroll: true,
   maxEventsPerTab: 500,
   defaultExpandDepth: 2,
+  preserveLog: false,
 } as const;
 
 /**

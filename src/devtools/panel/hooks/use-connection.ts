@@ -17,6 +17,7 @@ import {
   type ClientToBackgroundRequest,
   type ClientToBackgroundResponse,
   PORT_NAME,
+  type UserSettings,
 } from "@shared/types";
 import { useEffect, useRef } from "react";
 import { CONNECTION_STATE, usePanelStore } from "../store";
@@ -190,6 +191,7 @@ export function useCommands(): {
   clearEvents: () => Promise<void>;
   toggleRecording: () => Promise<void>;
   toggleEnabled: () => Promise<void>;
+  saveSettings: (partial: Partial<UserSettings>) => Promise<void>;
 } {
   const tabId = usePanelStore((s) => s.tabId);
   const isRecording = usePanelStore((s) => s.isRecording);
@@ -238,5 +240,15 @@ export function useCommands(): {
     });
   }
 
-  return { clearEvents, toggleRecording, toggleEnabled };
+  async function saveSettings(partial: Partial<UserSettings>): Promise<void> {
+    // Optimistic local update; background persists to chrome.storage.sync
+    updateSettings(partial);
+
+    await sendCommand({
+      type: CLIENT_REQUEST_TYPE.UPDATE_SETTINGS,
+      payload: partial,
+    });
+  }
+
+  return { clearEvents, toggleRecording, toggleEnabled, saveSettings };
 }

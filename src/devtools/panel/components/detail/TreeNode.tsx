@@ -2,9 +2,10 @@
  * TreeNode component - recursive JSON tree node
  */
 
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { usePanelStore } from "../../store";
-import { ArrowIcon } from "../common";
+import { ArrowIcon, CheckIcon, CopyIcon } from "../common";
 
 interface TreeNodeProps {
   keyName: string | number;
@@ -65,12 +66,31 @@ const typeColors: Record<string, string> = {
   object: "text-gray-400",
 };
 
+/**
+ * Strip the internal "root." prefix so the copied path matches how
+ * the payload is accessed in code: "ecommerce.items.0.price"
+ */
+function toDisplayPath(path: string): string {
+  return path.startsWith("root.") ? path.slice(5) : path;
+}
+
 export function TreeNode({ keyName, value, path, depth }: TreeNodeProps) {
   const expandedPaths = usePanelStore((s) => s.expandedPaths);
   const togglePath = usePanelStore((s) => s.togglePath);
+  const [copied, setCopied] = useState(false);
 
   const isExpanded = expandedPaths.has(path);
   const { type, preview, expandable } = getValueInfo(value);
+
+  async function copyPath(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(toDisplayPath(path));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (error) {
+      console.error("[Strata] Failed to copy path:", error);
+    }
+  }
 
   // Prevent infinite depth
   if (depth > MAX_DEPTH) {
@@ -99,7 +119,7 @@ export function TreeNode({ keyName, value, path, depth }: TreeNodeProps) {
       {/* Node row */}
       <div
         className={cn(
-          "flex items-center h-6 hover:bg-panel-surface/50 cursor-default",
+          "group flex items-center h-6 hover:bg-panel-surface/50 cursor-default",
           "font-mono text-sm"
         )}
         style={{ paddingLeft: depth * INDENT_PX }}
@@ -128,10 +148,35 @@ export function TreeNode({ keyName, value, path, depth }: TreeNodeProps) {
 
         {/* Value or preview */}
         {expandable ? (
-          <span className={typeColors[type]}>{preview}</span>
+          <span className={cn(typeColors[type], "flex-1 min-w-0 truncate")}>
+            {preview}
+          </span>
         ) : (
-          <span className={cn(typeColors[type], "truncate")}>{preview}</span>
+          <span
+            className={cn(typeColors[type], "flex-1 min-w-0 truncate")}
+            title={preview}
+          >
+            {preview}
+          </span>
         )}
+
+        {/* Copy path (visible on hover) */}
+        <button
+          type="button"
+          onClick={() => void copyPath()}
+          title={`Copy path: ${toDisplayPath(path)}`}
+          className={cn(
+            "ml-2 w-4 h-4 flex items-center justify-center flex-shrink-0",
+            "text-gray-500 hover:text-gray-300 transition-opacity",
+            copied ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}
+        >
+          {copied ? (
+            <CheckIcon className="w-3 h-3 text-green-400" />
+          ) : (
+            <CopyIcon className="w-3 h-3" />
+          )}
+        </button>
       </div>
 
       {/* Children */}

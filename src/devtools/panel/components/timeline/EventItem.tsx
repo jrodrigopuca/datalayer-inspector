@@ -3,10 +3,11 @@
  */
 
 import type { DataLayerEvent, EventValidation } from "@shared/types";
+import { getEventCategory } from "@shared/utils";
 import { cn } from "@/lib/utils";
 import { usePanelStore } from "../../store";
 import { CheckIcon, XIcon } from "../common";
-import { EventBadge, getEventCategory } from "./EventBadge";
+import { EventBadge } from "./EventBadge";
 
 interface EventItemProps {
   event: DataLayerEvent;
@@ -14,6 +15,19 @@ interface EventItemProps {
   onClick: () => void;
   onCreateSchema: () => void;
   validation?: EventValidation | undefined;
+  /** Milliseconds elapsed since the previous event in the full stream */
+  deltaMs?: number | null;
+}
+
+/**
+ * Format a time delta compactly: +82ms, +1.4s, +2m 05s
+ */
+function formatDelta(deltaMs: number): string {
+  if (deltaMs < 1000) return `+${deltaMs}ms`;
+  if (deltaMs < 60_000) return `+${(deltaMs / 1000).toFixed(1)}s`;
+  const minutes = Math.floor(deltaMs / 60_000);
+  const seconds = Math.round((deltaMs % 60_000) / 1000);
+  return `+${minutes}m ${seconds.toString().padStart(2, "0")}s`;
 }
 
 /**
@@ -77,6 +91,8 @@ function getBorderColor(eventName: string | null): string {
       return "border-l-event-gtm";
     case "ecommerce":
       return "border-l-event-ecommerce";
+    case "engagement":
+      return "border-l-event-engagement";
     case "error":
       return "border-l-event-error";
     default:
@@ -90,6 +106,7 @@ export function EventItem({
   onClick,
   onCreateSchema,
   validation,
+  deltaMs,
 }: EventItemProps) {
   const displayName = event.eventName ?? "(push)";
   const isGTMInternal = event.eventName?.startsWith("gtm.");
@@ -114,7 +131,7 @@ export function EventItem({
       }}
       onContextMenu={handleContextMenu}
       className={cn(
-        "h-12 px-2 py-1.5 border-l-4 cursor-pointer transition-colors",
+        "h-12 px-2 py-1.5 border-l-4 cursor-pointer transition-colors overflow-hidden",
         getBorderColor(event.eventName),
         isSelected
           ? "bg-panel-surface ring-1 ring-brand-primary"
@@ -122,38 +139,52 @@ export function EventItem({
         isGTMInternal && "opacity-60"
       )}
     >
-      {/* Row 1: Timestamp + badges */}
-      <div className="flex items-center justify-between">
+      {/* Row 1: Event name (primary) + validation/category */}
+      <div className="flex items-center justify-between gap-2 min-w-0">
         <span
-          className="text-2xs text-gray-500 font-mono"
-          title={formatFullTimestamp(event.timestamp)}
+          className={cn(
+            "flex-1 min-w-0 truncate text-sm font-medium",
+            event.eventName ? "text-gray-200" : "text-gray-500 italic"
+          )}
+          title={displayName}
         >
-          {formatTime(event.timestamp)}
+          {displayName}
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-shrink-0">
           {validation && (
             <ValidationBadge validation={validation} eventId={event.id} />
-          )}
-          {event.source !== "dataLayer" && (
-            <span className="text-2xs text-gray-500 font-mono">
-              {event.source}
-            </span>
           )}
           <EventBadge eventName={event.eventName} />
         </div>
       </div>
 
-      {/* Row 2: Event name */}
-      <div className="flex items-center justify-between mt-0.5">
-        <span
-          className={cn(
-            "text-sm font-medium truncate",
-            event.eventName ? "text-gray-200" : "text-gray-500 italic"
+      {/* Row 2: Time metadata + index */}
+      <div className="flex items-center justify-between gap-2 mt-0.5 min-w-0 text-2xs font-mono">
+        <span className="flex items-baseline gap-1.5 min-w-0">
+          <span
+            className="text-gray-500 flex-shrink-0"
+            title={formatFullTimestamp(event.timestamp)}
+          >
+            {formatTime(event.timestamp)}
+          </span>
+          {deltaMs !== null && deltaMs !== undefined && (
+            <span
+              className="text-gray-600 flex-shrink-0"
+              title="Time since previous event"
+            >
+              {formatDelta(deltaMs)}
+            </span>
           )}
-        >
-          {displayName}
+          {event.source !== "dataLayer" && (
+            <span
+              className="text-gray-500 truncate min-w-0"
+              title={`Source: ${event.source}`}
+            >
+              {event.source}
+            </span>
+          )}
         </span>
-        <span className="text-2xs text-gray-600">#{event.index}</span>
+        <span className="text-gray-600 flex-shrink-0">#{event.index}</span>
       </div>
     </div>
   );

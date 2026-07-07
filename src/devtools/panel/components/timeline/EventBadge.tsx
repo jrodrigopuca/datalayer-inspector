@@ -1,37 +1,32 @@
 /**
- * EventBadge component - visual indicator for event type
+ * EventBadge component - compact category indicator
  *
- * Shows the actual event name (like in dataLayer), with color based on category
+ * Shows a short category label; the event name itself is rendered by
+ * the row (EventItem), so the badge never competes with it for space.
  */
 
-import { EVENT_PATTERNS } from "@shared/constants";
+import type { EventCategory } from "@shared/utils";
+import { getEventCategory } from "@shared/utils";
 import { Badge } from "../common";
 
 interface EventBadgeProps {
   eventName: string | null;
 }
 
-/**
- * Determine event category from event name (used for coloring)
- */
-function getEventCategory(
-  eventName: string | null
-): "gtm" | "ecommerce" | "custom" | "error" {
-  if (!eventName) return "custom";
-
-  if (EVENT_PATTERNS.GTM.test(eventName)) return "gtm";
-  if (EVENT_PATTERNS.ECOMMERCE.test(eventName)) return "ecommerce";
-  if (eventName.toLowerCase().includes("error")) return "error";
-
-  return "custom";
-}
+const CATEGORY_LABEL: Record<EventCategory, string> = {
+  gtm: "GTM",
+  ecommerce: "Ecom",
+  engagement: "Engage",
+  error: "Error",
+  custom: "Custom",
+};
 
 export function EventBadge({ eventName }: EventBadgeProps) {
   const category = getEventCategory(eventName);
-  // Show actual event name, or "push" for events without event key
-  const displayLabel = eventName ?? "push";
 
-  return <Badge variant={category}>{displayLabel}</Badge>;
+  return (
+    <Badge variant={category} className="flex-shrink-0">
+      {CATEGORY_LABEL[category]}
+    </Badge>
+  );
 }
-
-export { getEventCategory };

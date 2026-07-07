@@ -9,6 +9,7 @@ const BADGE_VARIANT = {
   DEFAULT: "default",
   GTM: "gtm",
   ECOMMERCE: "ecommerce",
+  ENGAGEMENT: "engagement",
   CUSTOM: "custom",
   ERROR: "error",
 } as const;
@@ -23,6 +24,7 @@ const variantStyles: Record<BadgeVariant, string> = {
   default: "bg-panel-border text-gray-300",
   gtm: "bg-event-gtm/20 text-event-gtm",
   ecommerce: "bg-event-ecommerce/20 text-event-ecommerce",
+  engagement: "bg-event-engagement/20 text-event-engagement",
   custom: "bg-event-custom/20 text-event-custom",
   error: "bg-event-error/20 text-event-error",
 };

@@ -248,7 +248,10 @@ export function handleTabRemoved(tabId: number): void {
 /**
  * Handle tab navigation (URL change)
  */
-export function handleTabNavigation(tabId: number, newUrl: string): void {
+export async function handleTabNavigation(
+  tabId: number,
+  newUrl: string
+): Promise<void> {
   const state = tabManager.getTabState(tabId);
   if (!state) return;
 
@@ -270,7 +273,11 @@ export function handleTabNavigation(tabId: number, newUrl: string): void {
 
   const isCrossOrigin = oldOrigin !== newOrigin;
 
-  if (isCrossOrigin) {
+  // "Preserve log" keeps events across cross-origin hops (payment
+  // gateways, SSO redirects) so full flows stay inspectable.
+  const { preserveLog } = await storage.getSettings();
+
+  if (isCrossOrigin && !preserveLog) {
     // Cross-origin: full reset
     tabManager.resetTabState(tabId, newUrl);
     portManager.broadcastToTab(tabId, {
@@ -278,7 +285,7 @@ export function handleTabNavigation(tabId: number, newUrl: string): void {
       payload: { tabId, reason: TAB_RESET_REASON.NAVIGATION },
     });
   } else {
-    // Same-origin: just update URL, keep events
+    // Keep events, just track the new URL
     tabManager.updateTabUrl(tabId, newUrl);
   }
 }

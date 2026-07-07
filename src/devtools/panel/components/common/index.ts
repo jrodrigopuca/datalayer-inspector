@@ -36,8 +36,10 @@ export {
   SchemaIcon,
   SearchIcon,
   SelectIcon,
+  SettingsIcon,
   // Misc
   SpinnerIcon,
+  TableIcon,
   TestIcon,
   TrashIcon,
   TreeIcon,

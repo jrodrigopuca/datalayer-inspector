@@ -14,6 +14,7 @@
   --color-event-gtm: oklch(0.7 0.12 145);
   --color-event-ecommerce: oklch(0.7 0.15 45);
   --color-event-custom: oklch(0.7 0.12 280);
+  --color-event-engagement: oklch(0.72 0.11 190);
   --color-event-error: oklch(0.65 0.2 25);
 
   /* Validation states */

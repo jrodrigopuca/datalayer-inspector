@@ -18,6 +18,7 @@ import {
   toggleExtensionEnabled,
 } from "./message-handler";
 import { registerPort } from "./port-manager";
+import * as storage from "./storage";
 import * as tabManager from "./tab-manager";
 
 /**
@@ -26,6 +27,13 @@ import * as tabManager from "./tab-manager";
 async function init(): Promise<void> {
   // Restore tab states from session storage first (survives service worker dormancy)
   await tabManager.restoreFromStorage();
+
+  // Apply user-configured event limit and keep it in sync
+  const settings = await storage.getSettings();
+  tabManager.setMaxEventsPerTab(settings.maxEventsPerTab);
+  storage.onSettingsChanged((updated) => {
+    tabManager.setMaxEventsPerTab(updated.maxEventsPerTab);
+  });
 
   setupMessageListeners();
   setupPortListener();
@@ -140,7 +148,7 @@ function setupTabListeners(): void {
 
       // No previous state, let handleTabNavigation deal with it
       if (!state?.url) {
-        handleTabNavigation(tabId, changeInfo.url);
+        void handleTabNavigation(tabId, changeInfo.url);
         return;
       }
 
@@ -155,14 +163,14 @@ function setupTabListeners(): void {
           oldUrl.pathname !== newUrl.pathname;
 
         if (hasSignificantChange) {
-          handleTabNavigation(tabId, changeInfo.url);
+          void handleTabNavigation(tabId, changeInfo.url);
         } else {
           // Just update URL without any reset logic
           tabManager.updateTabUrl(tabId, changeInfo.url);
         }
       } catch {
         // Invalid URL, let handleTabNavigation deal with it
-        handleTabNavigation(tabId, changeInfo.url);
+        void handleTabNavigation(tabId, changeInfo.url);
       }
     }
   });
