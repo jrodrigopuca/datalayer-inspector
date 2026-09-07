@@ -20,6 +20,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ### Fixed
 
 - Clean JSON export ignored `includeUrl` whenever `includeTimestamp` was on.
+- **Privacy**: trigger labels no longer include the text of arbitrary clicked elements (table cells, paragraphs, containers). Text is recorded only from explicit accessible names, the `<label>` of a form field, or the caption of a real control. Form fields are described by their label, never their value or options. See PRIVACY.md.
 
 ## [1.4.0] - 2026-07
 

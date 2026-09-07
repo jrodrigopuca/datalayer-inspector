@@ -27,8 +27,8 @@
 | 2 | Acotar el panel al mismo límite que el service worker | Estructural | ✅ Cerrado | `108b1cd` |
 | 3 | Persistencia por tab en `storage.session` | Estructural | ✅ Cerrado | `b678924` |
 | 4 | Un único dueño de la persistencia de schemas | Estructural | ✅ Cerrado | `10c4ba6` |
-| 5 | Cerrar el gap de inyección del page script | Estructural | ✅ Cerrado (verificado en Chrome) | |
-| 6 | Restringir el texto capturado por el tracker | Privacidad | ⬜ Pendiente | |
+| 5 | Cerrar el gap de inyección del page script | Estructural | ✅ Cerrado (verificado en Chrome) | `692969d` |
+| 6 | Restringir el texto capturado por el tracker | Privacidad | ✅ Cerrado (verificado en Chrome) | |
 | 7 | Lista de tipos de request duplicada | Fricción | ✅ Cerrado | `10c4ba6` |
 | 8 | Cliente de mensajería compartido | Fricción | ✅ Cerrado (parcial, ver nota) | `10c4ba6` |
 | 9 | Un solo lockfile | Fricción | ✅ Cerrado | `8128a01` |
@@ -103,7 +103,7 @@ captura o la persistencia. Refactorizar eso sin red es apostar.
 **Criterio de aceptación.**
 
 - [x] Un PR con un test que falla se marca rojo en GitHub (`.github/workflows/ci.yml`, job `check`).
-- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 42/40/29/44 tras el ítem 5, medido 44.0/41.7/30.2/45.7).
+- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 44/42/30/46 tras el ítem 6, medido 45.2/43.8/31.0/46.8).
 - [x] Existen tests para los cuatro módulos listados en el paso 3 (59 tests nuevos; 235 en total).
 
 **Nota de cierre (2026-09).** El job `e2e` existe pero corre solo con `workflow_dispatch`. Promoverlo a cada PR cuando haya pasado verde tres veces seguidas de forma manual. Ese es el único cabo suelto del ítem.
@@ -422,11 +422,25 @@ filtrar.
 
 **Criterio de aceptación.**
 
-- [ ] Test unitario: click en un `<td>` con texto produce un label sin ese
-      texto.
-- [ ] Test unitario: click en un `<span>` dentro de un `<button>` produce el
+- [x] Test unitario: click en un `<td>` con texto produce un label sin ese
+      texto (`src/page/interaction-tracker.privacy.test.ts`).
+- [x] Test unitario: click en un `<span>` dentro de un `<button>` produce el
       texto del botón.
-- [ ] `PRIVACY.md` actualizado.
+- [x] `PRIVACY.md` actualizado con las reglas exactas.
+
+**Nota de cierre (2026-09).** Regla implementada en `describeElement`, en
+este orden: nombre accesible explícito → `<label>` asociado para controles
+de formulario (excluyendo el control anidado, así `<label>Plan <select>`
+lee "Plan" y no las opciones) → texto visible solo para button, a,
+role=button/link/tab, summary, label → formularios por `name`/`id` → todo lo
+demás solo tag. Excepción explícita: `input[type=submit|button|reset]` usa
+su `value` porque es una leyenda, no un dato.
+
+Verificado en Chrome (2026-09) con el export JSON v2 del smoke test: cuatro
+clicks en la celda de cuenta salen como `"label":"td"`,
+`"selector":"#sensitive-cell"`, sin rastro del número ni del email; el
+select sale como `select "Plan"`; el form como `form "lead-form"`; los
+botones conservan su texto. `summary.byTrigger` cuadra con los 12 eventos.
 
 ---
 
@@ -568,6 +582,16 @@ Reproducido (2026-09): con DevTools abierto, recargar Strata desde
 `chrome://extensions` deja al panel con "Max reconnection attempts reached"
 y el botón Clear falla en silencio. El usuario reinstaló la extensión; con
 cerrar y reabrir DevTools alcanzaba.
+
+**Evidencia adicional (2026-09).** Tras rebuild y recarga de la extensión,
+Chrome registró en la página de la extensión un error con origen en la
+página de DevTools y stack en `shared/messaging/client.ts`: "No response
+from the service worker". Es un `void clearEvents()` / `toggleRecording()`
+del panel viejo contra un runtime que no responde, y el rechazo queda sin
+manejar. Nota: el CHANGELOG de 1.4.0 afirma que los rechazos no manejados
+"se capturan y reportan", pero no existe ningún `unhandledrejection` en
+`src/` (verificado con `git log -S`). El paso 3 de este ítem lo resuelve
+de verdad; el ítem 12 debe corregir el CHANGELOG.
 
 **Causa.** Al recargar la extensión, la página del panel queda huérfana: su
 `chrome.runtime` apunta a un contexto invalidado. `use-connection.ts`

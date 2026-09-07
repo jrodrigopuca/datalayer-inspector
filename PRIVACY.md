@@ -24,7 +24,12 @@ When you use Strata:
 
 1. **Event Capture**: The Extension intercepts `dataLayer.push()` calls on the current page. This data is stored temporarily in your browser's memory.
 
-2. **Trigger Attribution**: To show what caused each dataLayer event, the Extension observes user interactions (clicks, form submits, field changes, Enter key) on the inspected page and records a short description of the interacted element (e.g. `button "Add to cart"`). It NEVER records what you type, input values, passwords, or any field content. This information stays in your browser's memory alongside the captured events and follows the same lifecycle.
+2. **Trigger Attribution**: To show what caused each dataLayer event, the Extension observes user interactions (clicks, form submits, field changes, Enter key) on the inspected page and records a short description of the interacted element (e.g. `button "Add to cart"`), truncated to 40 characters, plus a compact selector (`#add-to-cart`). Text is recorded ONLY when it exists to label a control:
+   - an explicit accessible name (`aria-label`, `title`, `alt`);
+   - the `<label>` associated with a form field (never the field's value, options or typed text);
+   - the visible caption of a button, link, tab, summary or label.
+
+   Anything else you click (table cells, paragraphs, generic containers) is described by tag and selector only, e.g. `td` / `#row-3`, because its content may be personal data. Forms are described by their `name` or `id`. This information stays in your browser's memory alongside the captured events and follows the same lifecycle, and appears in exports (JSON, PDF evidence) you choose to generate.
 
 3. **Schema Storage**: Validation schemas you create are stored locally using Chrome's `storage.local` API. This data never leaves your device.
 
