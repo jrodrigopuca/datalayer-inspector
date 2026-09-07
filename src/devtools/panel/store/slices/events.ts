@@ -3,7 +3,10 @@
  */
 
 import type { DataLayerEvent, EventId } from "@shared/types";
+import { pruneEvents } from "@shared/utils/prune";
 import type { StateCreator } from "zustand";
+import type { SchemasSlice } from "./schemas";
+import type { SettingsSlice } from "./settings";
 
 export interface EventsSlice {
   /** All captured events for current tab */
@@ -21,8 +24,12 @@ export interface EventsSlice {
   setContainers: (containers: readonly string[]) => void;
 }
 
+/**
+ * The slice reads `settings.maxEventsPerTab` and prunes `validations`,
+ * so its creator is typed against the slices it touches.
+ */
 export const createEventsSlice: StateCreator<
-  EventsSlice,
+  EventsSlice & SettingsSlice & SchemasSlice,
   [],
   [],
   EventsSlice
@@ -34,9 +41,28 @@ export const createEventsSlice: StateCreator<
   setEvents: (events) => set({ events }),
 
   addEvent: (event) =>
-    set((state) => ({
-      events: [...state.events, event],
-    })),
+    set((state) => {
+      // Mirror the service worker's window exactly (shared prune rule)
+      const { kept, removed } = pruneEvents(
+        [...state.events, event],
+        state.settings.maxEventsPerTab
+      );
+
+      if (removed.length === 0) {
+        return { events: kept };
+      }
+
+      const validations = new Map(state.validations);
+      let selectedEventId = state.selectedEventId;
+      for (const dropped of removed) {
+        validations.delete(dropped.id);
+        if (dropped.id === selectedEventId) {
+          selectedEventId = null;
+        }
+      }
+
+      return { events: kept, validations, selectedEventId };
+    }),
 
   clearEvents: () =>
     set({

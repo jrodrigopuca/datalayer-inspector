@@ -13,6 +13,7 @@ import {
   type DataLayerEvent,
   type MutableTabState,
 } from "@shared/types";
+import { countToPrune } from "@shared/utils/prune";
 
 /**
  * In-memory storage of tab states
@@ -271,13 +272,12 @@ export function setMaxEventsPerTab(limit: number): void {
 /**
  * Prune old events if over limit
  *
- * Prunes below the limit with some slack so we don't splice on every push.
+ * The rule lives in shared/utils/prune.ts so the DevTools panel applies
+ * exactly the same window (docs/TECH-DEBT.md, item 2).
  */
 function pruneEventsIfNeeded(state: MutableTabState): void {
-  if (state.events.length > maxEventsPerTab) {
-    const pruneSlack = Math.min(100, Math.floor(maxEventsPerTab / 5));
-    const keep = Math.max(1, maxEventsPerTab - pruneSlack);
-    const toRemove = state.events.length - keep;
+  const toRemove = countToPrune(state.events.length, maxEventsPerTab);
+  if (toRemove > 0) {
     state.events.splice(0, toRemove);
   }
 }

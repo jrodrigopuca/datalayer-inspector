@@ -18,6 +18,7 @@ export {
   serializeExport,
   transformEventForExport,
 } from "./export";
+export { countToPrune, pruneEvents, pruneSlack } from "./prune";
 export {
   formatTriggerFull,
   formatTriggerShort,

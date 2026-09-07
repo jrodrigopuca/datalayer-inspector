@@ -39,7 +39,7 @@
 
 2. **Build command**: `tsc && vite build --config vite.page-script.config.ts && vite build`
 
-3. **Virtualización removida**: La virtualización del EventList causaba bugs de altura. Se simplificó a un scroll nativo ya que React maneja cientos de eventos sin problemas. Se puede agregar virtualización con `@tanstack/virtual` si se necesita soportar miles de eventos.
+3. **Virtualización removida**: La virtualización del EventList causaba bugs de altura. Se simplificó a un scroll nativo ya que React maneja cientos de eventos sin problemas. Desde el ítem 2 de [TECH-DEBT.md](./TECH-DEBT.md) el panel está acotado al mismo `maxEventsPerTab` que el service worker (regla compartida en `src/shared/utils/prune.ts`), así que la lista nunca supera ese límite. La virtualización solo vuelve a ser necesaria si se decide subir el límite por defecto a miles.
 
 4. **Full-height layout**: Se requiere `height: 100%` en `html`, `body`, y `#root` para que la cadena de `h-full` funcione correctamente en el panel de DevTools.
 

@@ -23,15 +23,15 @@
 
 | # | Ítem | Bucket | Estado | Commit |
 |---|------|--------|--------|--------|
-| 1 | CI y umbral de coverage honesto | Estructural | ✅ Cerrado (e2e queda manual, ver nota) | |
-| 2 | Acotar el panel al mismo límite que el service worker | Estructural | ⬜ Pendiente | |
+| 1 | CI y umbral de coverage honesto | Estructural | ✅ Cerrado (e2e queda manual, ver nota) | `8128a01` |
+| 2 | Acotar el panel al mismo límite que el service worker | Estructural | ✅ Cerrado | |
 | 3 | Persistencia por tab en `storage.session` | Estructural | ⬜ Pendiente | |
 | 4 | Un único dueño de la persistencia de schemas | Estructural | ⬜ Pendiente | |
 | 5 | Cerrar el gap de inyección del page script | Estructural | ⬜ Pendiente | |
 | 6 | Restringir el texto capturado por el tracker | Privacidad | ⬜ Pendiente | |
 | 7 | Lista de tipos de request duplicada | Fricción | ⬜ Pendiente | |
 | 8 | Cliente de mensajería compartido | Fricción | ⬜ Pendiente | |
-| 9 | Un solo lockfile | Fricción | ✅ Cerrado | |
+| 9 | Un solo lockfile | Fricción | ✅ Cerrado | `8128a01` |
 | 10 | Presupuesto del page script medido | Fricción | ⬜ Pendiente | |
 | 11 | Código muerto en manifest y service worker | Fricción | ⬜ Pendiente | |
 | 12 | Sincronizar documentación con el código | Fricción | ⬜ Pendiente | |
@@ -100,7 +100,7 @@ captura o la persistencia. Refactorizar eso sin red es apostar.
 **Criterio de aceptación.**
 
 - [x] Un PR con un test que falla se marca rojo en GitHub (`.github/workflows/ci.yml`, job `check`).
-- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 35/33/20/36, medido 36.7/35.4/22.4/38.7).
+- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 37/35/23/39 tras el ítem 2, medido 38.0/36.2/24.0/39.8).
 - [x] Existen tests para los cuatro módulos listados en el paso 3 (59 tests nuevos; 235 en total).
 
 **Nota de cierre (2026-09).** El job `e2e` existe pero corre solo con `workflow_dispatch`. Promoverlo a cada PR cuando haya pasado verde tres veces seguidas de forma manual. Ese es el único cabo suelto del ítem.
@@ -142,12 +142,20 @@ panel no está acotado a cientos.
 
 **Criterio de aceptación.**
 
-- [ ] Test unitario: con `maxEventsPerTab = 10`, tras 25 `addEvent` el store
-      tiene 10 eventos o menos y `validations` no contiene IDs podados.
-- [ ] Test unitario: SW y panel producen la misma lista final para la misma
-      secuencia de eventos y el mismo límite.
-- [ ] `PLAN.md` actualizado: "el panel está acotado; virtualización no
+- [x] Test unitario: con `maxEventsPerTab = 10`, tras 25 `addEvent` el store
+      tiene 10 eventos o menos y `validations` no contiene IDs podados
+      (`src/devtools/panel/store/slices/events.test.ts`).
+- [x] Test unitario: SW y panel producen la misma lista final para la misma
+      secuencia de eventos y el mismo límite
+      (`src/devtools/panel/store/prune-parity.test.ts`).
+- [x] `PLAN.md` actualizado: "el panel está acotado; virtualización no
       necesaria por debajo de N".
+
+**Nota de cierre (2026-09).** La regla vive en `src/shared/utils/prune.ts`
+(`countToPrune`, `pruneEvents`); el SW y el slice de eventos la importan
+directo del módulo, no del barrel, para no arrastrar `export.ts` (que toca
+`document`) al bundle del service worker. Al podar, el slice también limpia
+`validations` y anula `selectedEventId` si el seleccionado se fue.
 
 ---
 
