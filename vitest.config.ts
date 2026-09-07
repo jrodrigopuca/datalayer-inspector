@@ -21,10 +21,10 @@ export default defineConfig({
       // Ratchet: set just below measured coverage and raised as tests land.
       // Never lower these to make a red build green (docs/TECH-DEBT.md, item 1).
       thresholds: {
-        branches: 39,
-        functions: 27,
-        lines: 43,
-        statements: 41,
+        branches: 40,
+        functions: 29,
+        lines: 44,
+        statements: 42,
       },
     },
     setupFiles: ["./tests/setup.ts"],

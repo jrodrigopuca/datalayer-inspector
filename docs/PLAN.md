@@ -35,9 +35,9 @@
 
 ### Decisiones Técnicas Importantes
 
-1. **CRXJS MIME type issue**: El page script debe buildearse como IIFE standalone (no ES module) para evitar errores de MIME type. Se resolvió con `vite.page-script.config.ts` separado que genera output en `public/`.
+1. **Page script como content script `world: "MAIN"`** (desde el ítem 5 de [TECH-DEBT.md](./TECH-DEBT.md)): CRXJS 2.7+ lo soporta con un loader propio. Ya no hay inyección por tag de script, ni build IIFE separado, ni `web_accessible_resources` manual, y el script es inmune al CSP de la página. Decisión histórica reemplazada: antes se buildeaba como IIFE en `public/page-script.js` por un problema de MIME type con la inyección.
 
-2. **Build command**: `tsc && vite build --config vite.page-script.config.ts && vite build`
+2. **Build command**: `tsc && vite build`
 
 3. **Virtualización removida**: La virtualización del EventList causaba bugs de altura. Se simplificó a un scroll nativo ya que React maneja cientos de eventos sin problemas. Desde el ítem 2 de [TECH-DEBT.md](./TECH-DEBT.md) el panel está acotado al mismo `maxEventsPerTab` que el service worker (regla compartida en `src/shared/utils/prune.ts`), así que la lista nunca supera ese límite. La virtualización solo vuelve a ser necesaria si se decide subir el límite por defecto a miles.
 
@@ -47,7 +47,6 @@
 
 ```
 # Build configuration
-vite.page-script.config.ts    # IIFE build separado para page script
 package.json                  # Build script actualizado
 
 # Layout fixes

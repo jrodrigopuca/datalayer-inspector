@@ -15,8 +15,21 @@
  */
 
 import { LIMITS } from "@shared/constants";
+import type { EventTrigger } from "@shared/types";
+import { TRIGGER_TYPE } from "@shared/types";
 import { resolveTrigger } from "./interaction-tracker";
 import type { CapturedEventData } from "./message-emitter";
+
+/**
+ * Attribution for events that were already in the array when we attached:
+ * we know their order, never their timing.
+ */
+const PRELOAD_TRIGGER: EventTrigger = {
+  type: TRIGGER_TYPE.PRELOAD,
+  label: null,
+  selector: null,
+  sinceMs: null,
+};
 
 /**
  * Callback for captured events
@@ -156,7 +169,8 @@ function processExistingEvents(
     if (isValidPushItem(item)) {
       const event = createCapturedEvent(
         item as Record<string, unknown>,
-        sourceName
+        sourceName,
+        true
       );
       onEvent(event);
       count++;
@@ -188,7 +202,8 @@ function isValidPushItem(item: unknown): item is Record<string, unknown> {
  */
 function createCapturedEvent(
   data: Record<string, unknown>,
-  sourceName: string
+  sourceName: string,
+  isPreexisting = false
 ): CapturedEventData {
   state.eventIndex++;
 
@@ -209,7 +224,7 @@ function createCapturedEvent(
     containerIds: [...state.containerIds],
     sourceName,
     index: state.eventIndex,
-    trigger: resolveTrigger(timestamp),
+    trigger: isPreexisting ? PRELOAD_TRIGGER : resolveTrigger(timestamp),
   };
 }
 

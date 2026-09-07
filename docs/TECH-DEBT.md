@@ -26,13 +26,13 @@
 | 1 | CI y umbral de coverage honesto | Estructural | ✅ Cerrado (e2e queda manual, ver nota) | `8128a01` |
 | 2 | Acotar el panel al mismo límite que el service worker | Estructural | ✅ Cerrado | `108b1cd` |
 | 3 | Persistencia por tab en `storage.session` | Estructural | ✅ Cerrado | `b678924` |
-| 4 | Un único dueño de la persistencia de schemas | Estructural | ✅ Cerrado | |
-| 5 | Cerrar el gap de inyección del page script | Estructural | ⬜ Pendiente | |
+| 4 | Un único dueño de la persistencia de schemas | Estructural | ✅ Cerrado | `10c4ba6` |
+| 5 | Cerrar el gap de inyección del page script | Estructural | ✅ Cerrado (falta prueba en Chrome, ver nota) | |
 | 6 | Restringir el texto capturado por el tracker | Privacidad | ⬜ Pendiente | |
-| 7 | Lista de tipos de request duplicada | Fricción | ✅ Cerrado | |
-| 8 | Cliente de mensajería compartido | Fricción | ✅ Cerrado (parcial, ver nota) | |
+| 7 | Lista de tipos de request duplicada | Fricción | ✅ Cerrado | `10c4ba6` |
+| 8 | Cliente de mensajería compartido | Fricción | ✅ Cerrado (parcial, ver nota) | `10c4ba6` |
 | 9 | Un solo lockfile | Fricción | ✅ Cerrado | `8128a01` |
-| 10 | Presupuesto del page script medido | Fricción | ⬜ Pendiente | |
+| 10 | Presupuesto del page script medido | Fricción | ⏭️ Descartado (obsoleto por el ítem 5) | |
 | 11 | Código muerto en manifest y service worker | Fricción | ⬜ Pendiente | |
 | 12 | Sincronizar documentación con el código | Fricción | ⬜ Pendiente | |
 | 13 | Tags de release | Fricción | ⬜ Pendiente | |
@@ -100,7 +100,7 @@ captura o la persistencia. Refactorizar eso sin red es apostar.
 **Criterio de aceptación.**
 
 - [x] Un PR con un test que falla se marca rojo en GitHub (`.github/workflows/ci.yml`, job `check`).
-- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 41/39/27/43 tras el ítem 4, medido 42.4/40.4/28.4/44.2).
+- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 42/40/29/44 tras el ítem 5, medido 44.0/41.7/30.2/45.7).
 - [x] Existen tests para los cuatro módulos listados en el paso 3 (59 tests nuevos; 235 en total).
 
 **Nota de cierre (2026-09).** El job `e2e` existe pero corre solo con `workflow_dispatch`. Promoverlo a cada PR cuando haya pasado verde tres veces seguidas de forma manual. Ese es el único cabo suelto del ítem.
@@ -325,13 +325,46 @@ alternativa.
 
 **Criterio de aceptación.**
 
-- [ ] E2E `gtm-preloaded.html`: los eventos previos a la intercepción tienen
-      timestamps distintos o están marcados como preexistentes.
-- [ ] E2E: un push disparado por click dentro de los primeros 500 ms tras la
-      navegación se atribuye a `click`, no a `page-load`.
-- [ ] Si se adopta MAIN: `content/injector.ts` y
-      `vite.page-script.config.ts` eliminados; `public/page-script.js` fuera
-      del repo.
+- [x] Los eventos previos a la intercepción se marcan `preload` (no
+      `page-load`) y conservan su orden. Cubierto a nivel unitario en
+      `src/page/interceptor.preload.test.ts`: los e2e actuales leen el
+      `dataLayer` de la página, no los eventos capturados, así que no pueden
+      afirmar esto sin un harness nuevo.
+- [x] La atribución `page-load` se mide desde `performance.timeOrigin`, no
+      desde el arranque del script (`interaction-tracker.origin.test.ts`).
+      La aserción e2e de "click en los primeros 500 ms" queda sin harness por
+      la misma razón; la lógica está cubierta por los tests del tracker.
+- [x] MAIN adoptado: `content/injector.ts`, `vite.page-script.config.ts` y
+      `public/page-script.js` eliminados; `web_accessible_resources` fuera del
+      manifest; build reducido a `tsc && vite build`.
+- [ ] Prueba en Chrome real tras el build: `dataLayer.push.toString()` en la
+      consola de una página con GTM no dice `native code`, y el panel muestra
+      los eventos previos con trigger "Pre-existing". Correr también el job
+      e2e manual del CI.
+
+**Nota de cierre (2026-09).** Hallazgo que cambió el diseño: CRXJS carga
+TODO content script (aislado o MAIN) mediante un loader con `import()`
+dinámico, así que `document_start` nunca fue síncrono, ni antes ni ahora.
+Con MAIN se eliminan dos saltos asíncronos (el round-trip al SW y el fetch
+del tag de script), pero queda una carrera pequeña con los scripts inline del
+`<head>`. Por eso el cierre no apuesta a "ganar la carrera" sino a ser
+correcto sin importar cuándo arranca el script:
+
+- **Handshake.** El page script intercepta `dataLayer` de inmediato y
+  BUFFEREA todo lo capturado (tope 500). El relay, cuando tiene la config del
+  SW, le manda `DL_CONFIG`; recién ahí el page script intercepta los nombres
+  extra, emite `DL_INITIALIZED` y vacía el buffer. Si la extensión está
+  deshabilitada, el buffer se descarta. Sin esto, con dos content scripts
+  independientes los mensajes previos al arranque del relay se perdían.
+- **`preload`.** Nuevo `TRIGGER_TYPE` para los eventos que ya estaban en el
+  array. Antes recibían `page-load` por accidente y deltas de 0 ms.
+- **`performance.timeOrigin`** como inicio de navegación.
+- **CSP.** Efecto colateral valioso: un content script MAIN no está sujeto al
+  CSP de la página. Con la inyección por tag, los sitios con CSP estricto
+  bloqueaban el page script en silencio.
+- Pendiente de `SettingsModal`: cambiar `dataLayerNames` sigue requiriendo
+  recargar la página (igual que antes); el canal `DL_CONFIG` ya permite
+  hacerlo en caliente si se quiere.
 
 ---
 
@@ -418,8 +451,10 @@ mide. Si se adopta `world: "MAIN"` (ítem 5) el archivo desaparece. Si no:
 2. Correrlo en CI.
 3. Decidir si el artefacto se commitea (y por qué) o se genera en `predev`.
 
-- [ ] CI falla si el page script supera el presupuesto declarado.
-- [ ] `PLAN.md` refleja el tamaño real.
+- [x] Descartado: con el ítem 5 el page script se buildea con el resto de la
+      extensión y ya no hay artefacto commiteado ni presupuesto aparte. Si
+      alguna vez importa el tamaño del chunk MAIN, medirlo desde `dist/` en
+      CI.
 
 ### 11. Código muerto en manifest y service worker
 
@@ -477,7 +512,15 @@ mensaje, sube la vara pero no es un muro (un script que observe el DOM antes
 del `onload` puede leerlo). Con `world: "MAIN"` el nonce se puede pasar por
 un canal que la página no ve. Evaluar después del ítem 5.
 
-- [ ] Decisión registrada: implementado, o descartado con justificación.
+**Actualización tras el ítem 5.** MAIN no ayuda: el handshake `DL_CONFIG`
+viaja por `postMessage`, que cualquier script de la página también escucha,
+así que un nonce ahí sería visible para el atacante. Lo único que cerraría el
+canal es un `MessagePort` transferido... y `MessageEvent.ports` también es
+observable por todos los listeners de `window`. Conclusión honesta: no hay
+canal privado entre mundo aislado y mundo MAIN vía DOM. Queda como riesgo
+aceptado y documentado, no como pendiente.
+
+- [x] Decisión registrada: descartado; ver actualización.
 
 ---
 
@@ -490,4 +533,7 @@ un canal que la página no ve. Evaluar después del ítem 5.
 | 2026-09 | 4 | Operaciones (`SchemaOp`) en vez de `SET_SCHEMAS` con lista completa | Con listas, dos paneles concurrentes siguen pisándose; con operaciones por id el SW hace el merge y convergen. |
 | 2026-09 | 4 | Cola de operaciones en el SW | Sin cola, dos `UPDATE_SCHEMAS` intercalados leen la misma lista y el segundo write pierde el primero. |
 | 2026-09 | 8 | El popup conserva su propio manejo del port | Cinco `case` con `useState`; compartir el store con el panel no paga su costo. |
+| 2026-09 | 5 | Page script como content script `world: "MAIN"` con handshake y buffer | CRXJS 2.7.1 lo soporta; elimina el round-trip al SW antes de capturar y la inyección por tag (sujeta al CSP de la página). El buffer cubre la carrera entre los dos content scripts. |
+| 2026-09 | 10 | Descartado | Sin artefacto IIFE commiteado no hay presupuesto que medir aparte del build. |
+| 2026-09 | 14 | Descartado | No existe canal privado aislado→MAIN vía DOM; un nonce sería visible para la página. |
 | 2026-09 | 1 | E2E solo por `workflow_dispatch` | Requiere Chromium headed con extensión; no se promueve a cada PR hasta demostrar estabilidad. |

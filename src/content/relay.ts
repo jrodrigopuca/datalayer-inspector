@@ -10,12 +10,16 @@
 import type {
   BackgroundToContentMessage,
   ContentToBackgroundMessage,
+  ContentToPageMessage,
   DataLayerEvent,
+  PageConfigPayload,
   PageToContentMessage,
 } from "@shared/types";
 import {
   BACKGROUND_TO_CONTENT_TYPE,
   CONTENT_MESSAGE_TYPE,
+  CONTENT_TO_PAGE_TYPE,
+  MESSAGE_SOURCE,
   PAGE_MESSAGE_TYPE,
 } from "@shared/types";
 import { isPageToContentMessage } from "@shared/validators";
@@ -23,11 +27,35 @@ import { isPageToContentMessage } from "@shared/validators";
 /** Whether the extension is currently enabled */
 let isEnabled = true;
 
+/** Last config handed to the page script (re-sent on enabled changes) */
+let lastPageConfig: PageConfigPayload = {
+  enabled: true,
+  dataLayerNames: ["dataLayer"],
+};
+
 /**
  * Set the enabled state of the relay
  */
 export function setEnabled(enabled: boolean): void {
   isEnabled = enabled;
+}
+
+/**
+ * Hand the effective config to the MAIN-world page script.
+ * The first call is the handshake that makes it flush its buffer.
+ */
+export function postConfigToPage(config: PageConfigPayload): void {
+  lastPageConfig = config;
+  try {
+    const message: ContentToPageMessage = {
+      source: MESSAGE_SOURCE,
+      type: CONTENT_TO_PAGE_TYPE.CONFIG,
+      payload: config,
+    };
+    window.postMessage(message, "*");
+  } catch {
+    // Silent fail
+  }
 }
 
 /**
@@ -52,6 +80,8 @@ export function stopRelay(): void {
 function handleBackgroundMessage(message: BackgroundToContentMessage): void {
   if (message.type === BACKGROUND_TO_CONTENT_TYPE.SET_ENABLED) {
     setEnabled(message.payload.enabled);
+    // Let the page script stop (or resume) emitting too
+    postConfigToPage({ ...lastPageConfig, enabled: message.payload.enabled });
   }
 }
 

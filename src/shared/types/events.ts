@@ -13,6 +13,8 @@ export const TRIGGER_TYPE = {
   KEYBOARD: "keyboard",
   PAGE_LOAD: "page-load",
   SCRIPT: "script",
+  /** Already in the array before Strata attached; order kept, timing unknown */
+  PRELOAD: "preload",
 } as const;
 
 export type TriggerType = (typeof TRIGGER_TYPE)[keyof typeof TRIGGER_TYPE];

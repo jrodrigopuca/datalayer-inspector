@@ -80,6 +80,26 @@ export type PageToContentMessage =
     };
 
 // ============================================================================
+// Content Script → Page Script (window.postMessage)
+// ============================================================================
+
+export const CONTENT_TO_PAGE_TYPE = {
+  /** Handshake: the relay is listening; carries the effective settings */
+  CONFIG: "DL_CONFIG",
+} as const;
+
+export interface PageConfigPayload {
+  readonly enabled: boolean;
+  readonly dataLayerNames: readonly string[];
+}
+
+export type ContentToPageMessage = {
+  readonly source: typeof MESSAGE_SOURCE;
+  readonly type: typeof CONTENT_TO_PAGE_TYPE.CONFIG;
+  readonly payload: PageConfigPayload;
+};
+
+// ============================================================================
 // Content Script → Service Worker (chrome.runtime.sendMessage)
 // ============================================================================
 

@@ -1,16 +1,18 @@
 /**
  * Content Script - Entry Point
  *
- * Runs in isolated world with access to DOM but not page's window.
- * Bridges communication between page script and service worker.
+ * Runs in the isolated world with access to chrome.runtime but not the
+ * page's window. Bridges the MAIN-world page script and the service worker.
  *
- * Runs at: document_start
+ * Runs at: document_start. The page script (a MAIN-world content script)
+ * starts on its own and buffers until we send the DL_CONFIG handshake, so
+ * nothing captured before the settings round-trip is lost
+ * (docs/TECH-DEBT.md, item 5).
  */
 
 import { sendRequest } from "@shared/messaging/client";
 import { CLIENT_REQUEST_TYPE, CLIENT_RESPONSE_TYPE } from "@shared/types";
-import { injectPageScript } from "./injector";
-import { setEnabled, startRelay } from "./relay";
+import { postConfigToPage, setEnabled, startRelay } from "./relay";
 
 interface ContentConfig {
   enabled: boolean;
@@ -26,19 +28,15 @@ const DEFAULT_CONFIG: ContentConfig = {
  * Initialize content script
  */
 async function init(): Promise<void> {
+  // Listen first so no page message can slip past once we hand-shake
+  startRelay();
+
   // Load configuration (enabled state + monitored dataLayer names)
   const config = await loadConfig();
   setEnabled(config.enabled);
 
-  // Start listening for messages (including enable/disable commands)
-  startRelay();
-
-  // Only inject page script if enabled
-  if (config.enabled) {
-    injectPageScript({
-      dataLayerNames: config.dataLayerNames,
-    });
-  }
+  // Handshake: the page script flushes its buffer (or drops it if disabled)
+  postConfigToPage(config);
 }
 
 /**
@@ -50,13 +48,13 @@ async function loadConfig(): Promise<ContentConfig> {
       type: CLIENT_REQUEST_TYPE.GET_SETTINGS,
     });
 
-    if (response?.type === CLIENT_RESPONSE_TYPE.SETTINGS) {
+    if (response.type === CLIENT_RESPONSE_TYPE.SETTINGS) {
       const { enabled, dataLayerNames } = response.payload;
       return {
         enabled: enabled ?? true,
         dataLayerNames:
           Array.isArray(dataLayerNames) && dataLayerNames.length > 0
-            ? dataLayerNames
+            ? [...dataLayerNames]
             : DEFAULT_CONFIG.dataLayerNames,
       };
     }

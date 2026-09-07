@@ -28,6 +28,7 @@ const TYPE_LABEL: Record<TriggerType, string> = {
   keyboard: "Enter key",
   "page-load": "Page load",
   script: "Script",
+  preload: "Pre-existing",
 };
 
 /**
@@ -59,6 +60,10 @@ export function formatTriggerFull(trigger: EventTrigger): string {
 
   if (trigger.type === TRIGGER_TYPE.SCRIPT) {
     return "Script (no recent user interaction)";
+  }
+
+  if (trigger.type === TRIGGER_TYPE.PRELOAD) {
+    return "Pre-existing (pushed before Strata attached; timing unknown)";
   }
 
   const parts: string[] = [TYPE_LABEL[trigger.type]];

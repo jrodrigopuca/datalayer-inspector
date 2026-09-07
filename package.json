@@ -6,8 +6,7 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build --config vite.page-script.config.ts && vite build",
-    "build:page-script": "vite build --config vite.page-script.config.ts",
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",

@@ -35,15 +35,31 @@ interface TrackerState {
   navigationStart: number;
 }
 
+/**
+ * When the document actually started loading. Independent of when THIS
+ * script ran, so attribution stays right even if we attach late.
+ */
+function documentNavigationStart(): number {
+  try {
+    const origin = performance.timeOrigin;
+    if (Number.isFinite(origin) && origin > 0) return origin;
+  } catch {
+    // performance may be unavailable in exotic contexts
+  }
+  return Date.now();
+}
+
 const state: TrackerState = {
   lastInteraction: null,
-  navigationStart: Date.now(),
+  navigationStart: documentNavigationStart(),
 };
 
 /**
  * Reset state (for testing)
  */
-export function resetTracker(navigationStart: number = Date.now()): void {
+export function resetTracker(
+  navigationStart: number = documentNavigationStart()
+): void {
   state.lastInteraction = null;
   state.navigationStart = navigationStart;
 }

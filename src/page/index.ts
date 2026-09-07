@@ -1,15 +1,24 @@
 /**
  * Page Script - Entry Point
  *
- * Injected into page context to intercept dataLayer.push()
+ * Runs in the page's MAIN world as a manifest content script at
+ * document_start (no injection, immune to the page's CSP). Intercepts
+ * dataLayer.push() and reports to the isolated-world relay.
+ *
+ * Startup contract (docs/TECH-DEBT.md, item 5):
+ * - Intercept the default dataLayer immediately, without waiting for anyone.
+ * - Buffer everything until the relay's DL_CONFIG handshake arrives; then
+ *   intercept any extra dataLayer names and flush.
+ * - Events already in the array are reported in order but marked "preload":
+ *   their real push time is unknown and we never pretend otherwise.
  *
  * CRITICAL REQUIREMENTS:
- * - Bundle size < 5KB
  * - Zero impact on page performance
  * - Silent failure on errors
  * - No global pollution
  */
 
+import { listenForConfig } from "./config";
 import {
   detectContainers,
   getContainerIds,
@@ -17,38 +26,38 @@ import {
 } from "./container-detector";
 import { startInteractionTracking } from "./interaction-tracker";
 import { interceptDataLayer, setContainerIds } from "./interceptor";
-import { emitContainers, emitEvent, emitInitialized } from "./message-emitter";
+import type { CapturedEventData } from "./message-emitter";
+import {
+  configureEmitter,
+  emitContainers,
+  emitEvent,
+  emitInitialized,
+} from "./message-emitter";
 
-/**
- * Configuration passed via data attribute on script tag
- */
-interface PageScriptConfig {
-  dataLayerNames: string[];
+const DEFAULT_DATALAYER_NAMES: readonly string[] = ["dataLayer"];
+
+/** Array names already intercepted (idempotent across config updates) */
+const interceptedNames = new Set<string>();
+
+/** Events found in arrays before interception, across all names */
+let existingEventsTotal = 0;
+
+function handleCapturedEvent(event: CapturedEventData): void {
+  // Re-detect containers on gtm.js event
+  if (shouldRedetectContainers(event.eventName)) {
+    const containers = detectContainers();
+    setContainerIds(getContainerIds());
+    emitContainers(containers);
+  }
+
+  emitEvent(event);
 }
 
-/**
- * Read configuration from script tag data attribute
- */
-function readConfig(): PageScriptConfig {
-  try {
-    const scriptTag = document.currentScript;
-    if (!scriptTag) {
-      return { dataLayerNames: ["dataLayer"] };
-    }
-
-    const configAttr = scriptTag.getAttribute("data-config");
-    if (!configAttr) {
-      return { dataLayerNames: ["dataLayer"] };
-    }
-
-    const config = JSON.parse(configAttr) as Partial<PageScriptConfig>;
-    return {
-      dataLayerNames: Array.isArray(config.dataLayerNames)
-        ? config.dataLayerNames
-        : ["dataLayer"],
-    };
-  } catch {
-    return { dataLayerNames: ["dataLayer"] };
+function interceptNames(names: readonly string[]): void {
+  for (const name of names) {
+    if (interceptedNames.has(name)) continue;
+    interceptedNames.add(name);
+    existingEventsTotal += interceptDataLayer(name, handleCapturedEvent);
   }
 }
 
@@ -57,44 +66,34 @@ function readConfig(): PageScriptConfig {
  */
 function init(): void {
   try {
-    const config = readConfig();
-    let totalExistingEvents = 0;
-
     // Track user interactions so pushes can be attributed to them
     startInteractionTracking();
 
     // Detect initial containers
     const initialContainers = detectContainers();
-    const containerIds = getContainerIds();
-    setContainerIds(containerIds);
-
+    setContainerIds(getContainerIds());
     if (initialContainers.length > 0) {
       emitContainers(initialContainers);
     }
 
-    // Intercept each configured dataLayer
-    for (const name of config.dataLayerNames) {
-      const existingCount = interceptDataLayer(name, (event) => {
-        // Re-detect containers on gtm.js event
-        if (shouldRedetectContainers(event.eventName)) {
-          const containers = detectContainers();
-          const ids = getContainerIds();
-          setContainerIds(ids);
-          emitContainers(containers);
-        }
+    // Intercept the default array right away (buffered until handshake)
+    interceptNames(DEFAULT_DATALAYER_NAMES);
 
-        emitEvent(event);
-      });
+    // Handshake from the relay: extra names, enabled flag, flush
+    let announced = false;
+    listenForConfig((config) => {
+      interceptNames(config.dataLayerNames);
 
-      totalExistingEvents += existingCount;
-    }
+      if (!announced) {
+        announced = true;
+        emitInitialized([...interceptedNames], existingEventsTotal);
+      }
 
-    // Notify initialization complete
-    emitInitialized(config.dataLayerNames, totalExistingEvents);
+      configureEmitter({ enabled: config.enabled });
+    });
   } catch {
     // Silent fail - must not break page
   }
 }
 
-// Execute immediately (IIFE pattern for safety)
 init();
