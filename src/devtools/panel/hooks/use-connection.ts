@@ -3,12 +3,11 @@
  *
  * Handles:
  * - Establishing port connection
- * - Reconnection on disconnect
+ * - Reconnection on disconnect (policy in ../lib/connection-policy.ts)
  * - Message handling
  * - Initial state sync
  */
 
-import { LIMITS } from "@shared/constants";
 import { sendRequest } from "@shared/messaging/client";
 import {
   BACKGROUND_MESSAGE_TYPE,
@@ -20,6 +19,12 @@ import {
   type UserSettings,
 } from "@shared/types";
 import { useEffect, useRef } from "react";
+import {
+  CONTEXT_INVALIDATED_MESSAGE,
+  decideReconnect,
+  isExtensionContextInvalidated,
+  runCommand,
+} from "../lib/connection-policy";
 import { CONNECTION_STATE, usePanelStore } from "../store";
 
 export function useConnection(): void {
@@ -28,6 +33,8 @@ export function useConnection(): void {
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
+  /** Latest connect() so a manual reconnect can call it from another effect */
+  const connectRef = useRef<(() => void) | null>(null);
 
   const setConnectionState = usePanelStore((s) => s.setConnectionState);
   const setErrorMessage = usePanelStore((s) => s.setErrorMessage);
@@ -40,12 +47,33 @@ export function useConnection(): void {
   const setIsRecording = usePanelStore((s) => s.setIsRecording);
   const updateSettings = usePanelStore((s) => s.updateSettings);
   const setSchemas = usePanelStore((s) => s.setSchemas);
+  const reconnectRequest = usePanelStore((s) => s.reconnectRequest);
 
   useEffect(() => {
     const tabId = chrome.devtools.inspectedWindow.tabId;
     setTabId(tabId);
 
+    function clearPendingReconnect(): void {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+    }
+
+    /** This panel belongs to a dead extension version: only a new panel helps */
+    function stopForInvalidatedContext(): void {
+      clearPendingReconnect();
+      portRef.current = null;
+      setConnectionState(CONNECTION_STATE.ERROR);
+      setErrorMessage(CONTEXT_INVALIDATED_MESSAGE);
+    }
+
     function connect(): void {
+      if (isExtensionContextInvalidated()) {
+        stopForInvalidatedContext();
+        return;
+      }
+
       setConnectionState(CONNECTION_STATE.CONNECTING);
 
       try {
@@ -62,6 +90,7 @@ export function useConnection(): void {
         void requestInitialState(tabId);
 
         setConnectionState(CONNECTION_STATE.CONNECTED);
+        setErrorMessage(null);
         reconnectAttemptsRef.current = 0;
       } catch (error) {
         console.error("[Strata] Connection failed:", error);
@@ -70,6 +99,7 @@ export function useConnection(): void {
         scheduleReconnect();
       }
     }
+    connectRef.current = connect;
 
     function handleMessage(message: BackgroundToClientMessage): void {
       switch (message.type) {
@@ -125,16 +155,23 @@ export function useConnection(): void {
     }
 
     function scheduleReconnect(): void {
-      if (reconnectAttemptsRef.current >= LIMITS.MAX_RECONNECT_ATTEMPTS) {
-        setConnectionState(CONNECTION_STATE.ERROR);
-        setErrorMessage("Max reconnection attempts reached");
+      clearPendingReconnect();
+
+      const decision = decideReconnect({
+        attempt: reconnectAttemptsRef.current,
+        contextInvalidated: isExtensionContextInvalidated(),
+      });
+
+      if (decision.action === "stop") {
+        stopForInvalidatedContext();
         return;
       }
 
       reconnectAttemptsRef.current++;
       reconnectTimeoutRef.current = setTimeout(() => {
+        reconnectTimeoutRef.current = null;
         connect();
-      }, LIMITS.RECONNECT_DELAY);
+      }, decision.delayMs);
     }
 
     async function requestInitialState(
@@ -183,7 +220,11 @@ export function useConnection(): void {
           return;
         }
         console.error("[Strata] Failed to fetch initial state:", error);
-        setErrorMessage("Could not reach the extension service worker");
+        setErrorMessage(
+          isExtensionContextInvalidated()
+            ? CONTEXT_INVALIDATED_MESSAGE
+            : "Could not reach the extension service worker"
+        );
       }
     }
 
@@ -192,9 +233,8 @@ export function useConnection(): void {
 
     // Cleanup
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
+      clearPendingReconnect();
+      connectRef.current = null;
       if (portRef.current) {
         portRef.current.disconnect();
         portRef.current = null;
@@ -213,6 +253,19 @@ export function useConnection(): void {
     updateSettings,
     setSchemas,
   ]);
+
+  // Manual "Reconnect" from the status bar: start over from attempt 0
+  useEffect(() => {
+    if (reconnectRequest === 0) return;
+    reconnectAttemptsRef.current = 0;
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    portRef.current?.disconnect();
+    portRef.current = null;
+    connectRef.current?.();
+  }, [reconnectRequest]);
 }
 
 /**
@@ -228,43 +281,49 @@ export function useCommands(): {
   const isRecording = usePanelStore((s) => s.isRecording);
   const settings = usePanelStore((s) => s.settings);
   const updateSettings = usePanelStore((s) => s.updateSettings);
+  const setWarningMessage = usePanelStore((s) => s.setWarningMessage);
 
-  async function clearEvents(): Promise<void> {
-    if (tabId === null) return;
-
-    await sendRequest({
-      type: CLIENT_REQUEST_TYPE.CLEAR_EVENTS,
-      payload: { tabId },
-    });
+  // Every command reports its failure in the status bar; none rejects
+  function clearEvents(): Promise<void> {
+    return runCommand(async () => {
+      if (tabId === null) return;
+      await sendRequest({
+        type: CLIENT_REQUEST_TYPE.CLEAR_EVENTS,
+        payload: { tabId },
+      });
+    }, setWarningMessage);
   }
 
-  async function toggleRecording(): Promise<void> {
-    if (tabId === null) return;
-
-    await sendRequest({
-      type: CLIENT_REQUEST_TYPE.SET_RECORDING,
-      payload: { tabId, isRecording: !isRecording },
-    });
+  function toggleRecording(): Promise<void> {
+    return runCommand(async () => {
+      if (tabId === null) return;
+      await sendRequest({
+        type: CLIENT_REQUEST_TYPE.SET_RECORDING,
+        payload: { tabId, isRecording: !isRecording },
+      });
+    }, setWarningMessage);
   }
 
-  async function toggleEnabled(): Promise<void> {
-    const newEnabled = !settings.enabled;
-    updateSettings({ enabled: newEnabled });
-
-    await sendRequest({
-      type: CLIENT_REQUEST_TYPE.UPDATE_SETTINGS,
-      payload: { enabled: newEnabled },
-    });
+  function toggleEnabled(): Promise<void> {
+    return runCommand(async () => {
+      const newEnabled = !settings.enabled;
+      updateSettings({ enabled: newEnabled });
+      await sendRequest({
+        type: CLIENT_REQUEST_TYPE.UPDATE_SETTINGS,
+        payload: { enabled: newEnabled },
+      });
+    }, setWarningMessage);
   }
 
-  async function saveSettings(partial: Partial<UserSettings>): Promise<void> {
-    // Optimistic local update; the service worker persists to sync storage
-    updateSettings(partial);
-
-    await sendRequest({
-      type: CLIENT_REQUEST_TYPE.UPDATE_SETTINGS,
-      payload: partial,
-    });
+  function saveSettings(partial: Partial<UserSettings>): Promise<void> {
+    return runCommand(async () => {
+      // Optimistic local update; the service worker persists to sync storage
+      updateSettings(partial);
+      await sendRequest({
+        type: CLIENT_REQUEST_TYPE.UPDATE_SETTINGS,
+        payload: partial,
+      });
+    }, setWarningMessage);
   }
 
   return { clearEvents, toggleRecording, toggleEnabled, saveSettings };

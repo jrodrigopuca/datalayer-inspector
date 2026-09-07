@@ -20,10 +20,10 @@ export const LIMITS = {
   MAX_EVENT_PAYLOAD_SIZE: 100_000,
   /** Service worker idle timeout before suspension (ms) */
   SW_IDLE_TIMEOUT: 30_000,
-  /** DevTools panel reconnection delay (ms) */
+  /** DevTools panel reconnection: first delay (ms), doubled per attempt */
   RECONNECT_DELAY: 1000,
-  /** Maximum reconnection attempts */
-  MAX_RECONNECT_ATTEMPTS: 5,
+  /** DevTools panel reconnection: delay cap (ms). Never gives up. */
+  RECONNECT_MAX_DELAY: 30_000,
 } as const;
 
 /**

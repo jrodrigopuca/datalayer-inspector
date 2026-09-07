@@ -87,6 +87,13 @@ function init(): void {
       if (!announced) {
         announced = true;
         emitInitialized([...interceptedNames], existingEventsTotal);
+      } else {
+        // A later handshake means a fresh relay (extension reloaded):
+        // its worker has no state for this tab yet, so re-announce.
+        const containers = detectContainers();
+        if (containers.length > 0) {
+          emitContainers(containers);
+        }
       }
 
       configureEmitter({ enabled: config.enabled });

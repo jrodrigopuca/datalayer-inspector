@@ -25,6 +25,7 @@ import {
   toggleExtensionEnabled,
 } from "./message-handler";
 import { broadcastToTab, registerPort } from "./port-manager";
+import { reinjectContentScripts } from "./reinject";
 import * as storage from "./storage";
 import * as tabManager from "./tab-manager";
 
@@ -168,6 +169,19 @@ chrome.action.onClicked.addListener((tab) => {
     // Could open DevTools or show a notification
     console.log(`[Strata] Action clicked for tab ${tab.id}`);
   }
+});
+
+// Tabs open before an install/update/reload keep a dead relay: give them
+// a live one so capture resumes without a page reload.
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason !== "install" && details.reason !== "update") return;
+  reinjectContentScripts()
+    .then((count) => {
+      console.log(`[Strata] Re-injected content script into ${count} tab(s)`);
+    })
+    .catch((error: unknown) => {
+      console.error("[Strata] Content script re-injection failed:", error);
+    });
 });
 
 // Keyboard shortcut commands

@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
+import { isExtensionContextInvalidated } from "../../lib/connection-policy";
 import { usePanelStore } from "../../store";
 import {
   selectConnectionInfo,
@@ -25,6 +26,7 @@ export function StatusBar() {
     }))
   );
   const setWarningMessage = usePanelStore((s) => s.setWarningMessage);
+  const requestReconnect = usePanelStore((s) => s.requestReconnect);
 
   const counts = usePanelStore(useShallow(selectEventCounts));
   const validation = usePanelStore(useShallow(selectValidationSummary));
@@ -193,9 +195,18 @@ export function StatusBar() {
           </span>
         )}
 
-        {/* Error message */}
+        {/* Error message + manual reconnect (useless once the context is gone) */}
         {errorMessage && (
           <span className="text-event-error">{errorMessage}</span>
+        )}
+        {!isConnected && !isLoading && !isExtensionContextInvalidated() && (
+          <button
+            type="button"
+            onClick={requestReconnect}
+            className="px-1.5 py-0.5 rounded border border-panel-border text-gray-300 hover:bg-panel-bg transition-colors"
+          >
+            Reconnect
+          </button>
         )}
 
         {/* Keyboard shortcut hint */}

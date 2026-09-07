@@ -21,7 +21,19 @@ const chromeMock = {
       disconnect: vi.fn(),
     })),
     getURL: vi.fn((path: string) => `chrome-extension://mock-id/${path}`),
+    getManifest: vi.fn(() => ({
+      manifest_version: 3,
+      name: "Strata",
+      version: "0.0.0",
+    })),
+    onInstalled: {
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    },
     id: "mock-extension-id",
+  },
+  scripting: {
+    executeScript: vi.fn(),
   },
   storage: {
     onChanged: {

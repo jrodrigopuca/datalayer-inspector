@@ -20,6 +20,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ### Fixed
 
 - Clean JSON export ignored `includeUrl` whenever `includeTimestamp` was on.
+- **Panel reconnection**: after the extension is updated or reloaded, the open panel now says "Close and reopen DevTools to reconnect" instead of "Max reconnection attempts reached". Real disconnects (service worker asleep or restarted) retry forever with capped backoff, and the status bar offers a **Reconnect** button.
+- After an install, update or reload, Strata re-injects its relay into tabs that were already open, so capture resumes there without reloading the page.
+- Clear, Record, Enable and Settings failures now show in the status bar instead of surfacing as unhandled errors in `chrome://extensions`. The panel also reports any unhandled promise rejection there.
 - **Privacy**: trigger labels no longer include the text of arbitrary clicked elements (table cells, paragraphs, containers). Text is recorded only from explicit accessible names, the `<label>` of a form field, or the caption of a real control. Form fields are described by their label, never their value or options. See PRIVACY.md.
 
 ## [1.4.0] - 2026-07

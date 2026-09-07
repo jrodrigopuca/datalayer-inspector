@@ -28,7 +28,7 @@
 | 3 | Persistencia por tab en `storage.session` | Estructural | ✅ Cerrado | `b678924` |
 | 4 | Un único dueño de la persistencia de schemas | Estructural | ✅ Cerrado | `10c4ba6` |
 | 5 | Cerrar el gap de inyección del page script | Estructural | ✅ Cerrado (verificado en Chrome) | `692969d` |
-| 6 | Restringir el texto capturado por el tracker | Privacidad | ✅ Cerrado (verificado en Chrome) | |
+| 6 | Restringir el texto capturado por el tracker | Privacidad | ✅ Cerrado (verificado en Chrome) | `bacff22` |
 | 7 | Lista de tipos de request duplicada | Fricción | ✅ Cerrado | `10c4ba6` |
 | 8 | Cliente de mensajería compartido | Fricción | ✅ Cerrado (parcial, ver nota) | `10c4ba6` |
 | 9 | Un solo lockfile | Fricción | ✅ Cerrado | `8128a01` |
@@ -39,7 +39,7 @@
 | 14 | Nonce en el canal postMessage | Opcional | ⏭️ Descartado (ver actualización) | |
 | 15 | `DL_CONTAINERS_DETECTED` duplicado en el arranque | Fricción | ⬜ Pendiente | |
 | 16 | Recargar la misma URL no limpia los eventos | Producto | ⬜ Decidir | |
-| 17 | El panel muere tras recargar la extensión y no explica cómo recuperarse | UX | ⬜ Pendiente | |
+| 17 | El panel muere tras recargar la extensión y no explica cómo recuperarse | UX | ✅ Cerrado (reinyección verificada en Chrome) | |
 
 Estados: ⬜ Pendiente · 🔄 En curso · ✅ Cerrado · ⏭️ Descartado (anotar por qué)
 
@@ -614,13 +614,50 @@ contexto; el único camino es un panel nuevo.
 
 **Criterio de aceptación.**
 
-- [ ] Test de `use-connection` (o de una función extraída): con
-      `chrome.runtime.id` indefinido no se programa ningún reintento y el
-      mensaje de error contiene "reopen DevTools".
-- [ ] Test: tras 5 desconexiones el hook sigue reintentando con delay
-      creciente y acotado.
+- [x] Test de la política extraída
+      (`src/devtools/panel/lib/connection-policy.test.ts`): con el contexto
+      invalidado `decideReconnect` devuelve `stop` y el mensaje contiene
+      "reopen DevTools".
+- [x] Test: los intentos 5, 6, 10, 50 y 1000 siguen devolviendo `retry`, con
+      delay 1 s → 2 s → 4 s → 8 s → 16 s y tope 30 s.
 - [ ] Manual: recargar la extensión con DevTools abierto muestra el mensaje
-      accionable; Clear contra un runtime muerto muestra un aviso visible.
+      accionable; Clear contra un runtime muerto muestra un aviso visible en
+      la barra; el botón "Reconnect" aparece solo cuando reconectar tiene
+      sentido.
+- [x] Manual (2026-09): con la página de smoke test abierta, recargar la
+      extensión y reabrir DevTools SIN recargar la página; los pushes nuevos
+      llegan al panel y `window.__strataLog` muestra un segundo `DL_CONFIG`.
+      Verificado por el autor en Chrome.
+
+**Nota de cierre (2026-09).** La decisión vive en
+`src/devtools/panel/lib/connection-policy.ts`, pura y sin React:
+`isExtensionContextInvalidated` (lee `chrome.runtime.id`), `decideReconnect`
+(backoff exponencial acotado, nunca `stop` salvo contexto invalidado),
+`describeCommandFailure` y `runCommand`. El hook solo ejecuta la decisión:
+limpia el error al reconectar, resetea el contador con el botón "Reconnect"
+de la barra (vía `reconnectRequest` en el store, sin funciones en el
+estado), y todos los comandos de `useCommands` pasan por `runCommand`, que
+reporta a `warningMessage` y nunca rechaza. Además `panel/main.tsx` instala
+un `unhandledrejection` global que también reporta a la barra, así lo que
+el CHANGELOG 1.4.0 prometía pasa a ser cierto para el panel.
+`LIMITS.MAX_RECONNECT_ATTEMPTS` eliminado; `RECONNECT_MAX_DELAY` nuevo.
+
+**Segundo hallazgo, misma raíz (2026-09).** Tras recargar la extensión, aun
+reabriendo DevTools, el panel no recibía eventos NUEVOS de una pestaña ya
+abierta. Verificado desde la página: el page script seguía vivo y posteando
+(evento 18 capturado en `window`), pero solo había UN `DL_CONFIG`, el de la
+carga original. Chrome no reinyecta content scripts en pestañas abiertas al
+recargar una extensión; el relay de esa pestaña pertenece a la versión
+anterior y cada `sendMessage` falla en silencio. Fix en
+`src/background/reinject.ts`: en `onInstalled` (install/update) se ejecuta
+de nuevo el content script AISLADO, leído del manifest construido, en todas
+las pestañas http(s). El page script MAIN no se reinyecta (duplicaría el
+wrap de `push`); el nuevo relay hace el handshake y el flujo sigue. El page
+script re-anuncia los containers en cada handshake posterior al primero,
+porque el worker nuevo no los conoce. Consecuencia para el ítem 11: el
+permiso `scripting` pasa a estar EN USO.
+Cobertura de líneas bajó 0.2 puntos por el crecimiento del hook (React sin
+tests); el umbral sigue pasando.
 
 ---
 

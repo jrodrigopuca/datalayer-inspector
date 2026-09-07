@@ -75,6 +75,8 @@ export interface UISlice {
   rightPanelView: RightPanelView;
   /** Currently active modal */
   activeModal: ModalType;
+  /** Incremented by the UI to ask the connection hook to reconnect now */
+  reconnectRequest: number;
 
   // Actions
   setViewMode: (mode: ViewMode) => void;
@@ -97,6 +99,7 @@ export interface UISlice {
   showValidationErrors: (eventId: string) => void;
   openModal: (modal: ModalType) => void;
   closeModal: () => void;
+  requestReconnect: () => void;
 }
 
 export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
@@ -111,6 +114,7 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   expandedPaths: new Set(),
   rightPanelView: { type: RIGHT_PANEL_VIEW.EVENT_DETAIL },
   activeModal: MODAL_TYPE.NONE,
+  reconnectRequest: 0,
 
   setViewMode: (viewMode) => set({ viewMode }),
 
@@ -178,4 +182,7 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   openModal: (activeModal) => set({ activeModal }),
 
   closeModal: () => set({ activeModal: MODAL_TYPE.NONE }),
+
+  requestReconnect: () =>
+    set((state) => ({ reconnectRequest: state.reconnectRequest + 1 })),
 });
