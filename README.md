@@ -20,13 +20,13 @@ Validate your dataLayer events against JSON templates:
 
 ```json
 {
-  "event": "purchase",
-  "ecommerce": {
-    "transaction_id": "@string",
-    "value": "@number",
-    "currency": "@enum(USD, EUR, GBP)",
-    "items": [{ "item_id": "@string", "price": "@number" }]
-  }
+	"event": "purchase",
+	"ecommerce": {
+		"transaction_id": "@string",
+		"value": "@number",
+		"currency": "@enum(USD, EUR, GBP)",
+		"items": [{ "item_id": "@string", "price": "@number" }]
+	}
 }
 ```
 
@@ -53,7 +53,7 @@ Validate your dataLayer events against JSON templates:
 
 ### From Chrome Web Store
 
-[Install Strata](https://chrome.google.com/webstore/detail/strata/_______) (coming soon)
+[Install Strata](https://chromewebstore.google.com/detail/strata/foboeokfpclddbplomimopfihhlfnebk) (coming soon)
 
 ### Manual Installation
 
@@ -96,9 +96,21 @@ pnpm test          # Unit tests (Vitest)
 pnpm test:e2e      # E2E tests (Playwright)
 ```
 
+### Smoke test in a real Chrome
+
+`tests/fixtures/pages/strata-smoke.html` logs every Strata message that crosses the page (handshake, captured events with their trigger, containers), so you can verify the capture pipeline without opening DevTools.
+
+```bash
+pnpm smoke          # serve the fixtures on http://127.0.0.1:8765 and open the smoke page
+pnpm smoke:status   # is it running?
+pnpm smoke:stop     # stop it
+```
+
+Load the built extension, turn capture on, interact with the page and read the log on screen or `window.__strataLog` in the console. Export JSON from the panel to compare. Options: `--port <n>`, `--no-open`, `--fg` (foreground).
+
 ### Releasing
 
-1. Bump `version` in `manifest.json` and `package.json`, move the CHANGELOG's *Unreleased* section under the new version.
+1. Bump `version` in `manifest.json` and `package.json`, move the CHANGELOG's _Unreleased_ section under the new version.
 2. Commit, then tag and push: `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`.
 3. CI builds the extension and attaches `strata-vX.Y.Z.zip` to the workflow run, ready for the Web Store.
 

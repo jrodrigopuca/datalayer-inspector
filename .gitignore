@@ -41,3 +41,7 @@ yarn.lock
 # Evidence exports dropped in the repo root while testing
 /*.pdf
 /*.json.export
+
+# Smoke-test server state
+.smoke.pid
+

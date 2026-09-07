@@ -16,7 +16,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke": "node scripts/smoke.mjs start",
+    "smoke:stop": "node scripts/smoke.mjs stop",
+    "smoke:status": "node scripts/smoke.mjs status"
   },
   "dependencies": {
     "clsx": "^2.1.0",
