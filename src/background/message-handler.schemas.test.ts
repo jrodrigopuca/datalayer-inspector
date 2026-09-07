@@ -69,8 +69,8 @@ describe("schema requests", () => {
     clearAllPorts();
     clearSchemasCache();
     clearSettingsCache();
-    mocked(chrome.storage.sync.get).mockResolvedValue({});
     mocked(chrome.storage.local.get).mockResolvedValue({
+      [STORAGE_KEYS.SETTINGS]: { enabled: true },
       [STORAGE_KEYS.SCHEMAS]: [schema("a")],
     });
     mocked(chrome.storage.local.set).mockResolvedValue(undefined);

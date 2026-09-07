@@ -22,7 +22,9 @@ import { useEffect, useRef } from "react";
 import {
   CONTEXT_INVALIDATED_MESSAGE,
   decideReconnect,
+  describeVersionChange,
   isExtensionContextInvalidated,
+  readManifestVersion,
   runCommand,
 } from "../lib/connection-policy";
 import { CONNECTION_STATE, usePanelStore } from "../store";
@@ -35,6 +37,8 @@ export function useConnection(): void {
   );
   /** Latest connect() so a manual reconnect can call it from another effect */
   const connectRef = useRef<(() => void) | null>(null);
+  /** Extension version this panel was opened with (to detect a stale panel) */
+  const bootVersionRef = useRef<string | null>(readManifestVersion());
 
   const setConnectionState = usePanelStore((s) => s.setConnectionState);
   const setErrorMessage = usePanelStore((s) => s.setErrorMessage);
@@ -60,20 +64,21 @@ export function useConnection(): void {
       }
     }
 
-    /** This panel belongs to a dead extension version: only a new panel helps */
-    function stopForInvalidatedContext(): void {
-      clearPendingReconnect();
-      portRef.current = null;
-      setConnectionState(CONNECTION_STATE.ERROR);
-      setErrorMessage(CONTEXT_INVALIDATED_MESSAGE);
+    /**
+     * An orphaned panel that managed to reach a NEWER worker still runs
+     * old code: let it work, but say so.
+     */
+    function warnIfPanelIsStale(): void {
+      const message = describeVersionChange(
+        bootVersionRef.current,
+        readManifestVersion()
+      );
+      if (message) {
+        setWarningMessage(message);
+      }
     }
 
     function connect(): void {
-      if (isExtensionContextInvalidated()) {
-        stopForInvalidatedContext();
-        return;
-      }
-
       setConnectionState(CONNECTION_STATE.CONNECTING);
 
       try {
@@ -91,7 +96,10 @@ export function useConnection(): void {
 
         setConnectionState(CONNECTION_STATE.CONNECTED);
         setErrorMessage(null);
-        reconnectAttemptsRef.current = 0;
+        // NOTE: the attempt counter is reset in requestInitialState, once the
+        // worker actually answered; a port that opens and drops right away
+        // must keep backing off.
+        warnIfPanelIsStale();
       } catch (error) {
         console.error("[Strata] Connection failed:", error);
         setConnectionState(CONNECTION_STATE.ERROR);
@@ -162,12 +170,20 @@ export function useConnection(): void {
         contextInvalidated: isExtensionContextInvalidated(),
       });
 
-      if (decision.action === "stop") {
-        stopForInvalidatedContext();
-        return;
+      if (decision.message) {
+        // Hint only: keep retrying, the runtime may come back
+        setConnectionState(CONNECTION_STATE.ERROR);
+        setErrorMessage(decision.message);
       }
 
       reconnectAttemptsRef.current++;
+
+      if (decision.delayMs === 0) {
+        // Synchronously: a setTimeout(0) is still throttled in a hidden window
+        connect();
+        return;
+      }
+
       reconnectTimeoutRef.current = setTimeout(() => {
         reconnectTimeoutRef.current = null;
         connect();
@@ -211,6 +227,9 @@ export function useConnection(): void {
         if (schemasResponse.type === CLIENT_RESPONSE_TYPE.SCHEMAS) {
           setSchemas(schemasResponse.payload.schemas);
         }
+
+        // The worker answered: this connection is healthy
+        reconnectAttemptsRef.current = 0;
       } catch (error) {
         // The service worker may still be starting up - retry briefly
         if (attempt < 2) {

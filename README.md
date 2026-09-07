@@ -10,7 +10,7 @@ A Chrome DevTools extension built for developers and technical analysts who need
 
 - Intercepts all `dataLayer.push()` calls as they happen
 - Multi-container GTM support
-- Pause/resume recording
+- Pause/resume a tab's timeline while Strata keeps capturing elsewhere
 - Event timeline with color-coded categories (GTM, Ecommerce, Custom, Errors)
 
 ### Schema Validation
@@ -43,7 +43,7 @@ Validate your dataLayer events against JSON templates:
 
 ### Developer Experience
 
-- Keyboard shortcuts (`Alt+Shift+D` to toggle recording)
+- Keyboard shortcuts (`Alt+Shift+D` to turn Strata on/off)
 - Search and filter events
 - JSON tree view with syntax highlighting
 - Copy events to clipboard
@@ -66,9 +66,10 @@ Validate your dataLayer events against JSON templates:
 
 1. Open Chrome DevTools (`F12` or `Cmd+Opt+I`)
 2. Navigate to the **Strata** tab
-3. Interact with the page to capture dataLayer events
-4. Create schemas to validate event structure
-5. Export events or test assertions as needed
+3. Turn capture **on** (it starts off; the toolbar icon shows `OFF`). Events already in the dataLayer are picked up as "Pre-existing"
+4. Interact with the page to capture dataLayer events
+5. Create schemas to validate event structure
+6. Export events or test assertions as needed
 
 ## Development
 

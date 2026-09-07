@@ -24,7 +24,9 @@ function isConfigMessage(data: unknown): data is ContentToPageMessage {
   return (
     typeof config.enabled === "boolean" &&
     Array.isArray(config.dataLayerNames) &&
-    config.dataLayerNames.every((name) => typeof name === "string")
+    config.dataLayerNames.every((name) => typeof name === "string") &&
+    typeof config.relayId === "string" &&
+    config.relayId.length > 0
   );
 }
 

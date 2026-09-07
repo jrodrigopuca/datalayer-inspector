@@ -24,8 +24,13 @@ import {
   getContainerIds,
   shouldRedetectContainers,
 } from "./container-detector";
+import { INITIAL_HANDSHAKE_STATE, planHandshake } from "./handshake";
 import { startInteractionTracking } from "./interaction-tracker";
-import { interceptDataLayer, setContainerIds } from "./interceptor";
+import {
+  interceptDataLayer,
+  replayExisting,
+  setContainerIds,
+} from "./interceptor";
 import type { CapturedEventData } from "./message-emitter";
 import {
   configureEmitter,
@@ -79,17 +84,20 @@ function init(): void {
     // Intercept the default array right away (buffered until handshake)
     interceptNames(DEFAULT_DATALAYER_NAMES);
 
-    // Handshake from the relay: extra names, enabled flag, flush
-    let announced = false;
+    // Handshake from the relay: extra names, enabled flag, flush.
+    // What else to do is decided by planHandshake (see handshake.ts).
+    let handshake = INITIAL_HANDSHAKE_STATE;
     listenForConfig((config) => {
       interceptNames(config.dataLayerNames);
 
-      if (!announced) {
-        announced = true;
+      const plan = planHandshake(handshake, config);
+      handshake = plan.next;
+
+      if (plan.announce) {
         emitInitialized([...interceptedNames], existingEventsTotal);
-      } else {
-        // A later handshake means a fresh relay (extension reloaded):
-        // its worker has no state for this tab yet, so re-announce.
+      }
+
+      if (plan.reannounceContainers) {
         const containers = detectContainers();
         if (containers.length > 0) {
           emitContainers(containers);
@@ -97,6 +105,14 @@ function init(): void {
       }
 
       configureEmitter({ enabled: config.enabled });
+
+      // The array IS the history GTM keeps: replaying it (as "preload")
+      // restores the session after capture was off or the relay is new.
+      if (plan.replayHistory) {
+        for (const name of interceptedNames) {
+          replayExisting(name, handleCapturedEvent);
+        }
+      }
     });
   } catch {
     // Silent fail - must not break page

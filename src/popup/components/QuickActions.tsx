@@ -24,7 +24,7 @@ export function QuickActions({
             : "bg-event-gtm/20 text-event-gtm hover:bg-event-gtm/30"
         }`}
       >
-        {isRecording ? "Pause" : "Record"}
+        {isRecording ? "Pause" : "Resume"}
       </button>
       <button
         type="button"

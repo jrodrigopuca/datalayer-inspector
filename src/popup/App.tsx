@@ -202,22 +202,25 @@ export default function App() {
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium">Strata</span>
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={isEnabled}
-        aria-label={isEnabled ? "Disable extension" : "Enable extension"}
-        onClick={() => void handleToggleEnabled()}
-        className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
-          isEnabled ? "bg-brand-primary" : "bg-gray-600"
-        }`}
-      >
-        <span
-          className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
-            isEnabled ? "translate-x-4" : "translate-x-0"
+      <label className="flex items-center gap-2 text-2xs text-gray-400">
+        <span>{isEnabled ? "On" : "Off"}</span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isEnabled}
+          aria-label={isEnabled ? "Turn Strata off" : "Turn Strata on"}
+          onClick={() => void handleToggleEnabled()}
+          className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
+            isEnabled ? "bg-brand-primary" : "bg-gray-600"
           }`}
-        />
-      </button>
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+              isEnabled ? "translate-x-4" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </label>
     </div>
   );
 
@@ -266,9 +269,9 @@ export default function App() {
       <div className="min-h-0">
         {header}
         <div className="p-4 text-center">
-          <div className="text-sm text-gray-400">Extension disabled</div>
+          <div className="text-sm text-gray-400">Strata is off</div>
           <div className="text-xs text-gray-500 mt-1">
-            Toggle the switch above to enable
+            Turn it on with the switch above to capture
           </div>
         </div>
         {footer}
@@ -300,7 +303,7 @@ export default function App() {
         <div className="flex items-center gap-2">
           <span
             className={`w-2 h-2 rounded-full ${
-              tabState.isRecording ? "bg-red-500 animate-pulse" : "bg-gray-500"
+              tabState.isRecording ? "bg-red-500" : "bg-gray-500"
             }`}
           />
           <span className="text-sm font-medium">Strata</span>
@@ -308,22 +311,25 @@ export default function App() {
             {tabState.isRecording ? "Recording" : "Paused"}
           </span>
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={isEnabled}
-          aria-label={isEnabled ? "Disable extension" : "Enable extension"}
-          onClick={() => void handleToggleEnabled()}
-          className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
-            isEnabled ? "bg-brand-primary" : "bg-gray-600"
-          }`}
-        >
-          <span
-            className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
-              isEnabled ? "translate-x-4" : "translate-x-0"
+        <label className="flex items-center gap-2 text-2xs text-gray-400">
+          <span>{isEnabled ? "On" : "Off"}</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isEnabled}
+            aria-label={isEnabled ? "Turn Strata off" : "Turn Strata on"}
+            onClick={() => void handleToggleEnabled()}
+            className={`relative w-9 h-5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
+              isEnabled ? "bg-brand-primary" : "bg-gray-600"
             }`}
-          />
-        </button>
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                isEnabled ? "translate-x-4" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </label>
       </div>
 
       {/* Event summary */}

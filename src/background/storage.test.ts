@@ -17,9 +17,10 @@ type ChangeListener = (changes: StorageChanges, areaName: string) => void;
 describe("storage", () => {
   beforeEach(() => {
     clearSettingsCache();
+    mocked(chrome.storage.local.get).mockResolvedValue({});
+    mocked(chrome.storage.local.set).mockResolvedValue(undefined);
+    mocked(chrome.storage.local.remove).mockResolvedValue(undefined);
     mocked(chrome.storage.sync.get).mockResolvedValue({});
-    mocked(chrome.storage.sync.set).mockResolvedValue(undefined);
-    mocked(chrome.storage.sync.remove).mockResolvedValue(undefined);
   });
 
   describe("getSettings", () => {
@@ -27,13 +28,39 @@ describe("storage", () => {
       const settings = await getSettings();
 
       expect(settings).toEqual(DEFAULT_SETTINGS);
-      expect(chrome.storage.sync.get).toHaveBeenCalledWith(
+      expect(chrome.storage.local.get).toHaveBeenCalledWith(
         STORAGE_KEYS.SETTINGS
       );
     });
 
-    it("merges stored partial settings over defaults", async () => {
+    it("migrates settings saved in sync by older versions, once", async () => {
       mocked(chrome.storage.sync.get).mockResolvedValue({
+        [STORAGE_KEYS.SETTINGS]: { enabled: true, preserveLog: true },
+      });
+
+      const settings = await getSettings();
+
+      expect(settings.enabled).toBe(true);
+      expect(settings.preserveLog).toBe(true);
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({
+        [STORAGE_KEYS.SETTINGS]: { enabled: true, preserveLog: true },
+      });
+      // The sync copy is left for other devices to migrate from
+      expect(chrome.storage.sync.remove).not.toHaveBeenCalled();
+    });
+
+    it("does not consult sync when local already has settings", async () => {
+      mocked(chrome.storage.local.get).mockResolvedValue({
+        [STORAGE_KEYS.SETTINGS]: { enabled: true },
+      });
+
+      await getSettings();
+
+      expect(chrome.storage.sync.get).not.toHaveBeenCalled();
+    });
+
+    it("merges stored partial settings over defaults", async () => {
+      mocked(chrome.storage.local.get).mockResolvedValue({
         [STORAGE_KEYS.SETTINGS]: { enabled: false, maxEventsPerTab: 50 },
       });
 
@@ -50,11 +77,11 @@ describe("storage", () => {
       await getSettings();
       await getSettings();
 
-      expect(chrome.storage.sync.get).toHaveBeenCalledTimes(1);
+      expect(chrome.storage.local.get).toHaveBeenCalledTimes(1);
     });
 
     it("falls back to defaults when storage throws", async () => {
-      mocked(chrome.storage.sync.get).mockRejectedValue(new Error("quota"));
+      mocked(chrome.storage.local.get).mockRejectedValue(new Error("quota"));
 
       const settings = await getSettings();
 
@@ -66,7 +93,7 @@ describe("storage", () => {
       clearSettingsCache();
       await getSettings();
 
-      expect(chrome.storage.sync.get).toHaveBeenCalledTimes(2);
+      expect(chrome.storage.local.get).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -75,7 +102,7 @@ describe("storage", () => {
       const updated = await updateSettings({ preserveLog: true });
 
       expect(updated).toEqual({ ...DEFAULT_SETTINGS, preserveLog: true });
-      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({
         [STORAGE_KEYS.SETTINGS]: updated,
       });
     });
@@ -86,12 +113,12 @@ describe("storage", () => {
       const settings = await getSettings();
 
       expect(settings.enabled).toBe(false);
-      expect(chrome.storage.sync.get).toHaveBeenCalledTimes(1);
+      expect(chrome.storage.local.get).toHaveBeenCalledTimes(1);
     });
 
     it("rethrows when persistence fails", async () => {
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      mocked(chrome.storage.sync.set).mockRejectedValue(new Error("quota"));
+      mocked(chrome.storage.local.set).mockRejectedValue(new Error("quota"));
 
       await expect(updateSettings({ enabled: false })).rejects.toThrow("quota");
 
@@ -106,10 +133,10 @@ describe("storage", () => {
       const settings = await resetSettings();
 
       expect(settings).toEqual(DEFAULT_SETTINGS);
-      expect(chrome.storage.sync.remove).toHaveBeenCalledWith(
+      expect(chrome.storage.local.remove).toHaveBeenCalledWith(
         STORAGE_KEYS.SETTINGS
       );
-      expect((await getSettings()).enabled).toBe(true);
+      expect((await getSettings()).enabled).toBe(DEFAULT_SETTINGS.enabled);
     });
   });
 
@@ -124,13 +151,13 @@ describe("storage", () => {
       return { listener, unsubscribe };
     }
 
-    it("invokes the callback with merged settings on a sync change", () => {
+    it("invokes the callback with merged settings on a local change", () => {
       const callback = vi.fn();
       const { listener } = registerAndGetListener(callback);
 
       listener(
         { [STORAGE_KEYS.SETTINGS]: { newValue: { enabled: false } } },
-        "sync"
+        "local"
       );
 
       expect(callback).toHaveBeenCalledWith({
@@ -144,11 +171,11 @@ describe("storage", () => {
 
       listener(
         { [STORAGE_KEYS.SETTINGS]: { newValue: { maxEventsPerTab: 10 } } },
-        "sync"
+        "local"
       );
 
       expect((await getSettings()).maxEventsPerTab).toBe(10);
-      expect(chrome.storage.sync.get).not.toHaveBeenCalled();
+      expect(chrome.storage.local.get).not.toHaveBeenCalled();
     });
 
     it("ignores changes in other storage areas or other keys", () => {
@@ -157,9 +184,9 @@ describe("storage", () => {
 
       listener(
         { [STORAGE_KEYS.SETTINGS]: { newValue: { enabled: false } } },
-        "local"
+        "sync"
       );
-      listener({ [STORAGE_KEYS.SCHEMAS]: { newValue: [] } }, "sync");
+      listener({ [STORAGE_KEYS.SCHEMAS]: { newValue: [] } }, "local");
 
       expect(callback).not.toHaveBeenCalled();
     });

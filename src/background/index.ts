@@ -16,6 +16,7 @@
  */
 
 import { BACKGROUND_MESSAGE_TYPE, PORT_NAME } from "@shared/types";
+import { updateBadge } from "./badge";
 import {
   handleClientRequest,
   handleContentMessage,
@@ -25,7 +26,7 @@ import {
   toggleExtensionEnabled,
 } from "./message-handler";
 import { broadcastToTab, registerPort } from "./port-manager";
-import { reinjectContentScripts } from "./reinject";
+import { reinjectOnFreshStart } from "./reinject";
 import * as storage from "./storage";
 import * as tabManager from "./tab-manager";
 
@@ -41,6 +42,7 @@ const ready: Promise<void> = (async () => {
     // Apply user-configured event limit
     const settings = await storage.getSettings();
     tabManager.setMaxEventsPerTab(settings.maxEventsPerTab);
+    await updateBadge(settings.enabled);
   } catch (error) {
     console.error("[Strata] State restore failed:", error);
   }
@@ -49,6 +51,7 @@ const ready: Promise<void> = (async () => {
 // Keep the event limit in sync with settings changes
 storage.onSettingsChanged((updated) => {
   tabManager.setMaxEventsPerTab(updated.maxEventsPerTab);
+  void updateBadge(updated.enabled);
 });
 
 // Surface persistence problems in the panel instead of only in the console
@@ -171,18 +174,18 @@ chrome.action.onClicked.addListener((tab) => {
   }
 });
 
-// Tabs open before an install/update/reload keep a dead relay: give them
-// a live one so capture resumes without a page reload.
-chrome.runtime.onInstalled.addListener((details) => {
-  if (details.reason !== "install" && details.reason !== "update") return;
-  reinjectContentScripts()
-    .then((count) => {
+// Tabs open before an install/update/reload/enable keep a dead relay: give
+// them a live one so capture resumes without a page reload. Runs once per
+// extension process (session marker), not on every worker wake-up.
+reinjectOnFreshStart()
+  .then((count) => {
+    if (count !== null) {
       console.log(`[Strata] Re-injected content script into ${count} tab(s)`);
-    })
-    .catch((error: unknown) => {
-      console.error("[Strata] Content script re-injection failed:", error);
-    });
-});
+    }
+  })
+  .catch((error: unknown) => {
+    console.error("[Strata] Content script re-injection failed:", error);
+  });
 
 // Keyboard shortcut commands
 chrome.commands.onCommand.addListener((command) => {

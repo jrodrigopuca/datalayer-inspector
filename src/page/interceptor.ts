@@ -120,6 +120,28 @@ export function interceptDataLayer(
 }
 
 /**
+ * Re-emit everything currently in an array as "preload" events.
+ *
+ * Used when capture is turned ON after the page loaded: the array IS the
+ * history GTM keeps, so nothing needs to be buffered while capture is off.
+ *
+ * @returns Number of events emitted
+ */
+export function replayExisting(
+  arrayName: string,
+  onEvent: EventCallback
+): number {
+  try {
+    const win = window as unknown as Record<string, unknown>;
+    const arr = win[arrayName];
+    if (!Array.isArray(arr)) return 0;
+    return processExistingEvents(arr, arrayName, onEvent);
+  } catch {
+    return 0;
+  }
+}
+
+/**
  * Intercept an existing array
  */
 function interceptArray(

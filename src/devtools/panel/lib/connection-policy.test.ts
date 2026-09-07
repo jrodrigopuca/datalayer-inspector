@@ -4,6 +4,7 @@ import {
   CONTEXT_INVALIDATED_MESSAGE,
   decideReconnect,
   describeCommandFailure,
+  describeVersionChange,
   isContextInvalidatedError,
   isExtensionContextInvalidated,
   NO_RESPONSE_MESSAGE,
@@ -27,37 +28,60 @@ describe("isExtensionContextInvalidated", () => {
 });
 
 describe("decideReconnect", () => {
-  it("stops with an actionable message when the context is invalidated", () => {
-    const decision = decideReconnect({ attempt: 0, contextInvalidated: true });
+  it("keeps retrying with an actionable message when the context looks invalidated", () => {
+    const decision = decideReconnect({ attempt: 1, contextInvalidated: true });
 
     expect(decision).toEqual({
-      action: "stop",
+      delayMs: 1000,
       message: CONTEXT_INVALIDATED_MESSAGE,
     });
     expect(CONTEXT_INVALIDATED_MESSAGE).toContain("reopen DevTools");
   });
 
-  it("backs off exponentially from the base delay", () => {
-    const delays = [0, 1, 2, 3, 4].map((attempt) =>
+  it("retries immediately the first time (no timer to be throttled)", () => {
+    expect(decideReconnect({ attempt: 0, contextInvalidated: false })).toEqual({
+      delayMs: 0,
+      message: null,
+    });
+  });
+
+  it("then backs off exponentially from the base delay, silently", () => {
+    const delays = [1, 2, 3, 4, 5].map((attempt) =>
       decideReconnect({ attempt, contextInvalidated: false })
     );
 
     expect(delays).toEqual([
-      { action: "retry", delayMs: 1000 },
-      { action: "retry", delayMs: 2000 },
-      { action: "retry", delayMs: 4000 },
-      { action: "retry", delayMs: 8000 },
-      { action: "retry", delayMs: 16000 },
+      { delayMs: 1000, message: null },
+      { delayMs: 2000, message: null },
+      { delayMs: 4000, message: null },
+      { delayMs: 8000, message: null },
+      { delayMs: 16000, message: null },
     ]);
   });
 
-  it("caps the delay and never gives up", () => {
-    for (const attempt of [5, 6, 10, 50, 1000]) {
-      expect(decideReconnect({ attempt, contextInvalidated: false })).toEqual({
-        action: "retry",
-        delayMs: LIMITS.RECONNECT_MAX_DELAY,
-      });
+  it("caps the delay and never gives up, whatever the hint says", () => {
+    for (const attempt of [6, 7, 10, 50, 1000]) {
+      for (const contextInvalidated of [false, true]) {
+        expect(decideReconnect({ attempt, contextInvalidated }).delayMs).toBe(
+          LIMITS.RECONNECT_MAX_DELAY
+        );
+      }
     }
+  });
+});
+
+describe("describeVersionChange", () => {
+  it("is silent when versions match or are unknown", () => {
+    expect(describeVersionChange("1.5.0", "1.5.0")).toBeNull();
+    expect(describeVersionChange(null, "1.5.0")).toBeNull();
+    expect(describeVersionChange("1.5.0", null)).toBeNull();
+  });
+
+  it("tells the user to reopen DevTools when the extension changed underneath", () => {
+    const message = describeVersionChange("1.4.0", "1.5.0");
+
+    expect(message).toContain("1.4.0 → 1.5.0");
+    expect(message).toContain("reopen DevTools");
   });
 });
 

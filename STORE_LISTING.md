@@ -16,7 +16,7 @@ Stop guessing if your GTM dataLayer is working correctly. Strata gives you real-
 • Intercepts all dataLayer.push() calls as they happen
 • Color-coded event categories (GTM, Ecommerce, Custom, Errors)
 • Multi-container GTM support
-• Pause and resume recording anytime
+• Pause and resume a tab's timeline anytime
 • Search and filter through captured events
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

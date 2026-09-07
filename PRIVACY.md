@@ -33,7 +33,7 @@ When you use Strata:
 
 3. **Schema Storage**: Validation schemas you create are stored locally using Chrome's `storage.local` API. This data never leaves your device.
 
-4. **Settings**: Your preferences (monitored dataLayer names, display options) are stored using Chrome's `storage.sync` API, which Chrome may synchronize across your own browsers through your Google account. We have no access to this data.
+4. **Settings**: Your preferences (capture on/off, monitored dataLayer names, display options) are stored locally using Chrome's `storage.local` API. Earlier versions used `storage.sync`, which Chrome may synchronize across your own browsers through your Google account; those values are copied to local storage the first time the new version runs, and the synced copy is not modified. We have no access to this data.
 
 5. **Data Lifecycle**: All captured events are cleared when you close the browser tab or click "Clear". Schemas and settings persist until you delete them.
 

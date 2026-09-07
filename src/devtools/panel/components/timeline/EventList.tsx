@@ -11,6 +11,7 @@
 import type { DataLayerEvent } from "@shared/types";
 import { useEffect, useMemo, useRef } from "react";
 import {
+  useCommands,
   useEventSelection,
   useFilteredEvents,
   useSchemas,
@@ -43,6 +44,8 @@ export function EventList() {
   const events = useFilteredEvents();
   const allEvents = usePanelStore((s) => s.events);
   const isRecording = usePanelStore((s) => s.isRecording);
+  const isEnabled = usePanelStore((s) => s.settings.enabled);
+  const { toggleEnabled } = useCommands();
   const { selectedEventId, selectEvent } = useEventSelection();
   const autoScroll = usePanelStore((s) => s.settings.autoScroll);
   const showSchemaEditor = usePanelStore((s) => s.showSchemaEditor);
@@ -103,6 +106,28 @@ export function EventList() {
     }
   }, [selectedEventId]);
 
+  if (events.length === 0 && !isEnabled) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-gray-500 px-4">
+        <EmptyIcon className="w-12 h-12 mb-3 opacity-50" />
+        <p className="text-sm font-medium text-gray-400">Capture is off</p>
+        <p className="text-xs mt-1 text-center leading-relaxed">
+          Strata starts off so it never runs when you are not debugging.
+          <br />
+          Turn it on to capture this page's dataLayer, including what was pushed
+          before now.
+        </p>
+        <button
+          type="button"
+          onClick={() => void toggleEnabled()}
+          className="mt-4 px-3 py-1.5 text-sm rounded bg-brand-primary text-white hover:opacity-90 transition-opacity"
+        >
+          Turn on capture
+        </button>
+      </div>
+    );
+  }
+
   if (events.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-500 px-4">
@@ -122,13 +147,13 @@ export function EventList() {
         <div className="mt-4 text-2xs text-gray-600">
           {isRecording ? (
             <span className="inline-flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              Recording active
+              <span className="w-2 h-2 rounded-full bg-green-500" />
+              Recording this tab
             </span>
           ) : (
             <span className="inline-flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-gray-500" />
-              Recording paused — press Record to capture
+              Timeline paused — press Resume to continue
             </span>
           )}
         </div>

@@ -1,5 +1,10 @@
+import { STORAGE_KEYS } from "@shared/constants";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
-import { isolatedContentScripts, reinjectContentScripts } from "./reinject";
+import {
+  isolatedContentScripts,
+  reinjectContentScripts,
+  reinjectOnFreshStart,
+} from "./reinject";
 
 const mocked = (fn: unknown): Mock => fn as Mock;
 
@@ -37,6 +42,45 @@ describe("isolatedContentScripts", () => {
         version: "0",
       } as chrome.runtime.ManifestV3)
     ).toEqual([]);
+  });
+});
+
+describe("reinjectOnFreshStart", () => {
+  beforeEach(() => {
+    mocked(chrome.scripting.executeScript).mockResolvedValue([]);
+    mocked(chrome.tabs.query).mockResolvedValue([{ id: 1 }]);
+    mocked(chrome.storage.session.set).mockResolvedValue(undefined);
+  });
+
+  it("injects and sets the marker on a fresh extension process", async () => {
+    mocked(chrome.storage.session.get).mockResolvedValue({});
+
+    await expect(reinjectOnFreshStart(MANIFEST)).resolves.toBe(1);
+
+    expect(chrome.storage.session.set).toHaveBeenCalledWith({
+      [STORAGE_KEYS.SESSION_BOOTED]: true,
+    });
+    expect(chrome.scripting.executeScript).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips on a plain worker wake-up (marker present)", async () => {
+    mocked(chrome.storage.session.get).mockResolvedValue({
+      [STORAGE_KEYS.SESSION_BOOTED]: true,
+    });
+
+    await expect(reinjectOnFreshStart(MANIFEST)).resolves.toBeNull();
+
+    expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
+    expect(chrome.storage.session.set).not.toHaveBeenCalled();
+  });
+
+  it("skips safely when session storage is unavailable", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocked(chrome.storage.session.get).mockRejectedValue(new Error("nope"));
+
+    await expect(reinjectOnFreshStart(MANIFEST)).resolves.toBeNull();
+    expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 });
 

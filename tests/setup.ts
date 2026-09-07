@@ -35,6 +35,11 @@ const chromeMock = {
   scripting: {
     executeScript: vi.fn(),
   },
+  action: {
+    setBadgeText: vi.fn(),
+    setBadgeBackgroundColor: vi.fn(),
+    onClicked: { addListener: vi.fn(), removeListener: vi.fn() },
+  },
   storage: {
     onChanged: {
       addListener: vi.fn(),

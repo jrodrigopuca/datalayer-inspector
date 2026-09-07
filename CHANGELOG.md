@@ -13,6 +13,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Changed
 
+- **Capture is off by default.** Strata is used in short sessions (open, capture a flow, export), so it no longer wraps `dataLayer.push` output on every page all day. The toolbar icon shows `OFF`, the panel's empty state offers "Turn on capture", and turning it on picks up everything already in the dataLayer as "Pre-existing". Users who never changed a setting will find capture off after this update; users with saved settings keep their choice.
 - Page script runs as a `world: "MAIN"` content script (no script-tag injection, immune to page CSP). Capture starts before the settings round-trip; messages are buffered until the relay is ready.
 - Schemas are owned by the service worker: every open panel stays in sync and concurrent edits no longer overwrite each other.
 - Per-tab session persistence; the panel is bounded to the same `maxEventsPerTab` as the worker.
@@ -21,7 +22,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 - Clean JSON export ignored `includeUrl` whenever `includeTimestamp` was on.
 - **Panel reconnection**: after the extension is updated or reloaded, the open panel now says "Close and reopen DevTools to reconnect" instead of "Max reconnection attempts reached". Real disconnects (service worker asleep or restarted) retry forever with capped backoff, and the status bar offers a **Reconnect** button.
-- After an install, update or reload, Strata re-injects its relay into tabs that were already open, so capture resumes there without reloading the page.
+- After an install, update, reload or re-enable, Strata re-injects its relay into tabs that were already open, so capture resumes there without reloading the page, and the dataLayer history is listed again as "Pre-existing".
+- Settings moved from `storage.sync` to `storage.local` (no cross-device sync, no sync write quotas). Existing values are migrated automatically on first run.
 - Clear, Record, Enable and Settings failures now show in the status bar instead of surfacing as unhandled errors in `chrome://extensions`. The panel also reports any unhandled promise rejection there.
 - **Privacy**: trigger labels no longer include the text of arbitrary clicked elements (table cells, paragraphs, containers). Text is recorded only from explicit accessible names, the `<label>` of a form field, or the caption of a real control. Form fields are described by their label, never their value or options. See PRIVACY.md.
 

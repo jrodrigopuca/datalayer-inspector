@@ -16,7 +16,11 @@ type Handler = (event: MessageEvent<unknown>) => void;
 const VALID = {
   source: MESSAGE_SOURCE,
   type: CONTENT_TO_PAGE_TYPE.CONFIG,
-  payload: { enabled: true, dataLayerNames: ["dataLayer", "customLayer"] },
+  payload: {
+    enabled: true,
+    dataLayerNames: ["dataLayer", "customLayer"],
+    relayId: "relay-1",
+  },
 };
 
 function messageFromWindow(data: unknown): MessageEvent<unknown> {
@@ -68,6 +72,12 @@ describe("listenForConfig", () => {
       })
     );
     handler(messageFromWindow({ ...VALID, payload: null }));
+    handler(
+      messageFromWindow({
+        ...VALID,
+        payload: { enabled: true, dataLayerNames: ["dataLayer"] },
+      })
+    );
 
     expect(onConfig).not.toHaveBeenCalled();
   });

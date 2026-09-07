@@ -1,8 +1,14 @@
 /**
  * Toolbar component - top bar with actions
  *
- * High-frequency actions (Record, Clear) stay as buttons; the three
+ * High-frequency actions (Pause/Resume, Clear) stay as buttons; the three
  * export flavors live under a single Export menu to reduce noise.
+ *
+ * Naming rule (docs/TECH-DEBT.md, item 18): the switch says what it IS
+ * ("Strata on/off", global). The button shows this tab's STATE
+ * ("Recording" / "Paused" / "Off") next to its dot; the action it performs
+ * lives in the tooltip. Author's call: a state word next to a state dot
+ * reads better than an action word.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -63,21 +69,28 @@ export function Toolbar() {
 
   return (
     <div className="flex items-center gap-2 px-2 py-1.5 border-b border-panel-border bg-panel-surface">
-      {/* Recording toggle */}
+      {/* Pause/Resume this tab's timeline. Precedence: Off (global) > Paused > Live */}
       <Button
-        variant={isRecording ? "primary" : "ghost"}
+        variant={settings.enabled && isRecording ? "primary" : "ghost"}
         size="sm"
+        disabled={!settings.enabled}
         onClick={() => void toggleRecording()}
-        title={isRecording ? "Pause recording" : "Resume recording"}
+        title={
+          !settings.enabled
+            ? "Strata is off. Turn it on with the switch on the right."
+            : isRecording
+              ? "Pause this tab's timeline (Strata stays on)"
+              : "Resume this tab's timeline"
+        }
       >
         <span
           className={cn(
             "w-2 h-2 rounded-full md:mr-1.5",
-            isRecording ? "bg-red-500 animate-pulse" : "bg-gray-500"
+            settings.enabled && isRecording ? "bg-red-500" : "bg-gray-500"
           )}
         />
         <span className="hidden md:inline">
-          {isRecording ? "Recording" : "Paused"}
+          {!settings.enabled ? "Off" : isRecording ? "Recording" : "Paused"}
         </span>
       </Button>
 
@@ -142,12 +155,20 @@ export function Toolbar() {
         <SettingsIcon className="w-4 h-4" />
       </Button>
 
-      {/* Extension toggle */}
+      {/* Global switch: is Strata capturing at all? */}
+      <span className="hidden md:inline text-xs text-gray-400">
+        Strata {settings.enabled ? "on" : "off"}
+      </span>
       <button
         type="button"
         role="switch"
         aria-checked={settings.enabled}
-        aria-label={settings.enabled ? "Disable extension" : "Enable extension"}
+        aria-label={settings.enabled ? "Turn Strata off" : "Turn Strata on"}
+        title={
+          settings.enabled
+            ? "Turn Strata off (all tabs)"
+            : "Turn Strata on (all tabs)"
+        }
         onClick={() => void toggleEnabled()}
         className={cn(
           "relative w-9 h-5 rounded-full transition-colors",

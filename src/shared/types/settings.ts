@@ -34,8 +34,14 @@ export interface UserSettings {
 /**
  * Default settings values
  */
+/**
+ * Capture is OFF until the user turns it on. Strata is used in short
+ * sessions (open, capture a flow, export, close); wrapping dataLayer.push
+ * and relaying events on every page all day is not what the user wants.
+ * The badge and the panel's empty state say so (docs/TECH-DEBT.md, item 18).
+ */
 export const DEFAULT_SETTINGS: UserSettings = {
-  enabled: true,
+  enabled: false,
   theme: THEME.AUTO,
   dataLayerNames: ["dataLayer"],
   autoScroll: true,

@@ -30,12 +30,14 @@ export const LIMITS = {
  * Storage keys for chrome.storage
  */
 export const STORAGE_KEYS = {
-  /** User settings (sync storage) */
+  /** User settings (local storage; migrated from sync once) */
   SETTINGS: "strata_settings",
   /** Per-tab state backup (session storage): `${TAB_STATE_PREFIX}${tabId}` */
   TAB_STATE_PREFIX: "strata_tab_",
   /** Pre-1.5 single-key backup, removed on restore */
   LEGACY_TAB_STATES: "strata_tab_states",
+  /** Session marker: set on the first worker start of an extension process */
+  SESSION_BOOTED: "strata_booted",
   /** Schemas for validation - Phase 2 (local storage) */
   SCHEMAS: "strata_schemas",
 } as const;

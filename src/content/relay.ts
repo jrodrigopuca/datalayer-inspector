@@ -27,8 +27,24 @@ import { isPageToContentMessage } from "@shared/validators";
 /** Whether the extension is currently enabled */
 let isEnabled = true;
 
+/**
+ * Identity of THIS relay instance. The page script compares it across
+ * handshakes: a new id means a fresh relay (extension reloaded/enabled),
+ * whose worker has no state for the tab yet.
+ */
+const RELAY_ID: string = (() => {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+})();
+
+/** Config to hand to the page script (relayId is added here) */
+type PageConfigInput = Omit<PageConfigPayload, "relayId">;
+
 /** Last config handed to the page script (re-sent on enabled changes) */
-let lastPageConfig: PageConfigPayload = {
+let lastPageConfig: PageConfigInput = {
   enabled: true,
   dataLayerNames: ["dataLayer"],
 };
@@ -44,13 +60,13 @@ export function setEnabled(enabled: boolean): void {
  * Hand the effective config to the MAIN-world page script.
  * The first call is the handshake that makes it flush its buffer.
  */
-export function postConfigToPage(config: PageConfigPayload): void {
+export function postConfigToPage(config: PageConfigInput): void {
   lastPageConfig = config;
   try {
     const message: ContentToPageMessage = {
       source: MESSAGE_SOURCE,
       type: CONTENT_TO_PAGE_TYPE.CONFIG,
-      payload: config,
+      payload: { ...config, relayId: RELAY_ID },
     };
     window.postMessage(message, "*");
   } catch {

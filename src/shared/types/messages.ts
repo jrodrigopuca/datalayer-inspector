@@ -91,6 +91,8 @@ export const CONTENT_TO_PAGE_TYPE = {
 export interface PageConfigPayload {
   readonly enabled: boolean;
   readonly dataLayerNames: readonly string[];
+  /** Random id of the relay instance; a new id means a fresh relay */
+  readonly relayId: string;
 }
 
 export type ContentToPageMessage = {

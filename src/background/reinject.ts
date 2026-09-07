@@ -13,6 +13,8 @@
  * fresh relay's DL_CONFIG handshake simply resumes the flow.
  */
 
+import { STORAGE_KEYS } from "@shared/constants";
+
 interface ContentScriptSpec {
   readonly files: readonly string[];
 }
@@ -31,6 +33,33 @@ export function isolatedContentScripts(
     specs.push({ files: script.js });
   }
   return specs;
+}
+
+/**
+ * Run the re-injection once per extension process.
+ *
+ * The worker starts on every wake-up after idling; re-injecting each time
+ * would cost one executeScript per open tab per wake. chrome.storage.session
+ * lives exactly as long as the extension process (cleared on install,
+ * update, reload, disable), so a missing marker means "fresh process":
+ * inject and set it; a present marker means "just a wake-up": skip.
+ *
+ * @returns Number of tabs re-injected, or null when skipped
+ */
+export async function reinjectOnFreshStart(
+  manifest?: chrome.runtime.ManifestV3
+): Promise<number | null> {
+  const key = STORAGE_KEYS.SESSION_BOOTED;
+  try {
+    const marker = await chrome.storage.session.get(key);
+    if (marker[key] === true) return null;
+    await chrome.storage.session.set({ [key]: true });
+  } catch (error) {
+    console.error("[Strata] Could not read the session marker:", error);
+    return null;
+  }
+
+  return reinjectContentScripts(manifest);
 }
 
 /**

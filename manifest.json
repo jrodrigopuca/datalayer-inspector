@@ -12,7 +12,7 @@
         "default": "Alt+Shift+D",
         "mac": "Alt+Shift+D"
       },
-      "description": "Toggle dataLayer recording on/off"
+      "description": "Turn Strata on/off"
     },
     "_execute_action": {
       "suggested_key": {

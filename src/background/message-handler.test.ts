@@ -63,7 +63,7 @@ function connectPanel(tabId: number): Mock {
 
 function storeSettings(partial: Record<string, unknown>): void {
   clearSettingsCache();
-  mocked(chrome.storage.sync.get).mockResolvedValue({
+  mocked(chrome.storage.local.get).mockResolvedValue({
     [STORAGE_KEYS.SETTINGS]: partial,
   });
 }
@@ -72,8 +72,9 @@ describe("message-handler", () => {
   beforeEach(() => {
     clearAllStates();
     clearAllPorts();
-    storeSettings({});
-    mocked(chrome.storage.sync.set).mockResolvedValue(undefined);
+    // Capture is off by default; these tests exercise the ON path
+    storeSettings({ enabled: true });
+    mocked(chrome.storage.local.set).mockResolvedValue(undefined);
     mocked(chrome.storage.session.set).mockResolvedValue(undefined);
     mocked(chrome.tabs.query).mockResolvedValue([]);
     mocked(chrome.tabs.sendMessage).mockResolvedValue(undefined);
@@ -262,7 +263,7 @@ describe("message-handler", () => {
     });
 
     it("GET_SETTINGS returns the merged settings", async () => {
-      storeSettings({ preserveLog: true });
+      storeSettings({ preserveLog: true, enabled: true });
 
       const response = await handleClientRequest(
         { type: CLIENT_REQUEST_TYPE.GET_SETTINGS },
@@ -324,7 +325,7 @@ describe("message-handler", () => {
     });
 
     it("answers ERROR when a handler throws", async () => {
-      mocked(chrome.storage.sync.set).mockRejectedValue(new Error("quota"));
+      mocked(chrome.storage.local.set).mockRejectedValue(new Error("quota"));
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       const response = await handleClientRequest(
@@ -424,7 +425,7 @@ describe("message-handler", () => {
       const result = await toggleExtensionEnabled();
 
       expect(result).toBe(false);
-      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({
         [STORAGE_KEYS.SETTINGS]: expect.objectContaining({ enabled: false }),
       });
       expect(chrome.tabs.sendMessage).toHaveBeenCalledWith(1, {

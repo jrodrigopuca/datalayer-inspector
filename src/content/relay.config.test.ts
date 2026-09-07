@@ -61,10 +61,27 @@ describe("relay <-> page config handshake", () => {
       {
         source: MESSAGE_SOURCE,
         type: CONTENT_TO_PAGE_TYPE.CONFIG,
-        payload: { enabled: true, dataLayerNames: ["dataLayer", "dl2"] },
+        payload: {
+          enabled: true,
+          dataLayerNames: ["dataLayer", "dl2"],
+          relayId: expect.any(String),
+        },
       },
       "*"
     );
+  });
+
+  it("stamps the same relay id on every config from this relay", () => {
+    postConfigToPage({ enabled: true, dataLayerNames: ["dataLayer"] });
+    postConfigToPage({ enabled: false, dataLayerNames: ["dataLayer"] });
+
+    const ids = postMessage.mock.calls.map(
+      (call: unknown[]) =>
+        (call[0] as { payload: { relayId: string } }).payload.relayId
+    );
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).toBe(ids[1]);
+    expect(ids[0]?.length).toBeGreaterThan(0);
   });
 
   it("forwards SET_ENABLED to the page, keeping the last dataLayer names", () => {
@@ -79,7 +96,10 @@ describe("relay <-> page config handshake", () => {
     expect(postMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         type: CONTENT_TO_PAGE_TYPE.CONFIG,
-        payload: { enabled: false, dataLayerNames: ["dataLayer", "dl2"] },
+        payload: expect.objectContaining({
+          enabled: false,
+          dataLayerNames: ["dataLayer", "dl2"],
+        }),
       }),
       "*"
     );
@@ -91,7 +111,7 @@ describe("relay <-> page config handshake", () => {
       data: {
         source: MESSAGE_SOURCE,
         type: CONTENT_TO_PAGE_TYPE.CONFIG,
-        payload: { enabled: true, dataLayerNames: ["dataLayer"] },
+        payload: { enabled: true, dataLayerNames: ["dataLayer"], relayId: "r" },
       },
     } as unknown as MessageEvent<unknown>);
 

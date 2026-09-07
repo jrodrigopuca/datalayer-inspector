@@ -12,6 +12,7 @@
 
 import { sendRequest } from "@shared/messaging/client";
 import { CLIENT_REQUEST_TYPE, CLIENT_RESPONSE_TYPE } from "@shared/types";
+import { claimRelaySlot } from "./guard";
 import { postConfigToPage, setEnabled, startRelay } from "./relay";
 
 interface ContentConfig {
@@ -65,7 +66,9 @@ async function loadConfig(): Promise<ContentConfig> {
   }
 }
 
-// Initialize immediately
-init().catch((error: unknown) => {
-  console.error("[Strata] Content script init failed:", error);
-});
+// Initialize immediately, once per isolated world (see guard.ts)
+if (claimRelaySlot()) {
+  init().catch((error: unknown) => {
+    console.error("[Strata] Content script init failed:", error);
+  });
+}

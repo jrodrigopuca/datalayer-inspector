@@ -40,6 +40,7 @@
 | 15 | `DL_CONTAINERS_DETECTED` duplicado en el arranque | Fricción | ⬜ Pendiente | |
 | 16 | Recargar la misma URL no limpia los eventos | Producto | ⬜ Decidir | |
 | 17 | El panel muere tras recargar la extensión y no explica cómo recuperarse | UX | ✅ Cerrado (reinyección verificada en Chrome) | |
+| 18 | Captura apagada por defecto | Producto | ✅ Cerrado | |
 
 Estados: ⬜ Pendiente · 🔄 En curso · ✅ Cerrado · ⏭️ Descartado (anotar por qué)
 
@@ -103,7 +104,7 @@ captura o la persistencia. Refactorizar eso sin red es apostar.
 **Criterio de aceptación.**
 
 - [x] Un PR con un test que falla se marca rojo en GitHub (`.github/workflows/ci.yml`, job `check`).
-- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 44/42/30/46 tras el ítem 6, medido 45.2/43.8/31.0/46.8).
+- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 45/44/31/47 tras los seguimientos del 17, medido 46.0/44.9/31.7/47.6).
 - [x] Existen tests para los cuatro módulos listados en el paso 3 (59 tests nuevos; 235 en total).
 
 **Nota de cierre (2026-09).** El job `e2e` existe pero corre solo con `workflow_dispatch`. Promoverlo a cada PR cuando haya pasado verde tres veces seguidas de forma manual. Ese es el único cabo suelto del ítem.
@@ -620,10 +621,10 @@ contexto; el único camino es un panel nuevo.
       "reopen DevTools".
 - [x] Test: los intentos 5, 6, 10, 50 y 1000 siguen devolviendo `retry`, con
       delay 1 s → 2 s → 4 s → 8 s → 16 s y tope 30 s.
-- [ ] Manual: recargar la extensión con DevTools abierto muestra el mensaje
-      accionable; Clear contra un runtime muerto muestra un aviso visible en
-      la barra; el botón "Reconnect" aparece solo cuando reconectar tiene
-      sentido.
+- [x] Manual (2026-09): recargar la extensión con DevTools abierto muestra
+      el mensaje accionable. Observación del autor: poco después aparece el
+      botón "Reconnect", es decir, la señal `chrome.runtime.id` VUELVE tras
+      la recarga. Ver la corrección de diseño en la nota.
 - [x] Manual (2026-09): con la página de smoke test abierta, recargar la
       extensión y reabrir DevTools SIN recargar la página; los pushes nuevos
       llegan al panel y `window.__strataLog` muestra un segundo `DL_CONFIG`.
@@ -642,6 +643,71 @@ un `unhandledrejection` global que también reporta a la barra, así lo que
 el CHANGELOG 1.4.0 prometía pasa a ser cierto para el panel.
 `LIMITS.MAX_RECONNECT_ATTEMPTS` eliminado; `RECONNECT_MAX_DELAY` nuevo.
 
+**Corrección de diseño (2026-09).** La primera versión de la política
+PARABA los reintentos cuando `chrome.runtime.id` estaba indefinido, bajo la
+suposición de que un panel huérfano lo pierde para siempre. La observación
+del autor la refutó: el mensaje "Close and reopen" apareció y luego el
+botón "Reconnect", que se renderiza con la misma señal. El `id` desaparece
+durante la recarga y vuelve después, y un panel viejo puede llegar a
+conectarse al worker nuevo. Ahora: (a) la señal del `id` solo elige el
+MENSAJE, nunca detiene los reintentos; (b) si el panel reconecta, se le
+permite; (c) la señal determinista de "panel viejo" es la versión del
+manifest leída al abrir el panel contra la actual: si difieren, aviso
+ámbar "Strata was updated (1.4.0 → 1.5.0)... reopen DevTools". El botón
+"Reconnect" se muestra siempre que no haya conexión.
+
+**Seguimiento (2026-09), verificado en código a pedido del autor y
+RESUELTO después (ver "Decisiones tomadas" más abajo).** Los tres controles de on/off (switch del panel, switch del popup,
+atajo `Alt+Shift+D`) convergen en `storage.sync` vía el worker, que avisa a
+content scripts, hace broadcast a todos los ports y actualiza el badge; el
+test "toggling enabled notifies every tab and every client" lo cubre. Dos
+gaps registrados, ninguno bloqueante:
+
+- Un cambio de `enabled` llegado por sincronización desde OTRO dispositivo
+  (`storage.onChanged`, área `sync`) actualiza badge y límite, pero no
+  reenvía `SET_ENABLED` a los content scripts ni `EXTENSION_ENABLED_CHANGED`
+  a los ports. Fix: en el listener de `background/index.ts`, comparar el
+  `enabled` anterior con el nuevo y reutilizar la misma difusión que usa
+  `UPDATE_SETTINGS`.
+- Deshabilitar y volver a habilitar la extensión desde `chrome://extensions`
+  no dispara `onInstalled`, así que la reinyección del relay no corre y las
+  pestañas abiertas quedan mudas hasta recargar. Fix posible: reinyectar en
+  cada arranque del worker con un guard en el mundo aislado (una variable
+  global del relay) para no duplicar listeners; decidir si el costo por
+  arranque lo vale.
+
+**Decisiones tomadas (2026-09), las tres a pedido del autor.**
+
+1. *Primer reintento inmediato.* `decideReconnect` devuelve 0 ms para el
+   intento 0 y el hook lo ejecuta de forma síncrona (un `setTimeout(0)`
+   también se estrangula en ventanas ocultas). Guarda contra loops: el
+   contador se resetea recién cuando el worker contestó el estado inicial,
+   no al abrir el port.
+2. *Settings a `storage.local`.* La pregunta del autor, "¿necesitamos la
+   sincronización?", desmontó la decisión 2: no. `storage.sync` traía cuotas
+   de escritura y el gap de propagación entre dispositivos, y no aportaba
+   nada a una herramienta de DevTools. `getSettings` lee `local` y, si está
+   vacío, migra UNA vez desde `sync` sin borrar la copia (otros dispositivos
+   migran desde ella). `onSettingsChanged` escucha el área `local`.
+3. *Reinyección con marca de sesión + replay del historial.*
+   `reinjectOnFreshStart` corre en cada arranque del worker pero solo actúa
+   si falta la marca `strata_booted` en `storage.session`, que Chrome limpia
+   al instalar, actualizar, recargar y deshabilitar: una reinyección por
+   proceso de extensión, ninguna por despertar. `onInstalled` quedó
+   redundante y se quitó. El relay lleva un `relayId` aleatorio en cada
+   `DL_CONFIG`; el page script (`planHandshake`, pura y testeada) detecta un
+   relay NUEVO y re-anuncia containers y REPLAYA el array como `preload`,
+   así "reanudar" devuelve todos los registros sin recargar. Guard en el
+   mundo aislado (`claimRelaySlot`) para que una segunda ejecución del relay
+   en el mismo proceso sea un no-op.
+
+- [ ] Manual: deshabilitar y habilitar Strata en `chrome://extensions` con
+      el smoke test abierto; sin recargar la página, el log muestra un
+      segundo `DL_CONFIG` con OTRO `relayId`, y el panel (reabierto) lista
+      los eventos previos como Pre-existing. Esto verifica de paso que
+      `storage.session` se limpia al deshabilitar; si no fuera así, el
+      fallback es reinyectar por despertar con el guard.
+
 **Segundo hallazgo, misma raíz (2026-09).** Tras recargar la extensión, aun
 reabriendo DevTools, el panel no recibía eventos NUEVOS de una pestaña ya
 abierta. Verificado desde la página: el page script seguía vivo y posteando
@@ -658,6 +724,49 @@ porque el worker nuevo no los conoce. Consecuencia para el ítem 11: el
 permiso `scripting` pasa a estar EN USO.
 Cobertura de líneas bajó 0.2 puntos por el crecimiento del hook (React sin
 tests); el umbral sigue pasando.
+
+### 18. Captura apagada por defecto
+
+**Decisión del autor (2026-09).** Strata se usa en sesiones cortas: abrir,
+encender, probar un flujo, exportar evidencia, apagar. Mantener el wrap de
+`dataLayer.push` emitiendo en todas las páginas todo el día no tiene
+sentido, y un keepalive del service worker mientras DevTools está abierto
+va en la misma dirección equivocada (descartado, ver log). Por eso
+`DEFAULT_SETTINGS.enabled` pasa a `false`.
+
+**Implementación.**
+
+- Badge `OFF` en el ícono (`src/background/badge.ts`), actualizado al
+  arrancar y en cada cambio de settings.
+- Estado vacío del panel "Capture is off" con botón "Turn on capture"
+  (`EventList.tsx`). El popup ya mostraba "Extension disabled".
+- Al pasar de apagado a encendido, el page script RE-LEE el array y emite
+  su contenido como `preload` (`replayExisting` en `interceptor.ts`). Así
+  no se guarda nada en memoria mientras está apagado y, al encender, la
+  sesión igual muestra `gtm.js`, `page_view` y lo que hubiera.
+- Compatibilidad: quien nunca guardó settings queda apagado al actualizar;
+  quien sí guardó, conserva su valor. Explicado en el CHANGELOG.
+- Hallazgo del autor en el build anterior: con Strata apagado, el botón de
+  grabación seguía diciendo "Recording" con el punto rojo. `enabled`
+  (global) e `isRecording` (por pestaña) son estados independientes y el
+  botón solo miraba el segundo. Ahora la precedencia es Off > Paused >
+  Live: apagado, el botón dice "Off", está deshabilitado y no late.
+- Renombrado (decisión del autor, opción 1 de dos): el switch dice lo que
+  ES, "Strata on/off", con etiqueta visible en panel y popup; el botón
+  muestra el ESTADO de la pestaña, "Recording / Paused / Off", junto al
+  punto rojo, y la acción (pausar, reanudar) va en el tooltip. Se probó
+  "Pause / Resume" como etiqueta y el autor lo encontró confuso: un punto de
+  estado pide una palabra de estado. El atajo `Alt+Shift+D` se describía como "toggle recording"
+  y enciende/apaga Strata: manifest y README corregidos. Sin animaciones de
+  latido en los indicadores de captura (pedido del autor).
+
+- [x] `DEFAULT_SETTINGS.enabled === false` (test).
+- [x] Badge OFF/limpio según `enabled` (test).
+- [x] `replayExisting` emite el contenido actual del array como `preload`
+      (test).
+- [ ] Manual: instalar limpio, abrir el smoke test, ver badge OFF y el
+      estado vacío; encender desde el panel; deben aparecer los 3 eventos
+      previos como Pre-existing y los clicks posteriores en vivo.
 
 ---
 
@@ -698,4 +807,8 @@ aceptado y documentado, no como pendiente.
 | 2026-09 | 5 | Page script como content script `world: "MAIN"` con handshake y buffer | CRXJS 2.7.1 lo soporta; elimina el round-trip al SW antes de capturar y la inyección por tag (sujeta al CSP de la página). El buffer cubre la carrera entre los dos content scripts. |
 | 2026-09 | 10 | Descartado | Sin artefacto IIFE commiteado no hay presupuesto que medir aparte del build. |
 | 2026-09 | 14 | Descartado | No existe canal privado aislado→MAIN vía DOM; un nonce sería visible para la página. |
+| 2026-09 | 17 | Sin keepalive del service worker mientras el panel está abierto | Diseñar para "DevTools abierto todo el día" penaliza el caso común; las desconexiones por suspensión se resuelven reconectando. Decidido después (2026-09): primer reintento inmediato y síncrono; el contador se resetea solo cuando llegó el estado inicial, para que un worker caído no genere un loop. |
+| 2026-09 | 17 | Settings en `storage.local`, no `sync` | Sin necesidad de sincronizar entre dispositivos; `sync` sumaba cuotas y un gap de propagación. Migración de una vez desde `sync`. |
+| 2026-09 | 17 | Reinyección por proceso (marca en `storage.session`) y replay del historial ante un relay nuevo | Cubre habilitar desde `chrome://extensions` sin costo por despertar; "reanudar" recupera los registros sin recargar. |
+| 2026-09 | 18 | Captura apagada por defecto | Uso en sesiones cortas; encender es un click con aviso visible (badge + panel), y encender re-lee el historial del array. |
 | 2026-09 | 1 | E2E solo por `workflow_dispatch` | Requiere Chromium headed con extensión; no se promueve a cada PR hasta demostrar estabilidad. |

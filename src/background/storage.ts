@@ -1,7 +1,13 @@
 /**
  * Service Worker - Settings Storage
  *
- * Manages persistent user settings using chrome.storage.sync
+ * Manages persistent user settings using chrome.storage.local.
+ *
+ * Settings used to live in chrome.storage.sync. That bought cross-device
+ * sync nobody needed and cost two real problems: sync write quotas (a user
+ * toggling capture a few times in a row can hit them) and a propagation gap
+ * for changes arriving from another device. Existing values are migrated
+ * from sync on first read (docs/TECH-DEBT.md, item 17 follow-up).
  */
 
 import { STORAGE_KEYS } from "@shared/constants";
@@ -22,8 +28,12 @@ export async function getSettings(): Promise<UserSettings> {
 
   try {
     const key = STORAGE_KEYS.SETTINGS;
-    const result = await chrome.storage.sync.get(key);
-    const stored = result[key] as Partial<UserSettings> | undefined;
+    const local = await chrome.storage.local.get(key);
+    let stored = local[key] as Partial<UserSettings> | undefined;
+
+    if (stored === undefined) {
+      stored = await migrateFromSync(key);
+    }
 
     // Merge with defaults to ensure all fields exist
     cachedSettings = {
@@ -34,6 +44,26 @@ export async function getSettings(): Promise<UserSettings> {
     return cachedSettings;
   } catch {
     return DEFAULT_SETTINGS;
+  }
+}
+
+/**
+ * One-time migration: copy settings saved by pre-1.5 versions in
+ * chrome.storage.sync into local. The sync copy is left in place so other
+ * devices of the same user migrate from it too.
+ */
+async function migrateFromSync(
+  key: string
+): Promise<Partial<UserSettings> | undefined> {
+  try {
+    const synced = await chrome.storage.sync.get(key);
+    const stored = synced[key] as Partial<UserSettings> | undefined;
+    if (stored !== undefined) {
+      await chrome.storage.local.set({ [key]: stored });
+    }
+    return stored;
+  } catch {
+    return undefined;
   }
 }
 
@@ -51,7 +81,7 @@ export async function updateSettings(
   };
 
   try {
-    await chrome.storage.sync.set({
+    await chrome.storage.local.set({
       [STORAGE_KEYS.SETTINGS]: newSettings,
     });
 
@@ -68,7 +98,7 @@ export async function updateSettings(
  */
 export async function resetSettings(): Promise<UserSettings> {
   try {
-    await chrome.storage.sync.remove(STORAGE_KEYS.SETTINGS);
+    await chrome.storage.local.remove(STORAGE_KEYS.SETTINGS);
     cachedSettings = DEFAULT_SETTINGS;
     return DEFAULT_SETTINGS;
   } catch (error) {
@@ -98,7 +128,7 @@ export function onSettingsChanged(
     areaName: string
   ) => {
     const change = changes[key];
-    if (areaName === "sync" && change) {
+    if (areaName === "local" && change) {
       const newValue = change.newValue as Partial<UserSettings> | undefined;
 
       cachedSettings = {

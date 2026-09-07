@@ -8,7 +8,6 @@
 import { useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { cn } from "@/lib/utils";
-import { isExtensionContextInvalidated } from "../../lib/connection-policy";
 import { usePanelStore } from "../../store";
 import {
   selectConnectionInfo,
@@ -199,7 +198,7 @@ export function StatusBar() {
         {errorMessage && (
           <span className="text-event-error">{errorMessage}</span>
         )}
-        {!isConnected && !isLoading && !isExtensionContextInvalidated() && (
+        {!isConnected && !isLoading && (
           <button
             type="button"
             onClick={requestReconnect}
