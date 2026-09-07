@@ -25,8 +25,30 @@ import {
   isContentToBackgroundMessage,
 } from "@shared/validators";
 import * as portManager from "./port-manager";
+import * as schemasStorage from "./schemas-storage";
 import * as storage from "./storage";
 import * as tabManager from "./tab-manager";
+
+/**
+ * Every request type a DevTools panel or popup can send.
+ * Derived from the constant so a new type can never be silently misrouted
+ * as a content-script message (docs/TECH-DEBT.md, item 7).
+ */
+const CLIENT_REQUEST_TYPES: ReadonlySet<string> = new Set(
+  Object.values(CLIENT_REQUEST_TYPE)
+);
+
+/**
+ * Check if a message is a client request (expects a response)
+ * vs a content-script message (fire and forget)
+ */
+export function isClientRequest(message: unknown): boolean {
+  if (typeof message !== "object" || message === null) {
+    return false;
+  }
+  const type = (message as Record<string, unknown>).type;
+  return typeof type === "string" && CLIENT_REQUEST_TYPES.has(type);
+}
 
 /**
  * Handle message from content script
@@ -227,6 +249,31 @@ async function processClientRequest(
       return {
         type: CLIENT_RESPONSE_TYPE.SETTINGS,
         payload: settings,
+      };
+    }
+
+    case CLIENT_REQUEST_TYPE.GET_SCHEMAS: {
+      const schemas = await schemasStorage.getSchemas();
+      return {
+        type: CLIENT_RESPONSE_TYPE.SCHEMAS,
+        payload: { schemas },
+      };
+    }
+
+    case CLIENT_REQUEST_TYPE.UPDATE_SCHEMAS: {
+      const schemas = await schemasStorage.applySchemaOperation(
+        request.payload.op
+      );
+
+      // Schemas are global: every open panel mirrors the new list
+      portManager.broadcastToAll({
+        type: BACKGROUND_MESSAGE_TYPE.SCHEMAS_CHANGED,
+        payload: { schemas },
+      });
+
+      return {
+        type: CLIENT_RESPONSE_TYPE.SCHEMAS,
+        payload: { schemas },
       };
     }
 

@@ -7,6 +7,7 @@
  * Runs at: document_start
  */
 
+import { sendRequest } from "@shared/messaging/client";
 import { CLIENT_REQUEST_TYPE, CLIENT_RESPONSE_TYPE } from "@shared/types";
 import { injectPageScript } from "./injector";
 import { setEnabled, startRelay } from "./relay";
@@ -45,7 +46,7 @@ async function init(): Promise<void> {
  */
 async function loadConfig(): Promise<ContentConfig> {
   try {
-    const response = await chrome.runtime.sendMessage({
+    const response = await sendRequest({
       type: CLIENT_REQUEST_TYPE.GET_SETTINGS,
     });
 

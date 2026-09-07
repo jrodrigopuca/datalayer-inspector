@@ -10,6 +10,7 @@ import type {
   GTMContainer,
   TabState,
 } from "./events";
+import type { Schema, SchemaOp } from "./schema";
 import type { UserSettings } from "./settings";
 
 // ============================================================================
@@ -121,6 +122,8 @@ export const BACKGROUND_MESSAGE_TYPE = {
   RECORDING_CHANGED: "RECORDING_CHANGED",
   EXTENSION_ENABLED_CHANGED: "EXTENSION_ENABLED_CHANGED",
   STORAGE_WARNING: "STORAGE_WARNING",
+  /** Authoritative schema list after any change (sent to every client) */
+  SCHEMAS_CHANGED: "SCHEMAS_CHANGED",
 } as const;
 
 /** Why the service worker is warning about session persistence */
@@ -188,6 +191,10 @@ export type BackgroundToClientMessage =
   | {
       readonly type: typeof BACKGROUND_MESSAGE_TYPE.STORAGE_WARNING;
       readonly payload: StorageWarningPayload;
+    }
+  | {
+      readonly type: typeof BACKGROUND_MESSAGE_TYPE.SCHEMAS_CHANGED;
+      readonly payload: { readonly schemas: readonly Schema[] };
     };
 
 // ============================================================================
@@ -202,6 +209,8 @@ export const CLIENT_REQUEST_TYPE = {
   GET_TAB_STATE: "GET_TAB_STATE",
   GET_SETTINGS: "GET_SETTINGS",
   UPDATE_SETTINGS: "UPDATE_SETTINGS",
+  GET_SCHEMAS: "GET_SCHEMAS",
+  UPDATE_SCHEMAS: "UPDATE_SCHEMAS",
 } as const;
 
 export type ClientRequestType =
@@ -237,6 +246,13 @@ export type ClientToBackgroundRequest =
   | {
       readonly type: typeof CLIENT_REQUEST_TYPE.UPDATE_SETTINGS;
       readonly payload: Partial<UserSettings>;
+    }
+  | {
+      readonly type: typeof CLIENT_REQUEST_TYPE.GET_SCHEMAS;
+    }
+  | {
+      readonly type: typeof CLIENT_REQUEST_TYPE.UPDATE_SCHEMAS;
+      readonly payload: { readonly op: SchemaOp };
     };
 
 export const CLIENT_RESPONSE_TYPE = {
@@ -244,6 +260,7 @@ export const CLIENT_RESPONSE_TYPE = {
   CONTAINERS: "CONTAINERS",
   TAB_STATE: "TAB_STATE",
   SETTINGS: "SETTINGS",
+  SCHEMAS: "SCHEMAS",
   OK: "OK",
   ERROR: "ERROR",
 } as const;
@@ -267,6 +284,10 @@ export type ClientToBackgroundResponse =
   | {
       readonly type: typeof CLIENT_RESPONSE_TYPE.SETTINGS;
       readonly payload: UserSettings;
+    }
+  | {
+      readonly type: typeof CLIENT_RESPONSE_TYPE.SCHEMAS;
+      readonly payload: { readonly schemas: readonly Schema[] };
     }
   | {
       readonly type: typeof CLIENT_RESPONSE_TYPE.OK;

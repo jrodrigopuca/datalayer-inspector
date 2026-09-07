@@ -25,12 +25,12 @@
 |---|------|--------|--------|--------|
 | 1 | CI y umbral de coverage honesto | Estructural | ✅ Cerrado (e2e queda manual, ver nota) | `8128a01` |
 | 2 | Acotar el panel al mismo límite que el service worker | Estructural | ✅ Cerrado | `108b1cd` |
-| 3 | Persistencia por tab en `storage.session` | Estructural | ✅ Cerrado | |
-| 4 | Un único dueño de la persistencia de schemas | Estructural | ⬜ Pendiente | |
+| 3 | Persistencia por tab en `storage.session` | Estructural | ✅ Cerrado | `b678924` |
+| 4 | Un único dueño de la persistencia de schemas | Estructural | ✅ Cerrado | |
 | 5 | Cerrar el gap de inyección del page script | Estructural | ⬜ Pendiente | |
 | 6 | Restringir el texto capturado por el tracker | Privacidad | ⬜ Pendiente | |
-| 7 | Lista de tipos de request duplicada | Fricción | ⬜ Pendiente | |
-| 8 | Cliente de mensajería compartido | Fricción | ⬜ Pendiente | |
+| 7 | Lista de tipos de request duplicada | Fricción | ✅ Cerrado | |
+| 8 | Cliente de mensajería compartido | Fricción | ✅ Cerrado (parcial, ver nota) | |
 | 9 | Un solo lockfile | Fricción | ✅ Cerrado | `8128a01` |
 | 10 | Presupuesto del page script medido | Fricción | ⬜ Pendiente | |
 | 11 | Código muerto en manifest y service worker | Fricción | ⬜ Pendiente | |
@@ -100,7 +100,7 @@ captura o la persistencia. Refactorizar eso sin red es apostar.
 **Criterio de aceptación.**
 
 - [x] Un PR con un test que falla se marca rojo en GitHub (`.github/workflows/ci.yml`, job `check`).
-- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 39/36/24/41 tras el ítem 3, medido 39.8/37.6/25.1/41.7).
+- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 41/39/27/43 tras el ítem 4, medido 42.4/40.4/28.4/44.2).
 - [x] Existen tests para los cuatro módulos listados en el paso 3 (59 tests nuevos; 235 en total).
 
 **Nota de cierre (2026-09).** El job `e2e` existe pero corre solo con `workflow_dispatch`. Promoverlo a cada PR cuando haya pasado verde tres veces seguidas de forma manual. Ese es el único cabo suelto del ítem.
@@ -248,11 +248,34 @@ simultáneas siguen pisándose.
 
 **Criterio de aceptación.**
 
-- [ ] `rg "chrome.storage" src/devtools` no devuelve resultados.
-- [ ] Test de message-handler: `SET_SCHEMAS` persiste y emite
-      `SCHEMAS_CHANGED`.
+- [x] `rg "chrome.storage" src/devtools` no devuelve resultados.
+- [x] Test de message-handler: `UPDATE_SCHEMAS` persiste y emite
+      `SCHEMAS_CHANGED` a todos los clientes
+      (`src/background/message-handler.schemas.test.ts`).
 - [ ] Verificación manual: dos paneles abiertos, agregar en uno, aparece en el
-      otro sin recargar.
+      otro sin recargar. (Pendiente de probar en Chrome real; el resto del
+      ítem está cubierto por tests.)
+
+**Nota de cierre (2026-09).** Se implementó con OPERACIONES, no con
+`SET_SCHEMAS` de lista completa: mandar la lista entera desde cada panel era
+el mismo last-write-wins con otro nombre. Piezas:
+
+- `SchemaOp` (`add` | `update` | `delete` | `import`) en
+  `src/shared/types/schema.ts`, con timestamps dentro de la operación para que
+  SW y panel produzcan el mismo resultado.
+- `applySchemaOp` en `src/shared/utils/schema-ops.ts`: una sola implementación
+  pura, usada por el SW (autoritativo) y por el slice del panel (optimista).
+  Devuelve la misma referencia cuando no cambia nada, así el SW no escribe y
+  el panel no revalida.
+- `src/background/schemas-storage.ts`: único escritor de
+  `STORAGE_KEYS.SCHEMAS`, con COLA de operaciones para que dos requests
+  intercalados no se pisen dentro del propio SW. Lee la misma clave y forma
+  que escribían los paneles pre-1.5, así que no hay migración.
+- `SCHEMAS_CHANGED` se emite a TODOS los ports; el panel lo aplica con
+  `setSchemas`, que ignora listas idénticas (el eco de la propia edición no
+  dispara revalidación).
+- Si el SW no puede persistir, el panel lo muestra en la barra de estado
+  (mismo canal de aviso que el ítem 3).
 
 ---
 
@@ -353,8 +376,11 @@ strings paralela a `CLIENT_REQUEST_TYPE`. Agregar un tipo en `messages.ts` y
 olvidar esta lista rutea el request como mensaje de content script sin ningún
 error. Reemplazar por `Object.values(CLIENT_REQUEST_TYPE).includes(type)`.
 
-- [ ] La lista literal no existe; un test agrega un tipo y verifica que se
-      rutea como client request.
+- [x] La lista literal no existe. `isClientRequest` vive en
+      `message-handler.ts`, derivado de `Object.values(CLIENT_REQUEST_TYPE)`,
+      y el test recorre TODOS los tipos del constante
+      (`message-handler.schemas.test.ts`). Cerrado junto con el ítem 4, que
+      agregaba dos tipos nuevos y los habría ruteado mal.
 
 ### 8. Cliente de mensajería compartido
 
@@ -365,8 +391,14 @@ con `useState` en lugar de compartir el store. Extraer
 `shared/messaging/client.ts` con `sendRequest` y `connectPort` tipados, y
 usarlo desde panel, popup y content script.
 
-- [ ] `rg "chrome.runtime.sendMessage\(" src` devuelve un solo resultado
-      fuera de `content/relay.ts`.
+- [x] `rg "chrome.runtime.sendMessage\(" src` devuelve un solo resultado
+      fuera de `content/relay.ts`: `src/shared/messaging/client.ts`.
+
+**Nota de cierre (2026-09).** `sendRequest` compartido por panel, popup y
+content script. Lo que NO se hizo: el popup sigue con su propio `switch` de
+mensajes del port sobre `useState`. Compartir el store de Zustand entre popup
+y panel es un cambio mayor con poco valor para cinco `case`; queda registrado
+como decisión, no como pendiente.
 
 ### 9. Un solo lockfile
 
@@ -455,4 +487,7 @@ un canal que la página no ve. Evaluar después del ítem 5.
 |-------|------|----------|---------------|
 | 2026-09 | 9 | pnpm como único gestor | Preferencia del autor; era el gestor con el que se instalaba `node_modules` en la práctica. |
 | 2026-09 | 1 | Umbral de coverage como ratchet, no como meta | Un umbral que falla siempre se ignora. Se fija por debajo de lo medido y se sube al agregar tests; nunca se baja. |
+| 2026-09 | 4 | Operaciones (`SchemaOp`) en vez de `SET_SCHEMAS` con lista completa | Con listas, dos paneles concurrentes siguen pisándose; con operaciones por id el SW hace el merge y convergen. |
+| 2026-09 | 4 | Cola de operaciones en el SW | Sin cola, dos `UPDATE_SCHEMAS` intercalados leen la misma lista y el segundo write pierde el primero. |
+| 2026-09 | 8 | El popup conserva su propio manejo del port | Cinco `case` con `useState`; compartir el store con el panel no paga su costo. |
 | 2026-09 | 1 | E2E solo por `workflow_dispatch` | Requiere Chromium headed con extensión; no se promueve a cada PR hasta demostrar estabilidad. |

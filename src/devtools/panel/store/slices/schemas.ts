@@ -1,15 +1,18 @@
 /**
- * Schemas slice - manages validation schemas
+ * Schemas slice - mirrors the service worker's authoritative schema list
+ *
+ * Mutations go through `applySchemaOp` (optimistic, same pure function the
+ * worker uses); the worker's SCHEMAS_CHANGED broadcast lands in `setSchemas`,
+ * which is a no-op when the list already matches (docs/TECH-DEBT.md, item 4).
  */
 
 import type {
-  CreateSchemaInput,
   DataLayerEvent,
   EventValidation,
   Schema,
-  UpdateSchemaInput,
+  SchemaOp,
 } from "@shared/types";
-import { createSchema } from "@shared/types";
+import { applySchemaOp } from "@shared/utils/schema-ops";
 import { validateEvent } from "@shared/validators";
 import type { StateCreator } from "zustand";
 
@@ -21,12 +24,11 @@ export interface SchemasSlice {
   /** Track schema version for cache invalidation */
   _schemaVersion: number;
 
-  // Schema CRUD
-  addSchema: (input: CreateSchemaInput) => Schema;
-  updateSchema: (id: string, input: UpdateSchemaInput) => void;
-  deleteSchema: (id: string) => void;
+  // Schema mutations
+  /** Apply a mutation locally (the hook also sends it to the worker) */
+  applySchemaOp: (op: SchemaOp) => void;
+  /** Replace the list with the worker's; no-op if identical */
   setSchemas: (schemas: readonly Schema[]) => void;
-  toggleSchemaEnabled: (id: string) => void;
 
   // Validation
   /** Validate all events (full re-validation, use sparingly) */
@@ -42,6 +44,10 @@ export interface SchemasSlice {
   invalidateValidations: () => void;
 }
 
+function sameSchemas(a: readonly Schema[], b: readonly Schema[]): boolean {
+  return a === b || JSON.stringify(a) === JSON.stringify(b);
+}
+
 export const createSchemasSlice: StateCreator<
   SchemasSlice,
   [],
@@ -52,50 +58,18 @@ export const createSchemasSlice: StateCreator<
   validations: new Map(),
   _schemaVersion: 0,
 
-  addSchema: (input) => {
-    const schema = createSchema(input);
-    set((state) => ({
-      schemas: [...state.schemas, schema],
-      _schemaVersion: state._schemaVersion + 1,
-    }));
-    // Re-validate after adding schema
-    // Note: This requires events from another slice, will be handled in hook
-    return schema;
-  },
-
-  updateSchema: (id, input) =>
-    set((state) => ({
-      schemas: state.schemas.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              ...input,
-              updatedAt: Date.now(),
-            }
-          : s
-      ),
-      _schemaVersion: state._schemaVersion + 1,
-    })),
-
-  deleteSchema: (id) =>
-    set((state) => ({
-      schemas: state.schemas.filter((s) => s.id !== id),
-      _schemaVersion: state._schemaVersion + 1,
-    })),
+  applySchemaOp: (op) =>
+    set((state) => {
+      const schemas = applySchemaOp(state.schemas, op);
+      if (schemas === state.schemas) return {};
+      return { schemas, _schemaVersion: state._schemaVersion + 1 };
+    }),
 
   setSchemas: (schemas) =>
-    set((state) => ({
-      schemas,
-      _schemaVersion: state._schemaVersion + 1,
-    })),
-
-  toggleSchemaEnabled: (id) =>
-    set((state) => ({
-      schemas: state.schemas.map((s) =>
-        s.id === id ? { ...s, enabled: !s.enabled, updatedAt: Date.now() } : s
-      ),
-      _schemaVersion: state._schemaVersion + 1,
-    })),
+    set((state) => {
+      if (sameSchemas(state.schemas, schemas)) return {};
+      return { schemas, _schemaVersion: state._schemaVersion + 1 };
+    }),
 
   validateEvents: (events) => {
     const { schemas } = get();

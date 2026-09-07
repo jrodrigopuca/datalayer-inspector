@@ -4,13 +4,12 @@
  * Quick summary view accessible from browser toolbar
  */
 
+import { sendRequest } from "@shared/messaging/client";
 import {
   BACKGROUND_MESSAGE_TYPE,
   type BackgroundToClientMessage,
   CLIENT_REQUEST_TYPE,
   CLIENT_RESPONSE_TYPE,
-  type ClientToBackgroundRequest,
-  type ClientToBackgroundResponse,
   PORT_NAME,
   type TabState,
 } from "@shared/types";
@@ -148,20 +147,6 @@ export default function App() {
       console.error("[Strata Popup] Failed to get tab state:", error);
       setState(POPUP_STATE.NO_DATALAYER);
     }
-  }
-
-  async function sendRequest(
-    request: ClientToBackgroundRequest
-  ): Promise<ClientToBackgroundResponse> {
-    return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(request, (response) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve(response);
-        }
-      });
-    });
   }
 
   async function handleClear(): Promise<void> {

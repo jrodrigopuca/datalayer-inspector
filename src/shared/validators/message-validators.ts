@@ -9,12 +9,15 @@ import type {
   ClientToBackgroundRequest,
   ContentToBackgroundMessage,
   PageToContentMessage,
+  Schema,
+  SchemaOp,
 } from "../types";
 import {
   CLIENT_REQUEST_TYPE,
   CONTENT_MESSAGE_TYPE,
   MESSAGE_SOURCE,
   PAGE_MESSAGE_TYPE,
+  SCHEMA_OP,
 } from "../types";
 
 /**
@@ -202,6 +205,80 @@ export function isClientToBackgroundRequest(
 
     case CLIENT_REQUEST_TYPE.UPDATE_SETTINGS:
       return isObject(data.payload);
+
+    case CLIENT_REQUEST_TYPE.GET_SCHEMAS:
+      return true; // No payload needed
+
+    case CLIENT_REQUEST_TYPE.UPDATE_SCHEMAS:
+      return isObject(data.payload) && isSchemaOp(data.payload.op);
+
+    default:
+      return false;
+  }
+}
+
+// ============================================================================
+// Schema Validators (stored data and mutation ops)
+// ============================================================================
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return isObject(value) && !Array.isArray(value);
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === "string";
+}
+
+/**
+ * Structural check for a persisted or transported schema
+ */
+export function isSchema(value: unknown): value is Schema {
+  if (!isPlainObject(value)) return false;
+
+  return (
+    hasStringProp(value, "id") &&
+    hasStringProp(value, "name") &&
+    isPlainObject(value.template) &&
+    typeof value.enabled === "boolean" &&
+    hasNumberProp(value, "createdAt") &&
+    hasNumberProp(value, "updatedAt") &&
+    isOptionalString(value.description)
+  );
+}
+
+function isUpdateSchemaInput(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+
+  return (
+    isOptionalString(value.name) &&
+    (value.template === undefined || isPlainObject(value.template)) &&
+    isOptionalString(value.description) &&
+    (value.enabled === undefined || typeof value.enabled === "boolean")
+  );
+}
+
+/**
+ * Validate a schema mutation coming from a panel
+ */
+export function isSchemaOp(value: unknown): value is SchemaOp {
+  if (!isPlainObject(value)) return false;
+
+  switch (value.op) {
+    case SCHEMA_OP.ADD:
+      return isSchema(value.schema);
+
+    case SCHEMA_OP.UPDATE:
+      return (
+        hasStringProp(value, "id") &&
+        isUpdateSchemaInput(value.input) &&
+        hasNumberProp(value, "updatedAt")
+      );
+
+    case SCHEMA_OP.DELETE:
+      return hasStringProp(value, "id");
+
+    case SCHEMA_OP.IMPORT:
+      return Array.isArray(value.schemas) && value.schemas.every(isSchema);
 
     default:
       return false;

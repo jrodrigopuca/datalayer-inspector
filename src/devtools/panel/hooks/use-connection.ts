@@ -9,13 +9,12 @@
  */
 
 import { LIMITS } from "@shared/constants";
+import { sendRequest } from "@shared/messaging/client";
 import {
   BACKGROUND_MESSAGE_TYPE,
   type BackgroundToClientMessage,
   CLIENT_REQUEST_TYPE,
   CLIENT_RESPONSE_TYPE,
-  type ClientToBackgroundRequest,
-  type ClientToBackgroundResponse,
   PORT_NAME,
   STORAGE_WARNING_KIND,
   type UserSettings,
@@ -40,6 +39,7 @@ export function useConnection(): void {
   const setContainers = usePanelStore((s) => s.setContainers);
   const setIsRecording = usePanelStore((s) => s.setIsRecording);
   const updateSettings = usePanelStore((s) => s.updateSettings);
+  const setSchemas = usePanelStore((s) => s.setSchemas);
 
   useEffect(() => {
     const tabId = chrome.devtools.inspectedWindow.tabId;
@@ -103,6 +103,11 @@ export function useConnection(): void {
         case BACKGROUND_MESSAGE_TYPE.EXTENSION_ENABLED_CHANGED:
           updateSettings({ enabled: message.payload.enabled });
           break;
+
+        case BACKGROUND_MESSAGE_TYPE.SCHEMAS_CHANGED:
+          // Authoritative list (own edits echo back and no-op)
+          setSchemas(message.payload.schemas);
+          break;
       }
     }
 
@@ -160,6 +165,15 @@ export function useConnection(): void {
         if (settingsResponse.type === CLIENT_RESPONSE_TYPE.SETTINGS) {
           updateSettings(settingsResponse.payload);
         }
+
+        // Request schemas (global, owned by the service worker)
+        const schemasResponse = await sendRequest({
+          type: CLIENT_REQUEST_TYPE.GET_SCHEMAS,
+        });
+
+        if (schemasResponse.type === CLIENT_RESPONSE_TYPE.SCHEMAS) {
+          setSchemas(schemasResponse.payload.schemas);
+        }
       } catch (error) {
         // The service worker may still be starting up - retry briefly
         if (attempt < 2) {
@@ -171,20 +185,6 @@ export function useConnection(): void {
         console.error("[Strata] Failed to fetch initial state:", error);
         setErrorMessage("Could not reach the extension service worker");
       }
-    }
-
-    async function sendRequest(
-      request: ClientToBackgroundRequest
-    ): Promise<ClientToBackgroundResponse> {
-      return new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage(request, (response) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve(response);
-          }
-        });
-      });
     }
 
     // Start connection
@@ -211,6 +211,7 @@ export function useConnection(): void {
     setContainers,
     setIsRecording,
     updateSettings,
+    setSchemas,
   ]);
 }
 
@@ -228,24 +229,10 @@ export function useCommands(): {
   const settings = usePanelStore((s) => s.settings);
   const updateSettings = usePanelStore((s) => s.updateSettings);
 
-  async function sendCommand(
-    request: ClientToBackgroundRequest
-  ): Promise<ClientToBackgroundResponse> {
-    return new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(request, (response) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve(response);
-        }
-      });
-    });
-  }
-
   async function clearEvents(): Promise<void> {
     if (tabId === null) return;
 
-    await sendCommand({
+    await sendRequest({
       type: CLIENT_REQUEST_TYPE.CLEAR_EVENTS,
       payload: { tabId },
     });
@@ -254,7 +241,7 @@ export function useCommands(): {
   async function toggleRecording(): Promise<void> {
     if (tabId === null) return;
 
-    await sendCommand({
+    await sendRequest({
       type: CLIENT_REQUEST_TYPE.SET_RECORDING,
       payload: { tabId, isRecording: !isRecording },
     });
@@ -264,17 +251,17 @@ export function useCommands(): {
     const newEnabled = !settings.enabled;
     updateSettings({ enabled: newEnabled });
 
-    await sendCommand({
+    await sendRequest({
       type: CLIENT_REQUEST_TYPE.UPDATE_SETTINGS,
       payload: { enabled: newEnabled },
     });
   }
 
   async function saveSettings(partial: Partial<UserSettings>): Promise<void> {
-    // Optimistic local update; background persists to chrome.storage.sync
+    // Optimistic local update; the service worker persists to sync storage
     updateSettings(partial);
 
-    await sendCommand({
+    await sendRequest({
       type: CLIENT_REQUEST_TYPE.UPDATE_SETTINGS,
       payload: partial,
     });

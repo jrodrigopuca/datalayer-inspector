@@ -72,6 +72,8 @@ export type {
   MutableSchema,
   ParsedPlaceholder,
   Schema,
+  SchemaOp,
+  SchemaOpType,
   TemplateArray,
   TemplateObject,
   TemplateValue,
@@ -86,6 +88,7 @@ export {
   isExtendedPlaceholder,
   isTypePlaceholder,
   parsePlaceholder,
+  SCHEMA_OP,
   TYPE_PLACEHOLDER,
   TYPE_PLACEHOLDERS,
 } from "./schema";

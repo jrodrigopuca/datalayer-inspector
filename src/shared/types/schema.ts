@@ -288,3 +288,45 @@ export function getSchemaEventName(schema: Schema): string | null {
   }
   return null;
 }
+
+// ============================================================================
+// Schema mutations
+// ============================================================================
+
+/**
+ * Schema mutations - the ONLY way schemas change, on both sides of the wire.
+ *
+ * The panel applies an op optimistically and sends it to the service worker,
+ * which applies the same op to its authoritative list, persists it and
+ * broadcasts the result to every client. Timestamps travel inside the op so
+ * both sides produce identical output (docs/TECH-DEBT.md, item 4).
+ *
+ * Ops carry ids, never positions, so two panels mutating concurrently
+ * converge instead of overwriting each other.
+ */
+export const SCHEMA_OP = {
+  /** Upsert one schema (by id) */
+  ADD: "add",
+  /** Merge fields into an existing schema */
+  UPDATE: "update",
+  /** Remove a schema by id */
+  DELETE: "delete",
+  /** Upsert many schemas (by id), e.g. file import or presets */
+  IMPORT: "import",
+} as const;
+
+export type SchemaOpType = (typeof SCHEMA_OP)[keyof typeof SCHEMA_OP];
+
+export type SchemaOp =
+  | { readonly op: typeof SCHEMA_OP.ADD; readonly schema: Schema }
+  | {
+      readonly op: typeof SCHEMA_OP.UPDATE;
+      readonly id: string;
+      readonly input: UpdateSchemaInput;
+      readonly updatedAt: number;
+    }
+  | { readonly op: typeof SCHEMA_OP.DELETE; readonly id: string }
+  | {
+      readonly op: typeof SCHEMA_OP.IMPORT;
+      readonly schemas: readonly Schema[];
+    };

@@ -19,6 +19,7 @@ export {
   transformEventForExport,
 } from "./export";
 export { countToPrune, pruneEvents, pruneSlack } from "./prune";
+export { applySchemaOp } from "./schema-ops";
 export {
   formatTriggerFull,
   formatTriggerShort,

@@ -6,6 +6,8 @@ export {
   isClientToBackgroundRequest,
   isContentToBackgroundMessage,
   isPageToContentMessage,
+  isSchema,
+  isSchemaOp,
 } from "./message-validators";
 
 export {

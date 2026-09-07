@@ -21,6 +21,7 @@ import {
   handleContentMessage,
   handleTabNavigation,
   handleTabRemoved,
+  isClientRequest,
   toggleExtensionEnabled,
 } from "./message-handler";
 import { broadcastToTab, registerPort } from "./port-manager";
@@ -56,30 +57,6 @@ tabManager.onStorageWarning((warning) => {
     payload: warning,
   });
 });
-
-/**
- * Check if message is a client request (vs content script message)
- */
-function isClientRequest(message: unknown): boolean {
-  if (typeof message !== "object" || message === null) {
-    return false;
-  }
-
-  const type = (message as Record<string, unknown>).type;
-
-  // Client requests use these types
-  const clientTypes = [
-    "GET_EVENTS",
-    "GET_CONTAINERS",
-    "CLEAR_EVENTS",
-    "SET_RECORDING",
-    "GET_TAB_STATE",
-    "GET_SETTINGS",
-    "UPDATE_SETTINGS",
-  ];
-
-  return typeof type === "string" && clientTypes.includes(type);
-}
 
 // ============================================================================
 // Listener registration - synchronous, top level (see MV3 RULE above)
