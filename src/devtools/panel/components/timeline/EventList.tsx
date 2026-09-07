@@ -119,6 +119,21 @@ export function EventList() {
 
   return (
     <div ref={containerRef} className="h-full overflow-auto">
+      {!isEnabled && (
+        <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 text-xs bg-panel-surface border-b border-panel-border text-gray-300">
+          <span className="flex-1">
+            Capture is off. These events are from before; new pushes are not
+            being recorded.
+          </span>
+          <button
+            type="button"
+            onClick={() => void toggleEnabled()}
+            className="px-2 py-1 rounded bg-brand-primary text-white hover:opacity-90 transition-opacity"
+          >
+            Turn on
+          </button>
+        </div>
+      )}
       {limitReached && (
         <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 text-xs bg-event-error/15 border-b border-event-error/40 text-gray-200">
           <span className="flex-1">

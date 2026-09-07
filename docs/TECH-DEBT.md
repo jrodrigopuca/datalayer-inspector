@@ -37,7 +37,7 @@
 | 12 | Sincronizar documentación con el código | Fricción | ✅ Cerrado | |
 | 13 | Tags de release | Fricción | ✅ Cerrado (tag local, falta push) | |
 | 14 | Nonce en el canal postMessage | Opcional | ⏭️ Descartado (ver actualización) | |
-| 15 | `DL_CONTAINERS_DETECTED` duplicado en el arranque | Fricción | ✅ Cerrado (falta smoke test) | |
+| 15 | `DL_CONTAINERS_DETECTED` duplicado en el arranque | Fricción | ✅ Cerrado (verificado en Chrome) | |
 | 16 | Recargar la misma URL no limpia los eventos | Producto | ✅ Cerrado (decidido: conservar + marcar; límite duro) | |
 | 17 | El panel muere tras recargar la extensión y no explica cómo recuperarse | UX | ✅ Cerrado (reinyección verificada en Chrome) | |
 | 18 | Captura apagada por defecto | Producto | ✅ Cerrado | |
@@ -590,11 +590,10 @@ containers en `init()` y otra vez cuando procesa el `gtm.js` preexistente
 visible; solo un mensaje redundante por carga. Fix: recordar el último set
 de ids emitido y saltear la emisión si no cambió.
 
-- [ ] Con un `gtm.js` preexistente, el smoke test muestra UN solo
-      `DL_CONTAINERS_DETECTED` en el arranque. (Implementado:
-      `announceContainers` en `page/index.ts` compara con lo último
-      anunciado vía `sameContainerIds`; un relay nuevo fuerza el anuncio.
-      Falta verlo en el smoke test.)
+- [x] Con un `gtm.js` preexistente, el smoke test muestra UN solo
+      `DL_CONTAINERS_DETECTED` en el arranque (verificado por el autor,
+      2026-09: uno a los 141 ms; antes eran dos). Un relay nuevo sigue
+      forzando el anuncio, también verificado.
 
 ### 16. Recargar la misma URL no limpia los eventos
 
@@ -650,8 +649,9 @@ recarga. Además, el autor fijó dos principios:
   en rojo al llegar; texto de Settings corregido ("capture stops... nothing
   is dropped silently").
 
-- [ ] Manual (smoke test): recargar la página con Strata encendido; el
-      timeline muestra "↻ Page reloaded" antes de los nuevos Pre-existing.
+- [x] Manual (smoke test, autor 2026-09): recargar la página con Strata
+      encendido muestra "↻ Page reloaded" antes de los nuevos Pre-existing;
+      el estado en `session` tiene dos `documentId`.
 - [ ] Manual: poner el límite en 100 en Settings, superar 100 pushes; el
       contador queda en 100/100 en rojo, aparece el banner, Clear reanuda.
 
@@ -779,12 +779,15 @@ gaps registrados, ninguno bloqueante:
    mundo aislado (`claimRelaySlot`) para que una segunda ejecución del relay
    en el mismo proceso sea un no-op.
 
-- [ ] Manual: deshabilitar y habilitar Strata en `chrome://extensions` con
-      el smoke test abierto; sin recargar la página, el log muestra un
-      segundo `DL_CONFIG` con OTRO `relayId`, y el panel (reabierto) lista
-      los eventos previos como Pre-existing. Esto verifica de paso que
-      `storage.session` se limpia al deshabilitar; si no fuera así, el
-      fallback es reinyectar por despertar con el guard.
+- [x] Manual (2026-09, autor): deshabilitar y habilitar Strata en
+      `chrome://extensions` con el smoke test abierto. Confirmado que Chrome
+      limpia `storage.session` al deshabilitar (la marca desaparece). Sin
+      recargar la página: segundo `DL_CONFIG` a los 63.9 s, containers
+      re-anunciados, y los 4 eventos del historial replayados como
+      `preload` con el MISMO `documentId`; panel, export JSON y `session`
+      coinciden. Nota: la atribución original (`click`) no vuelve, como
+      estaba previsto. Apagar Strata desde el popup NO toca `session` ni
+      dispara nada, como corresponde.
 
 **Segundo hallazgo, misma raíz (2026-09).** Tras recargar la extensión, aun
 reabriendo DevTools, el panel no recibía eventos NUEVOS de una pestaña ya
@@ -842,9 +845,15 @@ va en la misma dirección equivocada (descartado, ver log). Por eso
 - [x] Badge OFF/limpio según `enabled` (test).
 - [x] `replayExisting` emite el contenido actual del array como `preload`
       (test).
-- [ ] Manual: instalar limpio, abrir el smoke test, ver badge OFF y el
-      estado vacío; encender desde el panel; deben aparecer los 3 eventos
-      previos como Pre-existing y los clicks posteriores en vivo.
+- [x] Manual (autor, 2026-09), simulado apagando desde el popup y
+      recargando: badge OFF, botón de grabación "Off" gris y deshabilitado,
+      "Connected", `DL_CONFIG` con `enabled: false` y cero eventos capturados.
+      Hallazgo: con eventos conservados de antes, el estado vacío "Capture is
+      off" no aparece y nada más avisa; se agregó un banner fijo arriba del
+      timeline cuando Strata está apagado y hay eventos.
+- [ ] Manual: encender desde el panel; deben aparecer los eventos previos
+      como Pre-existing (tras "↻ Page reloaded", porque la página se recargó
+      apagada) y los clicks posteriores en vivo.
 
 ---
 
