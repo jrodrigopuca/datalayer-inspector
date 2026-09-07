@@ -166,14 +166,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   });
 });
 
-// Handle browser action click (if no popup)
-chrome.action.onClicked.addListener((tab) => {
-  if (tab.id !== undefined) {
-    // Could open DevTools or show a notification
-    console.log(`[Strata] Action clicked for tab ${tab.id}`);
-  }
-});
-
 // Tabs open before an install/update/reload/enable keep a dead relay: give
 // them a live one so capture resumes without a page reload. Runs once per
 // extension process (session marker), not on every worker wake-up.

@@ -96,7 +96,7 @@ export {
   TYPE_PLACEHOLDERS,
 } from "./schema";
 // Settings types
-export type { SettingsUpdate, Theme, UserSettings } from "./settings";
+export type { Theme, UserSettings } from "./settings";
 export { DEFAULT_SETTINGS, THEME } from "./settings";
 // Test generator types
 export type {

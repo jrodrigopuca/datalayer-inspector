@@ -41,12 +41,11 @@ When you use Strata:
 
 Strata requests the following permissions:
 
-| Permission                     | Why It's Needed                                                  |
-| ------------------------------ | ---------------------------------------------------------------- |
-| `activeTab`                    | To inject the dataLayer capture script into the current page     |
-| `scripting`                    | To run the capture script that intercepts dataLayer.push() calls |
-| `storage`                      | To save your validation schemas locally                          |
-| `host_permissions: <all_urls>` | To work on any website where you need to debug dataLayer         |
+| Permission                     | Why It's Needed                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `scripting`                    | To re-run Strata's relay in tabs that were already open when the extension was installed or updated |
+| `storage`                      | To save your settings, validation schemas and the current session's events locally               |
+| `host_permissions: <all_urls>` | To work on any website where you need to debug dataLayer                                          |
 
 ## Third-Party Services
 

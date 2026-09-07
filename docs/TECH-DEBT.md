@@ -33,11 +33,11 @@
 | 8 | Cliente de mensajería compartido | Fricción | ✅ Cerrado (parcial, ver nota) | `10c4ba6` |
 | 9 | Un solo lockfile | Fricción | ✅ Cerrado | `8128a01` |
 | 10 | Presupuesto del page script medido | Fricción | ⏭️ Descartado (obsoleto por el ítem 5) | |
-| 11 | Código muerto en manifest y service worker | Fricción | ⬜ Pendiente | |
-| 12 | Sincronizar documentación con el código | Fricción | ⬜ Pendiente | |
-| 13 | Tags de release | Fricción | ⬜ Pendiente | |
+| 11 | Código muerto en manifest y service worker | Fricción | ✅ Cerrado | |
+| 12 | Sincronizar documentación con el código | Fricción | ✅ Cerrado (roadmap: decisión pendiente) | |
+| 13 | Tags de release | Fricción | ✅ Cerrado (tag local, falta push) | |
 | 14 | Nonce en el canal postMessage | Opcional | ⏭️ Descartado (ver actualización) | |
-| 15 | `DL_CONTAINERS_DETECTED` duplicado en el arranque | Fricción | ⬜ Pendiente | |
+| 15 | `DL_CONTAINERS_DETECTED` duplicado en el arranque | Fricción | ✅ Cerrado (falta smoke test) | |
 | 16 | Recargar la misma URL no limpia los eventos | Producto | ⬜ Decidir | |
 | 17 | El panel muere tras recargar la extensión y no explica cómo recuperarse | UX | ✅ Cerrado (reinyección verificada en Chrome) | |
 | 18 | Captura apagada por defecto | Producto | ✅ Cerrado | |
@@ -511,8 +511,22 @@ mide. Si se adopta `world: "MAIN"` (ítem 5) el archivo desaparece. Si no:
   `PERMISSIONS.md` y dejar solo lo que se usa (menos fricción en la revisión
   del Web Store).
 
-- [ ] Listener y permisos sin uso eliminados; `PERMISSIONS.md` coincide con
+- [x] Listener y permisos sin uso eliminados; `PERMISSIONS.md` coincide con
       `manifest.json`.
+
+**Nota de cierre (2026-09).** Eliminado: `chrome.action.onClicked` (nunca
+dispara con `default_popup`), `optional_permissions: tabs`, `activeTab`
+(redundante con `<all_urls>` y ya no se inyecta bajo demanda), los
+listeners vacíos `onShown/onHidden` del panel, las constantes
+`EXTENSION_NAME`, `MIN_EVENTS_AFTER_PRUNE`, `SW_IDLE_TIMEOUT`,
+`GTM_CONTAINER_PATTERN` y `TIMING.CONTAINER_DETECT_*`, las funciones
+`exportStates/importStates/getAllTabIds` de tab-manager, el tipo
+`SettingsUpdate`, y la referencia a `eslint.config.js` en
+`tsconfig.node.json`. `scripting` se QUEDA porque la reinyección lo usa.
+`PERMISSIONS.md` reescrito: describía `activeTab` "para inyectar" y "solo
+captura con DevTools abierto", ambas falsas; ahora describe MAIN world,
+relay, reinyección y captura apagada por defecto. Tabla de permisos de
+`PRIVACY.md` alineada.
 
 ### 12. Sincronizar documentación con el código
 
@@ -531,8 +545,27 @@ una nota "documento de diseño original; el código en `src/` es la fuente de
 verdad para X, Y, Z", eliminar la sección de PNG, y decidir si el roadmap se
 versiona.
 
-- [ ] Ninguna sección de docs describe una feature eliminada.
+- [x] Ninguna sección de docs describe una feature eliminada: DESIGN §13.1
+      reemplazada por una nota de eliminación; PLAN §2.5 y TEST-CASES §9.4
+      marcan el PNG como eliminado.
 - [ ] Decisión registrada sobre el roadmap (versionado o no, y por qué).
+      Pendiente del autor; ver la pregunta al final de esta nota.
+
+**Nota de cierre (2026-09).** Criterio aplicado: no reescribir 7 mil líneas
+de diseño original, sino (a) una nota de estado al inicio de `SPEC.md` y
+`DESIGN.md` que enumera exactamente qué afirmaciones dejaron de ser ciertas
+y a qué ítem apuntar; (b) corregir en el lugar las secciones que describían
+código inexistente (inyección IIFE, PNG, `storage.sync`); (c) corregir el
+CHANGELOG 1.4.0, que afirmaba un handler de `unhandledrejection` que nunca
+existió, con una corrección visible en vez de reescribir la historia; (d) un
+mapa de documentación en el README que dice cuál es el documento vivo. Las
+secciones que describen tipos, mensajes o flujos todavía vigentes quedaron
+intactas.
+
+**Pregunta abierta**: `docs/ECOSYSTEM_ROADMAP.md` es el único documento al
+día y está en `docs/.gitignore`. Si es privado a propósito (planes de
+negocio), dejarlo así y anotarlo; si no, versionarlo, porque hoy la
+intención del producto vive fuera del repo.
 
 ### 13. Tags de release
 
@@ -540,7 +573,14 @@ versiona.
 commit de release y taggear cada release futuro. Opcional: que el CI construya
 el zip del Web Store al detectar un tag.
 
-- [ ] `git tag` lista `v1.4.0`.
+- [x] `git tag` lista `v1.4.0` (anotado sobre `712e738`, "chore: preparar
+      para release"). Pendiente del autor: `git push origin v1.4.0`.
+
+**Nota de cierre (2026-09).** El workflow de CI corre también en tags `v*`
+y, tras el job `check`, empaqueta `dist/` como `strata-vX.Y.Z.zip` adjunto a
+la ejecución (90 días). Pasos de release documentados en el README. No se
+crea un GitHub Release automáticamente para no pedir permisos de escritura
+al workflow; es un paso manual desde el zip.
 
 ### 15. `DL_CONTAINERS_DETECTED` duplicado en el arranque
 
@@ -551,7 +591,10 @@ visible; solo un mensaje redundante por carga. Fix: recordar el último set
 de ids emitido y saltear la emisión si no cambió.
 
 - [ ] Con un `gtm.js` preexistente, el smoke test muestra UN solo
-      `DL_CONTAINERS_DETECTED` en el arranque.
+      `DL_CONTAINERS_DETECTED` en el arranque. (Implementado:
+      `announceContainers` en `page/index.ts` compara con lo último
+      anunciado vía `sameContainerIds`; un relay nuevo fuerza el anuncio.
+      Falta verlo en el smoke test.)
 
 ### 16. Recargar la misma URL no limpia los eventos
 

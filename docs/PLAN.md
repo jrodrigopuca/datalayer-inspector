@@ -222,7 +222,7 @@ dataLayer.push({event: "purchase"})
 
 **Entregable**: Configuración persistente.
 
-- [x] Opciones en `chrome.storage.sync`: theme, custom dataLayer names, auto-scroll, max events
+- [x] Opciones en `chrome.storage.sync`: theme, custom dataLayer names, auto-scroll, max events (movidas a `storage.local` en el ítem 17 de TECH-DEBT)
 - [x] Accesible desde gear icon en toolbar
 - [x] Cambios se aplican inmediatamente
 
@@ -433,8 +433,8 @@ dataLayer.push({event: "purchase"})
   - Branding de Strata: logo en header/footer
   - Optimizado para ser legible por personas no-técnicas
   - Responsive: se ajusta al contenido (no corta datos)
-- [ ] **Formatos de export**:
-  - **PNG**: Imagen única, ideal para Slack/Teams/emails
+- [x] **Formatos de export** (PNG eliminado en 1.4.0: un solo canvas falla en silencio con sesiones largas; queda PDF):
+  - ~~**PNG**: Imagen única, ideal para Slack/Teams/emails~~
   - **PDF**: Documento multipágina si hay muchos eventos, ideal para documentación formal
 - [ ] **Preview antes de exportar**:
   - Modal con preview de cómo quedará la imagen/PDF

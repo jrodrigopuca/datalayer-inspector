@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   detectContainers,
   getContainerIds,
+  sameContainerIds,
   shouldRedetectContainers,
 } from "./container-detector";
 
@@ -128,5 +129,15 @@ describe("container-detector", () => {
       expect(shouldRedetectContainers("gtm.dom")).toBe(false);
       expect(shouldRedetectContainers(null)).toBe(false);
     });
+  });
+});
+
+describe("sameContainerIds", () => {
+  it("is true for equal lists and false otherwise", () => {
+    expect(sameContainerIds([], [])).toBe(true);
+    expect(sameContainerIds(["GTM-A"], ["GTM-A"])).toBe(true);
+    expect(sameContainerIds(["GTM-A"], ["GTM-B"])).toBe(false);
+    expect(sameContainerIds(["GTM-A"], ["GTM-A", "G-1"])).toBe(false);
+    expect(sameContainerIds(["GTM-A", "G-1"], ["G-1", "GTM-A"])).toBe(false);
   });
 });

@@ -54,7 +54,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Service worker connection drops** ("Receiving end does not exist"): listeners are now registered synchronously as Manifest V3 requires; the panel connection is significantly more stable and retries briefly during service worker startup.
 - Deleting the last schema now persists (it previously reappeared when reopening the panel).
 - Schema import shows visible success/error feedback and validates the file structure.
-- Unhandled promise rejections across the service worker, popup and panel are now caught and reported.
+- Unhandled promise rejections across the service worker, popup and panel are now caught and reported. *(Correction, 2026-09: no such handler shipped in 1.4.0; the panel gained one in the next release, see Unreleased.)*
 - Tree view values, container badges and long event names no longer overflow or overlap.
 
 ### Removed

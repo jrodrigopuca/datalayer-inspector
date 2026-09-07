@@ -95,6 +95,12 @@ pnpm test          # Unit tests (Vitest)
 pnpm test:e2e      # E2E tests (Playwright)
 ```
 
+### Releasing
+
+1. Bump `version` in `manifest.json` and `package.json`, move the CHANGELOG's *Unreleased* section under the new version.
+2. Commit, then tag and push: `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`.
+3. CI builds the extension and attaches `strata-vX.Y.Z.zip` to the workflow run, ready for the Web Store.
+
 ### Project Structure
 
 ```
@@ -106,6 +112,13 @@ src/
 ├── popup/          # Popup quick view
 └── shared/         # Shared types and utilities
 ```
+
+### Documentation
+
+- `docs/TECH-DEBT.md` — living document: findings, decisions and their status. Start here.
+- `docs/SPEC.md`, `docs/DESIGN.md`, `docs/PLAN.md`, `docs/TEST-CASES.md` — the original design (March 2026), kept as a record of intent; each carries a note listing what the code has since changed.
+- `PERMISSIONS.md`, `PRIVACY.md` — what the extension may do and what it records; kept in sync with `manifest.json`.
+- `tests/fixtures/pages/strata-smoke.html` — manual smoke test that logs every Strata message crossing the page.
 
 ## Tech Stack
 

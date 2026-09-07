@@ -49,8 +49,3 @@ export const DEFAULT_SETTINGS: UserSettings = {
   defaultExpandDepth: 2,
   preserveLog: false,
 } as const;
-
-/**
- * Partial settings for updates
- */
-export type SettingsUpdate = Partial<UserSettings>;

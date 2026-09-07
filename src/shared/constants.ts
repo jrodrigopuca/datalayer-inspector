@@ -3,23 +3,13 @@
  */
 
 /**
- * Extension identification
- * (version lives in manifest.json - read it via chrome.runtime.getManifest())
- */
-export const EXTENSION_NAME = "Strata" as const;
-
-/**
  * Performance limits
  */
 export const LIMITS = {
   /** Maximum events to store per tab before pruning oldest */
   MAX_EVENTS_PER_TAB: 500,
-  /** Minimum events to keep when pruning */
-  MIN_EVENTS_AFTER_PRUNE: 400,
   /** Maximum size of a single event payload in bytes (approx) */
   MAX_EVENT_PAYLOAD_SIZE: 100_000,
-  /** Service worker idle timeout before suspension (ms) */
-  SW_IDLE_TIMEOUT: 30_000,
   /** DevTools panel reconnection: first delay (ms), doubled per attempt */
   RECONNECT_DELAY: 1000,
   /** DevTools panel reconnection: delay cap (ms). Never gives up. */
@@ -70,11 +60,6 @@ export const EVENT_PATTERNS = {
 } as const;
 
 /**
- * GTM container ID pattern
- */
-export const GTM_CONTAINER_PATTERN = /^GTM-[A-Z0-9]{6,8}$/;
-
-/**
  * Timing constants
  */
 export const TIMING = {
@@ -82,8 +67,4 @@ export const TIMING = {
   SEARCH_DEBOUNCE: 150,
   /** Animation duration for UI transitions (ms) */
   ANIMATION_DURATION: 200,
-  /** Polling interval for container detection (ms) */
-  CONTAINER_DETECT_INTERVAL: 1000,
-  /** Maximum time to wait for container detection (ms) */
-  CONTAINER_DETECT_TIMEOUT: 10_000,
 } as const;

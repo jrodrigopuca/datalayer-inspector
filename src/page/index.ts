@@ -21,7 +21,7 @@
 import { listenForConfig } from "./config";
 import {
   detectContainers,
-  getContainerIds,
+  sameContainerIds,
   shouldRedetectContainers,
 } from "./container-detector";
 import { INITIAL_HANDSHAKE_STATE, planHandshake } from "./handshake";
@@ -47,12 +47,29 @@ const interceptedNames = new Set<string>();
 /** Events found in arrays before interception, across all names */
 let existingEventsTotal = 0;
 
+/** Container ids last announced to the relay (docs/TECH-DEBT.md, item 15) */
+let announcedContainerIds: readonly string[] = [];
+
+/**
+ * Detect containers and announce them if the set changed (or when forced,
+ * e.g. for a fresh relay whose worker has never heard of them).
+ */
+function announceContainers(force = false): void {
+  const containers = detectContainers();
+  const ids = containers.map((c) => c.id);
+  setContainerIds(ids);
+
+  if (containers.length === 0) return;
+  if (!force && sameContainerIds(ids, announcedContainerIds)) return;
+
+  announcedContainerIds = ids;
+  emitContainers(containers);
+}
+
 function handleCapturedEvent(event: CapturedEventData): void {
-  // Re-detect containers on gtm.js event
+  // Re-detect containers on gtm.js event (announced only if they changed)
   if (shouldRedetectContainers(event.eventName)) {
-    const containers = detectContainers();
-    setContainerIds(getContainerIds());
-    emitContainers(containers);
+    announceContainers();
   }
 
   emitEvent(event);
@@ -75,11 +92,7 @@ function init(): void {
     startInteractionTracking();
 
     // Detect initial containers
-    const initialContainers = detectContainers();
-    setContainerIds(getContainerIds());
-    if (initialContainers.length > 0) {
-      emitContainers(initialContainers);
-    }
+    announceContainers();
 
     // Intercept the default array right away (buffered until handshake)
     interceptNames(DEFAULT_DATALAYER_NAMES);
@@ -98,10 +111,7 @@ function init(): void {
       }
 
       if (plan.reannounceContainers) {
-        const containers = detectContainers();
-        if (containers.length > 0) {
-          emitContainers(containers);
-        }
+        announceContainers(true);
       }
 
       configureEmitter({ enabled: config.enabled });

@@ -70,6 +70,16 @@ export function getContainerIds(): string[] {
 }
 
 /**
+ * True when two container id lists hold the same ids in the same order
+ */
+export function sameContainerIds(
+  a: readonly string[],
+  b: readonly string[]
+): boolean {
+  return a.length === b.length && a.every((id, i) => id === b[i]);
+}
+
+/**
  * Check if an event indicates GTM has loaded (should re-detect)
  */
 export function shouldRedetectContainers(eventName: string | null): boolean {

@@ -2,6 +2,27 @@
 
 > Derivado de [SPEC.md](./SPEC.md) y [TEST-CASES.md](./TEST-CASES.md) — Marzo 2026
 
+> **Estado de este documento (septiembre 2026).** Es el diseño ORIGINAL,
+> escrito antes de implementar. Se conserva como registro de intención; el
+> código en `src/` es la fuente de verdad. Lo que cambió desde entonces está
+> en [TECH-DEBT.md](./TECH-DEBT.md) y en el CHANGELOG. En particular, ya NO
+> es cierto lo que este documento dice sobre:
+>
+> - **Inyección del page script**: hoy es un content script `world: "MAIN"`
+>   declarado en el manifest; no existe `injector.ts`, ni el build IIFE
+>   separado, ni `web_accessible_resources` (ítem 5).
+> - **Permisos**: solo `scripting` y `storage`; sin `activeTab` ni `tabs`
+>   opcional (ítem 11). Ver `PERMISSIONS.md`.
+> - **Almacenamiento**: settings en `storage.local` (migrados desde `sync`),
+>   estado de sesión con UNA clave por tab en `storage.session`, y schemas
+>   escritos únicamente por el service worker mediante operaciones (ítems 3,
+>   4 y 17).
+> - **Reconexión del panel**: sin tope de intentos; política en
+>   `src/devtools/panel/lib/connection-policy.ts` (ítem 17).
+> - **Captura por defecto**: apagada; se enciende desde el panel o el popup
+>   (ítem 18).
+> - **Evidence PNG**: eliminado en 1.4.0; solo PDF.
+
 Este documento describe el diseño técnico de implementación: patrones, decisiones de arquitectura, flujos de datos, y estructura de código.
 
 ---
@@ -12,12 +33,11 @@ Este documento describe el diseño técnico de implementación: patrones, decisi
 
 #### 1. Page Script Build Strategy
 
-**Problem**: CRXJS generates ES modules by default, but Chrome throws MIME type errors when injecting page scripts as modules.
+**Problem (histórico)**: CRXJS generates ES modules by default, but Chrome throws MIME type errors when injecting page scripts as modules.
 
-**Solution**: Separate Vite config (`vite.page-script.config.ts`) that builds page script as standalone IIFE:
-- Output to `public/page-script.js` (pre-build)
-- Main build copies to `dist/`
-- Build command: `tsc && vite build --config vite.page-script.config.ts && vite build`
+**Solution (histórica, reemplazada)**: a separate Vite config built the page script as a standalone IIFE in `public/page-script.js`, injected by the content script via a `<script>` tag.
+
+**Hoy** (TECH-DEBT ítem 5): the page script is a manifest content script with `world: "MAIN"`; CRXJS 2.7+ builds it with the rest of the extension. No injector, no separate build, no `web_accessible_resources`, immune to the page's CSP. Build command: `tsc && vite build`.
 
 #### 2. EventList Simplification
 
@@ -58,7 +78,7 @@ And `h-full` to SplitPane's left pane container.
 
 | File | Change |
 |------|--------|
-| `vite.page-script.config.ts` | New - IIFE build for page script |
+| `vite.page-script.config.ts` | New - IIFE build for page script (eliminado en el ítem 5 de TECH-DEBT) |
 | `package.json` | Updated build script |
 | `src/styles/globals.css` | Added height: 100% chain |
 | `src/devtools/panel/components/layout/SplitPane.tsx` | Added h-full to left pane |
@@ -144,7 +164,7 @@ src/
 │
 ├── content/                       # CAPA: Relay
 │   ├── index.ts                   # Entry point
-│   ├── injector.ts                # Inyección del page script
+│   ├── injector.ts                # (ELIMINADO, ítem 5: el page script es content script MAIN)
 │   └── relay.ts                   # Filtrado y retransmisión
 │
 ├── background/                    # CAPA: Coordinación
@@ -469,7 +489,7 @@ export function emitContainers(containers: string[]): void {
 
 ### 4.2 Módulos
 
-#### `injector.ts` — Inyección del Page Script
+#### `injector.ts` — Inyección del Page Script (ELIMINADO en el ítem 5 de TECH-DEBT; se conserva como registro)
 
 ```typescript
 /**
@@ -2179,139 +2199,12 @@ export class StorageManager {
 
 ### 13.1 Export Evidence Image (Feature 2.5)
 
-Genera capturas PNG o documentos PDF con los eventos del dataLayer para documentación de QA.
-
-#### Arquitectura
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                     DevTools Panel                                │
-│                                                                   │
-│  ┌─────────────────┐    ┌─────────────────┐                      │
-│  │ ExportEvidence  │───▶│ EvidenceDialog  │                      │
-│  │ Button          │    │ (options modal)  │                      │
-│  └─────────────────┘    └────────┬────────┘                      │
-│                                  │                                │
-│                                  ▼                                │
-│  ┌───────────────────────────────────────────────────────────┐   │
-│  │                   evidence-generator.ts                    │   │
-│  │                                                            │   │
-│  │  ┌──────────────┐    ┌──────────────┐    ┌─────────────┐  │   │
-│  │  │ buildLayout  │───▶│ renderToPNG  │───▶│ download    │  │   │
-│  │  │ (HTML/CSS)   │    │ (html2canvas) │    │ (blob→file)│  │   │
-│  │  └──────────────┘    └──────────────┘    └─────────────┘  │   │
-│  │         │                                                  │   │
-│  │         │            ┌──────────────┐    ┌─────────────┐  │   │
-│  │         └───────────▶│ renderToPDF  │───▶│ download    │  │   │
-│  │                      │ (jspdf)      │    │ (blob→file)│  │   │
-│  │                      └──────────────┘    └─────────────┘  │   │
-│  └───────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-#### Dependencias
-
-| Librería | Uso | Size (gzip) |
-|----------|-----|-------------|
-| `html2canvas` | Renderizar HTML a canvas para PNG | ~40KB |
-| `jspdf` | Generar PDF | ~90KB |
-
-> **Nota**: Ambas librerías se cargan lazy (dynamic import) para no afectar el bundle de Fase 1.
-
-#### Componentes
-
-```
-src/devtools/panel/
-├── components/
-│   └── export/
-│       ├── ExportEvidenceButton.tsx   # Trigger button en toolbar
-│       ├── EvidenceDialog.tsx         # Modal de opciones
-│       ├── EvidencePreview.tsx        # Vista previa del evidence
-│       └── EvidenceLayout.tsx         # Template del documento
-└── lib/
-    └── evidence/
-        ├── index.ts                   # Public API
-        ├── generator.ts               # Lógica principal
-        ├── layout.ts                  # Construir HTML del documento
-        ├── renderers/
-        │   ├── png.ts                 # html2canvas wrapper
-        │   └── pdf.ts                 # jspdf wrapper
-        └── templates/
-            ├── light.css              # Estilos tema claro
-            └── dark.css               # Estilos tema oscuro
-```
-
-#### Flujo
-
-```typescript
-// 1. Usuario hace click en "Export Evidence"
-// 2. Se abre EvidenceDialog con opciones
-
-// 3. Al confirmar, se ejecuta:
-async function exportEvidence(options: ExportEvidenceOptions): Promise<void> {
-  // a. Obtener eventos del store
-  const events = options.eventIds.length > 0
-    ? selectEventsByIds(options.eventIds)
-    : selectFilteredEvents();
-  
-  // b. Construir metadata
-  const metadata = buildMetadata(options);
-  
-  // c. Crear documento
-  const document: EvidenceDocument = {
-    metadata,
-    events: events.map(enrichWithValidation),
-    summary: computeSummary(events),
-  };
-  
-  // d. Generar output según formato
-  if (options.format === 'png') {
-    const blob = await renderToPNG(document, options);
-    downloadBlob(blob, `strata-evidence-${Date.now()}.png`);
-  } else {
-    const blob = await renderToPDF(document, options);
-    downloadBlob(blob, `strata-evidence-${Date.now()}.pdf`);
-  }
-}
-```
-
-#### Layout del Evidence
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  STRATA — DataLayer Evidence                                │
-│                                                              │
-│  Page: https://example.com/checkout                         │
-│  Generated: 2026-03-15 14:30:22                             │
-│  Project: Acme E-commerce                                    │
-│  Events: 12 captured | 10 valid | 2 invalid                 │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  #1 | gtm.js | 14:30:01.234                           ✓     │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ { "event": "gtm.js", "gtm.start": 1710512... }     │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                              │
-│  #2 | page_view | 14:30:01.456                        ✓     │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ { "event": "page_view", "page_title": "Check..." } │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                              │
-│  #3 | add_to_cart | 14:30:05.789                      ✗     │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ { "event": "add_to_cart", ... }                    │    │
-│  │ ⚠ Missing required field: currency                 │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
-
-#### Consideraciones de Performance
-
-- El rendering se hace off-screen para no bloquear UI
-- Para >50 eventos, se muestra "Large export" warning
-- PDF usa compresión de imágenes
-- PNG se escala a max 4000px de ancho
+> **Eliminado en 1.4.0.** El export PNG (html2canvas, un solo canvas) fallaba
+> en silencio al superar el límite de tamaño de canvas del navegador, cosa
+> que cualquier sesión larga hacía. La evidencia es solo PDF (jsPDF pagina).
+> El diseño original de esta sección se quitó para no describir código que
+> no existe; ver `src/shared/generators/evidence-generator.ts` y el
+> CHANGELOG 1.4.0.
 
 ---
 
@@ -2333,7 +2226,7 @@ async function exportEvidence(options: ExportEvidenceOptions): Promise<void> {
   - [ ] Unit tests (TC-PAGE-*)
 
 - [ ] **Content Script**
-  - [ ] injector.ts
+  - [x] ~~injector.ts~~ (eliminado, ítem 5)
   - [ ] relay.ts
   - [ ] Integration tests
 

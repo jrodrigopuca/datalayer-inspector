@@ -1398,7 +1398,7 @@ describe('Performance Benchmarks', () => {
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
-    "test:all": "npm run test:coverage && npm run test:e2e"
+    "test:all": "pnpm run test:coverage && pnpm run test:e2e"
   }
 }
 ```
@@ -1571,6 +1571,10 @@ afterAll(() => {
 ### 9.4 Export Evidence Image (Feature 2.5)
 
 > Exportación de evidencias visuales (PNG/PDF) para documentación QA.
+>
+> **Nota (2026-09)**: el formato PNG se eliminó en 1.4.0; los casos que lo
+> mencionan quedan como registro y no se implementan. La cobertura vigente
+> del generador PDF está en `src/shared/generators/evidence-generator.test.ts`.
 
 #### Unit Tests
 

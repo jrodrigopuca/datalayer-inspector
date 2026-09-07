@@ -364,13 +364,6 @@ export function removeTabState(tabId: number): boolean {
 }
 
 /**
- * Get all tab IDs with state
- */
-export function getAllTabIds(): number[] {
-  return [...tabStates.keys()];
-}
-
-/**
  * Get events for a tab
  */
 export function getEvents(tabId: number): readonly DataLayerEvent[] {
@@ -411,23 +404,6 @@ function pruneEventsIfNeeded(state: MutableTabState): void {
   const toRemove = countToPrune(state.events.length, maxEventsPerTab);
   if (toRemove > 0) {
     state.events.splice(0, toRemove);
-  }
-}
-
-/**
- * Export all states (for backup to storage)
- */
-export function exportStates(): Map<number, MutableTabState> {
-  return new Map(tabStates);
-}
-
-/**
- * Import states (for restore from storage)
- */
-export function importStates(states: Map<number, MutableTabState>): void {
-  tabStates.clear();
-  for (const [tabId, state] of states) {
-    tabStates.set(tabId, state);
   }
 }
 

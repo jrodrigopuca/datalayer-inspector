@@ -37,3 +37,7 @@ npm-debug.log*
 # Single package manager: pnpm (see docs/TECH-DEBT.md, item 9)
 package-lock.json
 yarn.lock
+
+# Evidence exports dropped in the repo root while testing
+/*.pdf
+/*.json.export

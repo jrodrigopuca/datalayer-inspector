@@ -2,6 +2,27 @@
 
 > Basado en [PLAN.md](./PLAN.md) y [RESEARCH.md](./RESEARCH.md) — Marzo 2026
 
+> **Estado de este documento (septiembre 2026).** Es el diseño ORIGINAL,
+> escrito antes de implementar. Se conserva como registro de intención; el
+> código en `src/` es la fuente de verdad. Lo que cambió desde entonces está
+> en [TECH-DEBT.md](./TECH-DEBT.md) y en el CHANGELOG. En particular, ya NO
+> es cierto lo que este documento dice sobre:
+>
+> - **Inyección del page script**: hoy es un content script `world: "MAIN"`
+>   declarado en el manifest; no existe `injector.ts`, ni el build IIFE
+>   separado, ni `web_accessible_resources` (ítem 5).
+> - **Permisos**: solo `scripting` y `storage`; sin `activeTab` ni `tabs`
+>   opcional (ítem 11). Ver `PERMISSIONS.md`.
+> - **Almacenamiento**: settings en `storage.local` (migrados desde `sync`),
+>   estado de sesión con UNA clave por tab en `storage.session`, y schemas
+>   escritos únicamente por el service worker mediante operaciones (ítems 3,
+>   4 y 17).
+> - **Reconexión del panel**: sin tope de intentos; política en
+>   `src/devtools/panel/lib/connection-policy.ts` (ítem 17).
+> - **Captura por defecto**: apagada; se enciende desde el panel o el popup
+>   (ítem 18).
+> - **Evidence PNG**: eliminado en 1.4.0; solo PDF.
+
 ## 1. Resumen
 
 Strata es una extensión de Chrome (MV3-native) que captura, inspecciona, valida y exporta el `dataLayer` de Google Tag Manager. La extensión opera a través de 4 contextos de ejecución con comunicación asíncrona entre ellos.
@@ -1052,9 +1073,9 @@ Performance:
 
 ## 11. Almacenamiento
 
-### 11.1 chrome.storage.sync (Settings)
+### 11.1 chrome.storage.local (Settings)
 
-Sincronizado entre dispositivos del usuario. Límite: 100KB total, 8KB por item.
+> Diseño original: `storage.sync`. Desde el ítem 17 de TECH-DEBT los settings viven en `storage.local` (sin sincronización entre dispositivos, sin cuotas de escritura de `sync`); los valores previos se migran una vez.
 
 ```
 Key: "settings"
