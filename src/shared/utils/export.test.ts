@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { DataLayerEvent } from "../types";
+import type { DataLayerEvent, EventValidation } from "../types";
 import {
   createExportPayload,
+  EXPORT_FORMAT_VERSION,
   generateExportFilename,
   serializeExport,
+  summarizeEvents,
   transformEventForExport,
 } from "./export";
 
@@ -43,9 +45,92 @@ describe("transformEventForExport", () => {
       id: "test-id-123",
       index: 1,
       event: "test_event",
+      category: "custom",
       data: { key: "value", nested: { foo: "bar" } },
       containerIds: ["GTM-XXXXX"],
       source: "dataLayer",
+      timestamp: FIXED_ISO,
+      url: "https://example.com/page",
+      trigger: null,
+    });
+  });
+
+  it("raw format carries trigger attribution and category", () => {
+    const trigger = {
+      type: "click",
+      label: 'button "Add to cart"',
+      selector: "#add",
+      sinceMs: 0,
+    } as const;
+    const result = transformEventForExport(
+      createMockEvent({ eventName: "add_to_cart", trigger }),
+      { format: "raw", includeTimestamp: true, includeUrl: true }
+    );
+
+    expect(result).toMatchObject({ category: "ecommerce", trigger });
+  });
+
+  it("raw format includes the validation outcome when one exists", () => {
+    const validation: EventValidation = {
+      eventId: "test-id-123",
+      status: "fail",
+      results: [
+        {
+          schemaId: "s1",
+          schemaName: "Purchase",
+          status: "fail",
+          errors: [{ path: "value", message: "Missing required field" }],
+        },
+      ],
+    };
+    const validations = new Map([["test-id-123", validation]]);
+
+    const result = transformEventForExport(event, {
+      format: "raw",
+      includeTimestamp: true,
+      includeUrl: true,
+      validations,
+    });
+
+    expect(result).toMatchObject({
+      validation: {
+        status: "fail",
+        schemas: [
+          {
+            name: "Purchase",
+            status: "fail",
+            errors: [{ path: "value", message: "Missing required field" }],
+          },
+        ],
+      },
+    });
+  });
+
+  it("raw format omits validation when no schema matched", () => {
+    const validations = new Map<string, EventValidation>([
+      ["test-id-123", { eventId: "test-id-123", status: "none", results: [] }],
+    ]);
+
+    const result = transformEventForExport(event, {
+      format: "raw",
+      includeTimestamp: true,
+      includeUrl: true,
+      validations,
+    });
+
+    expect(result).not.toHaveProperty("validation");
+  });
+
+  it("clean format includes both timestamp and url when requested", () => {
+    const result = transformEventForExport(event, {
+      format: "clean",
+      includeTimestamp: true,
+      includeUrl: true,
+    });
+
+    expect(result).toEqual({
+      event: "test_event",
+      data: { key: "value", nested: { foo: "bar" } },
       timestamp: FIXED_ISO,
       url: "https://example.com/page",
     });
@@ -107,6 +192,52 @@ describe("createExportPayload", () => {
     vi.useRealTimers();
   });
 
+  it("stamps the format version and generator", () => {
+    const payload = createExportPayload(events, containers, currentUrl);
+
+    expect(payload.formatVersion).toBe(EXPORT_FORMAT_VERSION);
+    expect(payload.generator).toBe("Strata");
+  });
+
+  it("summarizes categories, triggers and validation", () => {
+    const withTriggers = [
+      createMockEvent({
+        id: "1",
+        eventName: "add_to_cart",
+        trigger: { type: "click", label: null, selector: null, sinceMs: 0 },
+      }),
+      createMockEvent({
+        id: "2",
+        eventName: "gtm.js",
+        trigger: {
+          type: "preload",
+          label: null,
+          selector: null,
+          sinceMs: null,
+        },
+      }),
+      createMockEvent({ id: "3", eventName: "my_event" }),
+    ];
+    const validations = new Map<string, EventValidation>([
+      ["1", { eventId: "1", status: "pass", results: [] }],
+      ["2", { eventId: "2", status: "fail", results: [] }],
+    ]);
+
+    const payload = createExportPayload(withTriggers, containers, currentUrl, {
+      validations,
+    });
+
+    expect(payload.summary).toEqual({
+      byCategory: { gtm: 1, ecommerce: 1, engagement: 0, error: 0, custom: 1 },
+      byTrigger: { click: 1, preload: 1, unknown: 1 },
+      validation: { passed: 1, failed: 1, unchecked: 1 },
+    });
+  });
+
+  it("reports validation as null when no results were supplied", () => {
+    expect(summarizeEvents(events).validation).toBeNull();
+  });
+
   it("creates payload with default options (raw format)", () => {
     const payload = createExportPayload(events, containers, currentUrl);
 
@@ -146,13 +277,11 @@ describe("createExportPayload", () => {
 
 describe("serializeExport", () => {
   it("serializes payload to formatted JSON", () => {
-    const payload = {
-      exportedAt: "2024-03-15T15:00:00.000Z",
-      url: "https://example.com",
-      containers: ["GTM-XXXXX"],
-      totalEvents: 1,
-      events: [{ event: "test", data: {} }],
-    };
+    const payload = createExportPayload(
+      [createMockEvent()],
+      ["GTM-XXXXX"],
+      "https://example.com"
+    );
 
     const result = serializeExport(payload);
 

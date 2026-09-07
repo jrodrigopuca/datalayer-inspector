@@ -38,10 +38,11 @@ interface UseExportReturn {
  * ```
  */
 export function useExport(): UseExportReturn {
-  const { events, containers } = usePanelStore(
+  const { events, containers, validations } = usePanelStore(
     useShallow((s) => ({
       events: s.events,
       containers: s.containers,
+      validations: s.validations,
     }))
   );
 
@@ -63,9 +64,12 @@ export function useExport(): UseExportReturn {
       if (events.length === 0) return;
 
       const currentUrl = getCurrentUrl();
-      exportEventsAsJSON(events, containers, currentUrl, options);
+      exportEventsAsJSON(events, containers, currentUrl, {
+        validations,
+        ...options,
+      });
     },
-    [events, containers, getCurrentUrl]
+    [events, containers, validations, getCurrentUrl]
   );
 
   const exportFiltered = useCallback(
@@ -73,9 +77,12 @@ export function useExport(): UseExportReturn {
       if (filteredEvents.length === 0) return;
 
       const currentUrl = getCurrentUrl();
-      exportEventsAsJSON(filteredEvents, containers, currentUrl, options);
+      exportEventsAsJSON(filteredEvents, containers, currentUrl, {
+        validations,
+        ...options,
+      });
     },
-    [filteredEvents, containers, getCurrentUrl]
+    [filteredEvents, containers, validations, getCurrentUrl]
   );
 
   return {

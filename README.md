@@ -37,7 +37,7 @@ Validate your dataLayer events against JSON templates:
 
 ### Export Options
 
-- **JSON**: Export events for debugging or documentation
+- **JSON**: Export events with trigger attribution, category and validation results, plus a session summary (machine-readable twin of the Evidence PDF)
 - **Test Assertions**: Generate Playwright or Cypress test code
 - **Evidence**: Create PDF documents for QA reports
 

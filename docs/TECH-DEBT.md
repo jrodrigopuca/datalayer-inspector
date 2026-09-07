@@ -27,7 +27,7 @@
 | 2 | Acotar el panel al mismo límite que el service worker | Estructural | ✅ Cerrado | `108b1cd` |
 | 3 | Persistencia por tab en `storage.session` | Estructural | ✅ Cerrado | `b678924` |
 | 4 | Un único dueño de la persistencia de schemas | Estructural | ✅ Cerrado | `10c4ba6` |
-| 5 | Cerrar el gap de inyección del page script | Estructural | ✅ Cerrado (falta prueba en Chrome, ver nota) | |
+| 5 | Cerrar el gap de inyección del page script | Estructural | ✅ Cerrado (verificado en Chrome) | |
 | 6 | Restringir el texto capturado por el tracker | Privacidad | ⬜ Pendiente | |
 | 7 | Lista de tipos de request duplicada | Fricción | ✅ Cerrado | `10c4ba6` |
 | 8 | Cliente de mensajería compartido | Fricción | ✅ Cerrado (parcial, ver nota) | `10c4ba6` |
@@ -36,7 +36,10 @@
 | 11 | Código muerto en manifest y service worker | Fricción | ⬜ Pendiente | |
 | 12 | Sincronizar documentación con el código | Fricción | ⬜ Pendiente | |
 | 13 | Tags de release | Fricción | ⬜ Pendiente | |
-| 14 | Nonce en el canal postMessage | Opcional | ⬜ Pendiente | |
+| 14 | Nonce en el canal postMessage | Opcional | ⏭️ Descartado (ver actualización) | |
+| 15 | `DL_CONTAINERS_DETECTED` duplicado en el arranque | Fricción | ⬜ Pendiente | |
+| 16 | Recargar la misma URL no limpia los eventos | Producto | ⬜ Decidir | |
+| 17 | El panel muere tras recargar la extensión y no explica cómo recuperarse | UX | ⬜ Pendiente | |
 
 Estados: ⬜ Pendiente · 🔄 En curso · ✅ Cerrado · ⏭️ Descartado (anotar por qué)
 
@@ -337,10 +340,21 @@ alternativa.
 - [x] MAIN adoptado: `content/injector.ts`, `vite.page-script.config.ts` y
       `public/page-script.js` eliminados; `web_accessible_resources` fuera del
       manifest; build reducido a `tsc && vite build`.
-- [ ] Prueba en Chrome real tras el build: `dataLayer.push.toString()` en la
-      consola de una página con GTM no dice `native code`, y el panel muestra
-      los eventos previos con trigger "Pre-existing". Correr también el job
-      e2e manual del CI.
+- [x] Prueba en Chrome real tras el build (2026-09, con la extensión
+      Claude in Chrome sobre `tests/fixtures/pages/strata-smoke.html`
+      servida por HTTP local): `dataLayer.push` envuelto; secuencia de
+      arranque `DL_CONFIG` → containers → 3 eventos `preload` con índices
+      1..3 → `DL_INITIALIZED existing=3`, en ~90-140 ms; consola sin
+      mensajes en la recarga. Atribución verificada con interacciones
+      reales: `click` (con label del botón), `submit`, `change`, `script`
+      (push diferido 3 s). El push a `customLayer` no se captura sin
+      configurarlo, como corresponde. Falta correr el job e2e manual del CI.
+- [x] Recorrido completo hasta el panel, confirmado con el PDF de Evidence
+      exportado desde DevTools (`datalayer-evidence-evidence-2026-09-07.pdf`,
+      2 páginas, 12 eventos): los eventos previos salen con
+      "Trigger: Pre-existing (pushed before Strata attached; timing unknown)"
+      y la atribución de click/submit/change/script coincide con lo visto en
+      la página. El archivo NO va al repo.
 
 **Nota de cierre (2026-09).** Hallazgo que cambió el diseño: CRXJS carga
 TODO content script (aislado o MAIN) mediante un loader con `import()`
@@ -362,6 +376,15 @@ correcto sin importar cuándo arranca el script:
 - **CSP.** Efecto colateral valioso: un content script MAIN no está sujeto al
   CSP de la página. Con la inyección por tag, los sitios con CSP estricto
   bloqueaban el page script en silencio.
+- **Página de smoke test.** `tests/fixtures/pages/strata-smoke.html` registra
+  en pantalla (y en `window.__strataLog`) todo mensaje Strata que cruza
+  `window.postMessage`, en ambos sentidos. Sirve para verificar el handshake
+  y la atribución sin abrir DevTools: `python3 -m http.server 8765` en
+  `tests/fixtures/pages` y abrir `http://127.0.0.1:8765/strata-smoke.html`.
+- **Hallazgo menor** (ítem 15): en el arranque se emite
+  `DL_CONTAINERS_DETECTED` dos veces, una por la detección inicial y otra
+  por el `gtm.js` preexistente que dispara la re-detección. El SW mergea sin
+  duplicar, así que no hay bug visible; es un mensaje de más por página.
 - Pendiente de `SettingsModal`: cambiar `dataLayerNames` sigue requiriendo
   recargar la página (igual que antes); el canal `DL_CONFIG` ya permite
   hacerlo en caliente si se quiere.
@@ -373,7 +396,10 @@ correcto sin importar cuándo arranca el script:
 ### 6. Restringir el texto capturado por el tracker
 
 **Problema.** `describeElement` en `src/page/interaction-tracker.ts:81`
-lee `textContent` de CUALQUIER elemento clickeado (hasta 40 caracteres). Se
+lee `textContent` de CUALQUIER elemento clickeado (hasta 40 caracteres).
+Reproducido en vivo (2026-09) con la página de smoke test: un click en una
+celda de tabla produjo el label
+`td "ACCT-99887766 jane.doe@example.com"`, que viaja al timeline y al PDF. Se
 cumple la promesa de `PRIVACY.md` de no grabar valores de inputs, pero un click
 en una celda de tabla con un email, un nombre o un número de cuenta termina en
 el label del trigger, en el timeline y en el PDF de evidencia.
@@ -383,6 +409,10 @@ el label del trigger, en el timeline y en el PDF de evidencia.
 1. Usar texto visible solo cuando `findInteractiveTarget` devolvió un elemento
    interactivo real (`button`, `a`, `[role=button]`, `summary`, `label`). Si
    el target es un elemento genérico, describir solo por tag y selector.
+   Para controles de formulario (`select`, `input`, `textarea`) usar el texto
+   del `<label>` asociado (`element.labels`), nunca su contenido: en el smoke
+   test el select salió como `"select"` pelado aunque estaba dentro de
+   `<label>Plan</label>`.
 2. Priorizar `aria-label` y `title` sobre texto, como ya se hace.
 3. Documentar en `PRIVACY.md` qué se captura exactamente del elemento.
 
@@ -496,6 +526,77 @@ commit de release y taggear cada release futuro. Opcional: que el CI construya
 el zip del Web Store al detectar un tag.
 
 - [ ] `git tag` lista `v1.4.0`.
+
+### 15. `DL_CONTAINERS_DETECTED` duplicado en el arranque
+
+Detectado en el smoke test del ítem 5. `src/page/index.ts` emite los
+containers en `init()` y otra vez cuando procesa el `gtm.js` preexistente
+(`shouldRedetectContainers`). El SW mergea por id, así que no hay efecto
+visible; solo un mensaje redundante por carga. Fix: recordar el último set
+de ids emitido y saltear la emisión si no cambió.
+
+- [ ] Con un `gtm.js` preexistente, el smoke test muestra UN solo
+      `DL_CONTAINERS_DETECTED` en el arranque.
+
+### 16. Recargar la misma URL no limpia los eventos
+
+Visto en el PDF de Evidence del ítem 5: tras recargar la página de smoke
+test, los tres eventos `preload` aparecen dos veces (índices 1-3 y 10-12),
+con los seis eventos de la sesión anterior en el medio. Causa:
+`chrome.tabs.onUpdated` solo trae `changeInfo.url` cuando la URL CAMBIA; una
+recarga no pasa por `handleTabNavigation`, así que la lógica de
+`preserveLog` nunca se evalúa. No es un bug del ítem 5; es comportamiento
+previo que el smoke test hizo visible.
+
+**Pregunta de producto.** ¿Qué esperás al recargar con "Preserve log"
+apagado? El panel Network de DevTools limpia. Si la respuesta es "limpiar":
+
+- Usar `DL_INIT` (que el page script emite en cada carga del documento)
+  como señal de "documento nuevo" en `message-handler.ts`: si
+  `!preserveLog`, resetear el tab y emitir `TAB_STATE_RESET` con razón
+  `navigation`. No requiere permisos nuevos (`webNavigation` sí los
+  requeriría).
+- Si la respuesta es "conservar", documentarlo en el README y en el tooltip
+  de "Preserve log", porque hoy el nombre promete algo distinto.
+
+- [ ] Decisión registrada y, si aplica, test en `message-handler.test.ts`:
+      `DL_INIT` con `preserveLog=false` vacía los eventos del tab.
+
+### 17. El panel muere tras recargar la extensión y no explica cómo recuperarse
+
+Reproducido (2026-09): con DevTools abierto, recargar Strata desde
+`chrome://extensions` deja al panel con "Max reconnection attempts reached"
+y el botón Clear falla en silencio. El usuario reinstaló la extensión; con
+cerrar y reabrir DevTools alcanzaba.
+
+**Causa.** Al recargar la extensión, la página del panel queda huérfana: su
+`chrome.runtime` apunta a un contexto invalidado. `use-connection.ts`
+reintenta 5 veces cada 1 s (`LIMITS.MAX_RECONNECT_ATTEMPTS`,
+`RECONNECT_DELAY`) contra un runtime que nunca va a responder, y luego entra
+en `ERROR` permanente. Ninguna reconexión puede tener éxito desde ese
+contexto; el único camino es un panel nuevo.
+
+**Solución propuesta.**
+
+1. Detectar el contexto invalidado (`chrome.runtime?.id === undefined`, o el
+   error "Extension context invalidated") y mostrar un mensaje ACCIONABLE:
+   "Strata se actualizó. Cerrá y volvé a abrir DevTools para reconectar."
+   Sin reintentos: son ruido.
+2. Para desconexiones reales (SW dormido o reiniciado), reemplazar el tope
+   fijo por backoff exponencial acotado (1 s → 2 s → 4 s → 8 s, tope 30 s)
+   sin rendirse nunca, más un botón "Reconectar" en la barra de estado.
+3. `useCommands` (Clear, Record, Settings): si el request falla, mostrar el
+   error en `warningMessage` en lugar de dejarlo en la consola.
+
+**Criterio de aceptación.**
+
+- [ ] Test de `use-connection` (o de una función extraída): con
+      `chrome.runtime.id` indefinido no se programa ningún reintento y el
+      mensaje de error contiene "reopen DevTools".
+- [ ] Test: tras 5 desconexiones el hook sigue reintentando con delay
+      creciente y acotado.
+- [ ] Manual: recargar la extensión con DevTools abierto muestra el mensaje
+      accionable; Clear contra un runtime muerto muestra un aviso visible.
 
 ---
 

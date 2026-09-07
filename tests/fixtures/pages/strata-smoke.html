@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strata Smoke Test</title>
+  <script>
+    // 1) Events pushed BEFORE any extension code could possibly run.
+    //    Strata must report them in order, marked "preload".
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ event: 'gtm.js', 'gtm.start': Date.now() - 500 });
+    window.dataLayer.push({ event: 'page_view', page_title: 'Strata Smoke Test' });
+    window.dataLayer.push({ user_id: 'U-SMOKE', login_status: 'logged_in' });
+
+    // Fake GTM container so container detection has something to find
+    window.google_tag_manager = { 'GTM-SMOKE1': { dataLayer: { name: 'dataLayer' } } };
+
+    // 2) Observe every Strata message that crosses window.postMessage.
+    //    Page -> relay (DL_EVENT_CAPTURED, ...) and relay -> page (DL_CONFIG)
+    //    are both visible here. This is how the smoke test proves the
+    //    handshake without opening DevTools.
+    window.__strataLog = [];
+    window.addEventListener('message', function (e) {
+      if (e.source !== window) return;
+      var d = e.data;
+      if (!d || d.source !== '__STRATA_DATALAYER_INSPECTOR__') return;
+      var entry = { t: performance.now().toFixed(1), type: d.type };
+      if (d.type === 'DL_EVENT_CAPTURED') {
+        entry.event = d.payload.eventName;
+        entry.index = d.payload.index;
+        entry.trigger = d.payload.trigger ? d.payload.trigger.type : null;
+        entry.label = d.payload.trigger ? d.payload.trigger.label : null;
+        entry.source = d.payload.sourceName;
+      } else if (d.type === 'DL_CONFIG') {
+        entry.enabled = d.payload.enabled;
+        entry.names = d.payload.dataLayerNames.join(',');
+      } else if (d.type === 'DL_INITIALIZED') {
+        entry.names = d.payload.dataLayerNames.join(',');
+        entry.existing = d.payload.existingEventsCount;
+      } else if (d.type === 'DL_CONTAINERS_DETECTED') {
+        entry.containers = d.payload.containers.map(function (c) { return c.id; }).join(',');
+      }
+      window.__strataLog.push(entry);
+      var log = document.getElementById('log');
+      if (log) {
+        var row = document.createElement('div');
+        row.className = 'row ' + d.type;
+        row.textContent = JSON.stringify(entry);
+        log.appendChild(row);
+      }
+    }, true);
+  </script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 1rem; }
+    button, select, input { padding: .5rem .8rem; margin: .25rem; font-size: 14px; }
+    #status { padding: .6rem; border-radius: 6px; background: #eef; margin: 1rem 0; font-family: monospace; }
+    #log { font-family: monospace; font-size: 11px; background: #f7f7f7; padding: .6rem; border-radius: 6px; max-height: 320px; overflow: auto; }
+    .row { padding: 2px 4px; border-left: 3px solid #999; margin: 2px 0; background: #fff; }
+    .row.DL_CONFIG { border-color: #e67e22; }
+    .row.DL_EVENT_CAPTURED { border-color: #2980b9; }
+    .row.DL_INITIALIZED { border-color: #27ae60; }
+    .row.DL_CONTAINERS_DETECTED { border-color: #8e44ad; }
+    td { padding: 4px 8px; }
+  </style>
+</head>
+<body>
+  <h1>Strata Smoke Test</h1>
+  <p>Three events were pushed in <code>&lt;head&gt;</code> before any extension code. Interact below and watch the log.</p>
+
+  <div id="status">status: loading</div>
+
+  <h3>Interactions</h3>
+  <button id="add-to-cart" data-testid="add-to-cart">Add to cart</button>
+  <button id="purchase">Purchase</button>
+  <button id="custom-layer">Push to customLayer</button>
+  <button id="script-push">Delayed script push (3s)</button>
+  <form id="lead-form">
+    <input name="email" placeholder="email" type="email" value="qa@example.com">
+    <button type="submit">Send lead</button>
+  </form>
+  <label>Plan
+    <select id="plan">
+      <option value="free">Free</option>
+      <option value="pro">Pro</option>
+    </select>
+  </label>
+  <table>
+    <tr><td>Account</td><td id="sensitive-cell">ACCT-99887766 jane.doe@example.com</td></tr>
+  </table>
+
+  <h3>Strata messages seen on window</h3>
+  <div id="log"></div>
+
+  <script>
+    window.customLayer = window.customLayer || [];
+
+    function refreshStatus() {
+      var native = String(window.dataLayer.push).indexOf('native code') !== -1;
+      document.getElementById('status').textContent =
+        'dataLayer.push wrapped: ' + (!native) +
+        ' | dataLayer.length: ' + window.dataLayer.length +
+        ' | strata messages: ' + window.__strataLog.length;
+    }
+    setInterval(refreshStatus, 250);
+
+    document.getElementById('add-to-cart').addEventListener('click', function () {
+      window.dataLayer.push({ event: 'add_to_cart', ecommerce: { currency: 'USD', value: 19.99,
+        items: [{ item_id: 'SKU-1', item_name: 'Widget', price: 19.99, quantity: 1 }] } });
+    });
+    document.getElementById('purchase').addEventListener('click', function () {
+      window.dataLayer.push({ event: 'purchase', ecommerce: { transaction_id: 'T-' + Date.now(),
+        currency: 'USD', value: 19.99, items: [{ item_id: 'SKU-1', price: 19.99 }] } });
+    });
+    document.getElementById('custom-layer').addEventListener('click', function () {
+      window.customLayer.push({ event: 'custom_layer_event', note: 'from customLayer' });
+    });
+    document.getElementById('script-push').addEventListener('click', function () {
+      setTimeout(function () {
+        window.dataLayer.push({ event: 'delayed_script_event' });
+      }, 3000);
+    });
+    document.getElementById('lead-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      window.dataLayer.push({ event: 'generate_lead', form_id: 'lead-form' });
+    });
+    document.getElementById('plan').addEventListener('change', function (e) {
+      window.dataLayer.push({ event: 'select_content', content_type: 'plan', item_id: e.target.value });
+    });
+    document.getElementById('sensitive-cell').addEventListener('click', function () {
+      window.dataLayer.push({ event: 'cell_click' });
+    });
+  </script>
+</body>
+</html>

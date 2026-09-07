@@ -3,6 +3,24 @@
 All notable changes to Strata are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **JSON export v2** (`formatVersion: 2`): every raw event now carries `trigger` (the same attribution shown in the timeline and PDF), `category`, and, when a schema matched, `validation` with per-schema status and errors. The payload opens with a `summary` (counts by category, by trigger type, and validation pass/fail/unchecked) so a session can be evaluated without opening DevTools.
+- **Pre-existing attribution**: events already in the array when Strata attaches are marked `preload` instead of `page-load`.
+- Session storage warnings in the status bar when a tab's captured state is pruned to fit the quota or cannot be saved.
+
+### Changed
+
+- Page script runs as a `world: "MAIN"` content script (no script-tag injection, immune to page CSP). Capture starts before the settings round-trip; messages are buffered until the relay is ready.
+- Schemas are owned by the service worker: every open panel stays in sync and concurrent edits no longer overwrite each other.
+- Per-tab session persistence; the panel is bounded to the same `maxEventsPerTab` as the worker.
+
+### Fixed
+
+- Clean JSON export ignored `includeUrl` whenever `includeTimestamp` was on.
+
 ## [1.4.0] - 2026-07
 
 ### Added
