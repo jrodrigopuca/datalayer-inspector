@@ -75,23 +75,23 @@ Validate your dataLayer events against JSON templates:
 ### Prerequisites
 
 - Node.js 20+
-- npm or pnpm
+- pnpm 10 (`corepack enable` picks the pinned version from package.json)
 
 ### Setup
 
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Development mode (hot reload)
-npm run dev
+pnpm dev
 
 # Build for production
-npm run build
+pnpm build
 
 # Run tests
-npm test           # Unit tests (Vitest)
-npm run test:e2e   # E2E tests (Playwright)
+pnpm test          # Unit tests (Vitest)
+pnpm test:e2e      # E2E tests (Playwright)
 ```
 
 ### Project Structure
