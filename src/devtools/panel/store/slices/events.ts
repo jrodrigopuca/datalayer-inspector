@@ -1,12 +1,13 @@
 /**
- * Events slice - manages captured dataLayer events
+ * Events slice - mirrors the service worker's events for the current tab
+ *
+ * The worker enforces a HARD per-tab limit and never sends more than it
+ * stores, so this slice only appends; `limitReached` mirrors the worker's
+ * flag so the UI can ask the user to clear (docs/TECH-DEBT.md, item 16).
  */
 
 import type { DataLayerEvent, EventId } from "@shared/types";
-import { pruneEvents } from "@shared/utils/prune";
 import type { StateCreator } from "zustand";
-import type { SchemasSlice } from "./schemas";
-import type { SettingsSlice } from "./settings";
 
 export interface EventsSlice {
   /** All captured events for current tab */
@@ -15,6 +16,8 @@ export interface EventsSlice {
   selectedEventId: EventId | null;
   /** Containers detected in current tab */
   containers: readonly string[];
+  /** Capture stopped at the limit; Clear resumes it */
+  limitReached: boolean;
 
   // Actions
   setEvents: (events: readonly DataLayerEvent[]) => void;
@@ -22,14 +25,11 @@ export interface EventsSlice {
   clearEvents: () => void;
   selectEvent: (id: EventId | null) => void;
   setContainers: (containers: readonly string[]) => void;
+  setLimitReached: (limitReached: boolean) => void;
 }
 
-/**
- * The slice reads `settings.maxEventsPerTab` and prunes `validations`,
- * so its creator is typed against the slices it touches.
- */
 export const createEventsSlice: StateCreator<
-  EventsSlice & SettingsSlice & SchemasSlice,
+  EventsSlice,
   [],
   [],
   EventsSlice
@@ -37,40 +37,25 @@ export const createEventsSlice: StateCreator<
   events: [],
   selectedEventId: null,
   containers: [],
+  limitReached: false,
 
   setEvents: (events) => set({ events }),
 
   addEvent: (event) =>
-    set((state) => {
-      // Mirror the service worker's window exactly (shared prune rule)
-      const { kept, removed } = pruneEvents(
-        [...state.events, event],
-        state.settings.maxEventsPerTab
-      );
-
-      if (removed.length === 0) {
-        return { events: kept };
-      }
-
-      const validations = new Map(state.validations);
-      let selectedEventId = state.selectedEventId;
-      for (const dropped of removed) {
-        validations.delete(dropped.id);
-        if (dropped.id === selectedEventId) {
-          selectedEventId = null;
-        }
-      }
-
-      return { events: kept, validations, selectedEventId };
-    }),
+    set((state) => ({
+      events: [...state.events, event],
+    })),
 
   clearEvents: () =>
     set({
       events: [],
       selectedEventId: null,
+      limitReached: false,
     }),
 
   selectEvent: (id) => set({ selectedEventId: id }),
 
   setContainers: (containers) => set({ containers }),
+
+  setLimitReached: (limitReached) => set({ limitReached }),
 });

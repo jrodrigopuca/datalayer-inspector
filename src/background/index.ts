@@ -62,6 +62,14 @@ tabManager.onStorageWarning((warning) => {
   });
 });
 
+// A full tab stops capturing; the panel must say so and offer Clear
+tabManager.onLimitReached((payload) => {
+  broadcastToTab(payload.tabId, {
+    type: BACKGROUND_MESSAGE_TYPE.LIMIT_REACHED,
+    payload,
+  });
+});
+
 // ============================================================================
 // Listener registration - synchronous, top level (see MV3 RULE above)
 // ============================================================================

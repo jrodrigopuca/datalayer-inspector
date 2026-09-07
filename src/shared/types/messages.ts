@@ -51,6 +51,7 @@ export interface PageEventCapturedPayload {
   readonly sourceName: string;
   readonly index: number;
   readonly trigger?: EventTrigger;
+  readonly documentId?: string;
 }
 
 export interface PageContainersDetectedPayload {
@@ -146,12 +147,12 @@ export const BACKGROUND_MESSAGE_TYPE = {
   STORAGE_WARNING: "STORAGE_WARNING",
   /** Authoritative schema list after any change (sent to every client) */
   SCHEMAS_CHANGED: "SCHEMAS_CHANGED",
+  /** The tab hit its capture limit; nothing more is stored until Clear */
+  LIMIT_REACHED: "LIMIT_REACHED",
 } as const;
 
 /** Why the service worker is warning about session persistence */
 export const STORAGE_WARNING_KIND = {
-  /** Oldest events were dropped to fit the per-tab byte budget */
-  PRUNED_BY_SIZE: "pruned-by-size",
   /** The write failed (quota exhausted or storage unavailable) */
   PERSIST_FAILED: "persist-failed",
 } as const;
@@ -162,9 +163,28 @@ export type StorageWarningKind =
 export interface StorageWarningPayload {
   readonly tabId: number;
   readonly kind: StorageWarningKind;
-  /** Events removed from the tab (0 for persist failures) */
-  readonly droppedCount: number;
   /** Human-readable summary for the status bar */
+  readonly message: string;
+}
+
+/**
+ * Which limit stopped capture. Nothing is ever dropped silently: the user
+ * clears and capture resumes (docs/TECH-DEBT.md, item 16).
+ */
+export const LIMIT_REASON = {
+  /** `maxEventsPerTab` events stored */
+  COUNT: "count",
+  /** Serialized state exceeded the per-tab session-storage budget */
+  SIZE: "size",
+} as const;
+
+export type LimitReason = (typeof LIMIT_REASON)[keyof typeof LIMIT_REASON];
+
+export interface LimitReachedPayload {
+  readonly tabId: number;
+  readonly reason: LimitReason;
+  /** The limit that was hit (event count, or bytes for size) */
+  readonly limit: number;
   readonly message: string;
 }
 
@@ -217,6 +237,10 @@ export type BackgroundToClientMessage =
   | {
       readonly type: typeof BACKGROUND_MESSAGE_TYPE.SCHEMAS_CHANGED;
       readonly payload: { readonly schemas: readonly Schema[] };
+    }
+  | {
+      readonly type: typeof BACKGROUND_MESSAGE_TYPE.LIMIT_REACHED;
+      readonly payload: LimitReachedPayload;
     };
 
 // ============================================================================

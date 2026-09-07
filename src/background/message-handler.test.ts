@@ -198,6 +198,7 @@ describe("message-handler", () => {
           url: "",
           isRecording: true,
           nextIndex: 1,
+          limitReached: false,
         },
       });
     });

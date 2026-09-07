@@ -24,7 +24,7 @@
 | # | Ítem | Bucket | Estado | Commit |
 |---|------|--------|--------|--------|
 | 1 | CI y umbral de coverage honesto | Estructural | ✅ Cerrado (e2e queda manual, ver nota) | `8128a01` |
-| 2 | Acotar el panel al mismo límite que el service worker | Estructural | ✅ Cerrado | `108b1cd` |
+| 2 | Acotar el panel al mismo límite que el service worker | Estructural | ✅ Cerrado (reemplazado por el límite duro del ítem 16) | `108b1cd` |
 | 3 | Persistencia por tab en `storage.session` | Estructural | ✅ Cerrado | `b678924` |
 | 4 | Un único dueño de la persistencia de schemas | Estructural | ✅ Cerrado | `10c4ba6` |
 | 5 | Cerrar el gap de inyección del page script | Estructural | ✅ Cerrado (verificado en Chrome) | `692969d` |
@@ -34,11 +34,11 @@
 | 9 | Un solo lockfile | Fricción | ✅ Cerrado | `8128a01` |
 | 10 | Presupuesto del page script medido | Fricción | ⏭️ Descartado (obsoleto por el ítem 5) | |
 | 11 | Código muerto en manifest y service worker | Fricción | ✅ Cerrado | |
-| 12 | Sincronizar documentación con el código | Fricción | ✅ Cerrado (roadmap: decisión pendiente) | |
+| 12 | Sincronizar documentación con el código | Fricción | ✅ Cerrado | |
 | 13 | Tags de release | Fricción | ✅ Cerrado (tag local, falta push) | |
 | 14 | Nonce en el canal postMessage | Opcional | ⏭️ Descartado (ver actualización) | |
 | 15 | `DL_CONTAINERS_DETECTED` duplicado en el arranque | Fricción | ✅ Cerrado (falta smoke test) | |
-| 16 | Recargar la misma URL no limpia los eventos | Producto | ⬜ Decidir | |
+| 16 | Recargar la misma URL no limpia los eventos | Producto | ✅ Cerrado (decidido: conservar + marcar; límite duro) | |
 | 17 | El panel muere tras recargar la extensión y no explica cómo recuperarse | UX | ✅ Cerrado (reinyección verificada en Chrome) | |
 | 18 | Captura apagada por defecto | Producto | ✅ Cerrado | |
 
@@ -104,7 +104,7 @@ captura o la persistencia. Refactorizar eso sin red es apostar.
 **Criterio de aceptación.**
 
 - [x] Un PR con un test que falla se marca rojo en GitHub (`.github/workflows/ci.yml`, job `check`).
-- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 45/44/31/47 tras los seguimientos del 17, medido 46.0/44.9/31.7/47.6).
+- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 46/44/31/47 tras el ítem 16, medido 46.3/45.1/32.1/48.0).
 - [x] Existen tests para los cuatro módulos listados en el paso 3 (59 tests nuevos; 235 en total).
 
 **Nota de cierre (2026-09).** El job `e2e` existe pero corre solo con `workflow_dispatch`. Promoverlo a cada PR cuando haya pasado verde tres veces seguidas de forma manual. Ese es el único cabo suelto del ítem.
@@ -548,8 +548,7 @@ versiona.
 - [x] Ninguna sección de docs describe una feature eliminada: DESIGN §13.1
       reemplazada por una nota de eliminación; PLAN §2.5 y TEST-CASES §9.4
       marcan el PNG como eliminado.
-- [ ] Decisión registrada sobre el roadmap (versionado o no, y por qué).
-      Pendiente del autor; ver la pregunta al final de esta nota.
+- [x] Decisión registrada sobre el roadmap: NO se versiona, a propósito.
 
 **Nota de cierre (2026-09).** Criterio aplicado: no reescribir 7 mil líneas
 de diseño original, sino (a) una nota de estado al inicio de `SPEC.md` y
@@ -562,10 +561,11 @@ mapa de documentación en el README que dice cuál es el documento vivo. Las
 secciones que describen tipos, mensajes o flujos todavía vigentes quedaron
 intactas.
 
-**Pregunta abierta**: `docs/ECOSYSTEM_ROADMAP.md` es el único documento al
-día y está en `docs/.gitignore`. Si es privado a propósito (planes de
-negocio), dejarlo así y anotarlo; si no, versionarlo, porque hoy la
-intención del producto vive fuera del repo.
+**Roadmap (decisión del autor, 2026-09)**: `docs/ECOSYSTEM_ROADMAP.md`
+queda fuera del repo a propósito. El repositorio es público y el roadmap
+contiene ideas todavía no definidas y direcciones futuras que un competidor
+podría adelantar. Se mantiene en `docs/.gitignore`; lo que ya está decidido
+e implementado se documenta acá y en el CHANGELOG, nunca antes.
 
 ### 13. Tags de release
 
@@ -617,8 +617,43 @@ apagado? El panel Network de DevTools limpia. Si la respuesta es "limpiar":
 - Si la respuesta es "conservar", documentarlo en el README y en el tooltip
   de "Preserve log", porque hoy el nombre promete algo distinto.
 
-- [ ] Decisión registrada y, si aplica, test en `message-handler.test.ts`:
-      `DL_INIT` con `preserveLog=false` vacía los eventos del tab.
+- [x] Decisión registrada. NO se limpia en recarga: se conserva y se marca.
+
+**Decisión del autor (2026-09).** Dos casos de uso que la limpieza en
+recarga rompía: (1) A → B → Atrás a A, y (2) una página que se recarga sola
+cada X tiempo, donde se quieren los ciclos duplicados Y una marca de cada
+recarga. Además, el autor fijó dos principios:
+
+- **Límite explícito, nunca poda silenciosa.** El usuario tiene que saber
+  que los eventos no son infinitos; al llegar al tope, limpia.
+- **Identidad del producto**: Strata es un VISOR de dataLayer para
+  debuggear y probar, un DebugView de GA en chico. Cada feature se mide
+  contra "¿ayuda a ver y verificar lo que el dataLayer hizo?".
+
+**Implementación.**
+
+- `documentId` por instancia del page script, en cada evento
+  (`interceptor.ts`, relay, validadores, export v2). Una recarga es un id
+  nuevo; una restauración desde bfcache conserva el id, que es la verdad.
+- Timeline: `buildTimelineRows` (`panel/lib/timeline-rows.ts`, pura y
+  testeada) dibuja el separador de página existente si cambia el path y un
+  separador "↻ Page reloaded" si cambia el `documentId` con el mismo path.
+  Eventos sin `documentId` (anteriores) nunca reciben separador de recarga.
+- **Límite duro** en `tab-manager.addEvent`: al llegar a `maxEventsPerTab`
+  (o al superar el presupuesto de bytes de sesión) el tab queda
+  `limitReached`, no se almacena nada más, y se emite `LIMIT_REACHED` una
+  sola vez. Clear o navegación con reset lo levantan. La poda por cantidad
+  (ítem 2, `shared/utils/prune.ts`) y la poda por tamaño (ítem 3) se
+  ELIMINARON: contradecían el principio.
+- Panel: banner fijo "Event limit reached (N). Capture is paused until you
+  clear" con botón Clear; la barra de estado muestra `capturados / límite`
+  en rojo al llegar; texto de Settings corregido ("capture stops... nothing
+  is dropped silently").
+
+- [ ] Manual (smoke test): recargar la página con Strata encendido; el
+      timeline muestra "↻ Page reloaded" antes de los nuevos Pre-existing.
+- [ ] Manual: poner el límite en 100 en Settings, superar 100 pushes; el
+      contador queda en 100/100 en rojo, aparece el banner, Clear reanuda.
 
 ### 17. El panel muere tras recargar la extensión y no explica cómo recuperarse
 
@@ -851,6 +886,9 @@ aceptado y documentado, no como pendiente.
 | 2026-09 | 10 | Descartado | Sin artefacto IIFE commiteado no hay presupuesto que medir aparte del build. |
 | 2026-09 | 14 | Descartado | No existe canal privado aislado→MAIN vía DOM; un nonce sería visible para la página. |
 | 2026-09 | 17 | Sin keepalive del service worker mientras el panel está abierto | Diseñar para "DevTools abierto todo el día" penaliza el caso común; las desconexiones por suspensión se resuelven reconectando. Decidido después (2026-09): primer reintento inmediato y síncrono; el contador se resetea solo cuando llegó el estado inicial, para que un worker caído no genere un loop. |
+| 2026-09 | 16 | Conservar en recarga y marcar con `documentId`; límite DURO por tab en vez de poda | Casos A→B→Atrás y auto-refresh exigen conservar; "el usuario debe saber que no hay eventos infinitos y limpiar" (autor). Reemplaza a los ítems 2 y 3 en lo referente a poda. |
+| 2026-09 | 16 | Principio de producto: Strata es un visor de dataLayer para debuggear y probar | Fijado por el autor; criterio para evaluar features futuras. |
+| 2026-09 | 12 | `ECOSYSTEM_ROADMAP.md` no se versiona | Repo público; el roadmap contiene ideas sin definir y direcciones futuras que un competidor podría adelantar. Se publica solo lo decidido e implementado. |
 | 2026-09 | 17 | Settings en `storage.local`, no `sync` | Sin necesidad de sincronizar entre dispositivos; `sync` sumaba cuotas y un gap de propagación. Migración de una vez desde `sync`. |
 | 2026-09 | 17 | Reinyección por proceso (marca en `storage.session`) y replay del historial ante un relay nuevo | Cubre habilitar desde `chrome://extensions` sin costo por despertar; "reanudar" recupera los registros sin recargar. |
 | 2026-09 | 18 | Captura apagada por defecto | Uso en sesiones cortas; encender es un click con aviso visible (badge + panel), y encender re-lee el historial del array. |

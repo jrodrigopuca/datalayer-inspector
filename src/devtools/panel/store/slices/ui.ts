@@ -65,7 +65,7 @@ export interface UISlice {
   activeFilter: string | null;
   /** Error message if any (connection problems) */
   errorMessage: string | null;
-  /** Non-fatal warning (e.g. session storage pruned or unavailable) */
+  /** Non-fatal warning (e.g. limit reached, session storage unavailable) */
   warningMessage: string | null;
   /** Current tab ID */
   tabId: number | null;

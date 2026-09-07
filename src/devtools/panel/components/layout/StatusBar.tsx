@@ -26,6 +26,8 @@ export function StatusBar() {
   );
   const setWarningMessage = usePanelStore((s) => s.setWarningMessage);
   const requestReconnect = usePanelStore((s) => s.requestReconnect);
+  const maxEvents = usePanelStore((s) => s.settings.maxEventsPerTab);
+  const limitReached = usePanelStore((s) => s.limitReached);
 
   const counts = usePanelStore(useShallow(selectEventCounts));
   const validation = usePanelStore(useShallow(selectValidationSummary));
@@ -68,7 +70,15 @@ export function StatusBar() {
 
         {/* Event stats - grouped with color coding */}
         <div className="relative flex items-center gap-2">
-          <span className="text-gray-300 font-medium">{counts.total}</span>
+          <span
+            className={cn(
+              "font-medium",
+              limitReached ? "text-event-error" : "text-gray-300"
+            )}
+            title="Captured events / limit for this tab (capture stops at the limit until you clear)"
+          >
+            {counts.total} / {maxEvents}
+          </span>
           <span>events</span>
           {counts.total > 0 && (
             <button

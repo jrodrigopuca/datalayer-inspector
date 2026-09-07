@@ -55,6 +55,15 @@ describe("transformEventForExport", () => {
     });
   });
 
+  it("raw format carries the document id when present", () => {
+    const result = transformEventForExport(
+      createMockEvent({ documentId: "doc-9" }),
+      { format: "raw", includeTimestamp: true, includeUrl: true }
+    );
+
+    expect(result).toMatchObject({ documentId: "doc-9" });
+  });
+
   it("raw format carries trigger attribution and category", () => {
     const trigger = {
       type: "click",

@@ -6,6 +6,7 @@
 import { STORAGE_KEYS } from "@shared/constants";
 import {
   type DataLayerEvent,
+  LIMIT_REASON,
   type MutableTabState,
   STORAGE_WARNING_KIND,
 } from "@shared/types";
@@ -24,6 +25,7 @@ import {
   getEvents,
   getOrCreateTabState,
   hasTabState,
+  onLimitReached,
   onStorageWarning,
   removeTabState,
   restoreFromStorage,
@@ -55,6 +57,8 @@ function storedState(tabId: number): MutableTabState {
     url: `https://tab${tabId}.example/`,
     isRecording: true,
     nextIndex: 1,
+    limitReached: false,
+    approxBytes: 0,
   };
 }
 
@@ -171,55 +175,40 @@ describe("tab-manager persistence", () => {
     });
   });
 
-  describe("byte budget", () => {
-    it("drops the oldest events to fit, updates memory and reports it", async () => {
+  describe("size budget (hard stop, never a silent prune)", () => {
+    it("stops accepting events once the serialized size exceeds the budget and reports it once", async () => {
       const listener = vi.fn();
-      onStorageWarning(listener);
-      // Each padded event is ~200 chars; 10 of them blow a 900-char budget
+      onLimitReached(listener);
+      // Each padded event is ~200 chars; the 5th crosses a 900-char budget
       setTabStateByteBudget(900);
       getOrCreateTabState(1);
-      for (let i = 1; i <= 10; i++) addEvent(1, makeEvent(i, 100));
+      const accepted: number[] = [];
+      for (let i = 1; i <= 10; i++) {
+        if (addEvent(1, makeEvent(i, 100))) accepted.push(i);
+      }
 
-      await flushPersist();
-
-      const remaining = getEvents(1);
-      expect(remaining.length).toBeLessThan(10);
-      expect(remaining.at(-1)?.id).toBe("evt-10");
-      expect(remaining[0]?.id).not.toBe("evt-1");
-
-      const written = mocked(chrome.storage.session.set).mock.calls[0]?.[0] as
-        | Record<string, MutableTabState>
-        | undefined;
-      expect(written?.[KEY_TAB_1]?.events).toHaveLength(remaining.length);
-      expect(JSON.stringify(written?.[KEY_TAB_1]).length).toBeLessThanOrEqual(
-        900
-      );
-
+      expect(accepted.length).toBeLessThan(10);
+      expect(getEvents(1)).toHaveLength(accepted.length);
+      expect(getEvents(1)[0]?.id).toBe("evt-1"); // nothing dropped
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener).toHaveBeenCalledWith(
         expect.objectContaining({
           tabId: 1,
-          kind: STORAGE_WARNING_KIND.PRUNED_BY_SIZE,
-          droppedCount: 10 - remaining.length,
+          reason: LIMIT_REASON.SIZE,
+          limit: 900,
         })
       );
-    });
-
-    it("always keeps the newest event even if it alone exceeds the budget", async () => {
-      setTabStateByteBudget(50);
-      getOrCreateTabState(1);
-      addEvent(1, makeEvent(1, 500));
-      addEvent(1, makeEvent(2, 500));
 
       await flushPersist();
-
-      expect(getEvents(1).map((e) => e.id)).toEqual(["evt-2"]);
-      expect(chrome.storage.session.set).toHaveBeenCalledTimes(1);
+      const written = mocked(chrome.storage.session.set).mock.calls[0]?.[0] as
+        | Record<string, MutableTabState>
+        | undefined;
+      expect(written?.[KEY_TAB_1]?.limitReached).toBe(true);
     });
 
     it("does not warn while within budget", async () => {
       const listener = vi.fn();
-      onStorageWarning(listener);
+      onLimitReached(listener);
       getOrCreateTabState(1);
       addEvent(1, makeEvent(1));
 
@@ -246,26 +235,25 @@ describe("tab-manager persistence", () => {
         expect.objectContaining({
           tabId: 1,
           kind: STORAGE_WARNING_KIND.PERSIST_FAILED,
-          droppedCount: 0,
         })
       );
       expect(getEvents(1)).toHaveLength(1);
       errorSpy.mockRestore();
     });
 
-    it("keeps working when the warning listener throws", async () => {
+    it("keeps working when a listener throws", async () => {
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      onStorageWarning(() => {
+      onLimitReached(() => {
         throw new Error("listener bug");
       });
       setTabStateByteBudget(50);
       getOrCreateTabState(1);
       addEvent(1, makeEvent(1, 500));
-      addEvent(1, makeEvent(2, 500));
 
       await flushPersist();
 
       expect(chrome.storage.session.set).toHaveBeenCalledTimes(1);
+      expect(getEvents(1)).toHaveLength(1);
       errorSpy.mockRestore();
     });
   });

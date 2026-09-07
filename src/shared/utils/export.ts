@@ -70,6 +70,8 @@ export interface ExportedEventRaw {
   readonly url: string;
   /** What caused the push (null for events captured without attribution) */
   readonly trigger: EventTrigger | null;
+  /** Document load that captured the event (changes on reload) */
+  readonly documentId?: string;
   /** Present only when at least one enabled schema matched the event */
   readonly validation?: ExportedValidation;
 }
@@ -159,6 +161,7 @@ export function transformEventForExport(
     timestamp: new Date(event.timestamp).toISOString(),
     url: event.url,
     trigger: event.trigger ?? null,
+    ...(event.documentId && { documentId: event.documentId }),
     ...(validation && { validation }),
   };
 }

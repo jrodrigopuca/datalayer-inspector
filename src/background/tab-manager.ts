@@ -14,11 +14,12 @@ import { LIMITS, STORAGE_KEYS, STORAGE_LIMITS } from "@shared/constants";
 import {
   createInitialTabState,
   type DataLayerEvent,
+  LIMIT_REASON,
+  type LimitReachedPayload,
   type MutableTabState,
   STORAGE_WARNING_KIND,
   type StorageWarningPayload,
 } from "@shared/types";
-import { countToPrune } from "@shared/utils/prune";
 
 /**
  * In-memory storage of tab states
@@ -66,6 +67,21 @@ export function onStorageWarning(
   listener: StorageWarningListener | null
 ): void {
   storageWarningListener = listener;
+}
+
+type LimitReachedListener = (payload: LimitReachedPayload) => void;
+let limitReachedListener: LimitReachedListener | null = null;
+
+export function onLimitReached(listener: LimitReachedListener | null): void {
+  limitReachedListener = listener;
+}
+
+function emitLimitReached(payload: LimitReachedPayload): void {
+  try {
+    limitReachedListener?.(payload);
+  } catch (error) {
+    console.error("[Strata] Limit listener failed:", error);
+  }
 }
 
 function emitStorageWarning(warning: StorageWarningPayload): void {
@@ -126,32 +142,6 @@ function schedulePersist(tabId: number): void {
 }
 
 /**
- * Drop the oldest events until the serialized state fits the byte budget.
- * Mutates the in-memory state so memory and storage never disagree.
- *
- * @returns Number of events dropped
- */
-function pruneToByteBudget(state: MutableTabState): number {
-  let size = JSON.stringify(state).length;
-  if (size <= tabStateByteBudget) return 0;
-
-  let toDrop = 0;
-  // Always keep the newest event, however large it is
-  const droppable = state.events.length - 1;
-  for (const event of state.events) {
-    if (size <= tabStateByteBudget || toDrop >= droppable) break;
-    // +1 for the separating comma in the serialized array
-    size -= JSON.stringify(event).length + 1;
-    toDrop++;
-  }
-
-  if (toDrop > 0) {
-    state.events.splice(0, toDrop);
-  }
-  return toDrop;
-}
-
-/**
  * Write one tab's state (or remove its key if the tab is gone)
  */
 async function persistToStorage(tabId: number): Promise<void> {
@@ -164,23 +154,12 @@ async function persistToStorage(tabId: number): Promise<void> {
       return;
     }
 
-    const dropped = pruneToByteBudget(state);
-    if (dropped > 0) {
-      emitStorageWarning({
-        tabId,
-        kind: STORAGE_WARNING_KIND.PRUNED_BY_SIZE,
-        droppedCount: dropped,
-        message: `Dropped ${dropped} oldest event${dropped === 1 ? "" : "s"} to fit the session storage budget`,
-      });
-    }
-
     await chrome.storage.session.set({ [key]: state });
   } catch (error) {
     console.error(`[Strata] Failed to persist tab ${tabId}:`, error);
     emitStorageWarning({
       tabId,
       kind: STORAGE_WARNING_KIND.PERSIST_FAILED,
-      droppedCount: 0,
       message:
         "Could not save the session; events will be lost if the service worker restarts",
     });
@@ -204,6 +183,9 @@ export async function restoreFromStorage(): Promise<void> {
         console.warn(`[Strata] Ignoring malformed stored state for ${key}`);
         continue;
       }
+      // Fields added after 1.4 may be missing in an older stored state
+      value.limitReached = value.limitReached === true;
+      value.approxBytes = JSON.stringify(value.events).length;
       tabStates.set(tabId, value);
     }
 
@@ -254,7 +236,12 @@ export function hasTabState(tabId: number): boolean {
 /**
  * Add event to tab state
  *
- * @returns The event with assigned index, or null if recording is paused
+ * Capture is a HARD limit, never a rolling window: once the tab holds
+ * `maxEventsPerTab` events (or its serialized size exceeds the session
+ * budget) nothing more is stored until the user clears. The panel is told
+ * once via the limit listener (docs/TECH-DEBT.md, item 16).
+ *
+ * @returns The event with assigned index, or null if paused or at the limit
  */
 export function addEvent(
   tabId: number,
@@ -262,8 +249,8 @@ export function addEvent(
 ): DataLayerEvent | null {
   const state = getOrCreateTabState(tabId);
 
-  // Skip if not recording
-  if (!state.isRecording) {
+  // Skip if not recording or already full
+  if (!state.isRecording || state.limitReached) {
     return null;
   }
 
@@ -275,17 +262,44 @@ export function addEvent(
 
   state.nextIndex++;
   state.events.push(fullEvent);
+  // +1 for the separating comma in the serialized array
+  state.approxBytes += JSON.stringify(fullEvent).length + 1;
 
   // Update URL if different
   if (event.url && event.url !== state.url) {
     state.url = event.url;
   }
 
-  // Prune old events if over limit
-  pruneEventsIfNeeded(state);
+  checkLimit(tabId, state);
 
   schedulePersist(tabId);
   return fullEvent;
+}
+
+/**
+ * Flag the tab as full when a limit is hit, and tell the listener once
+ */
+function checkLimit(tabId: number, state: MutableTabState): void {
+  if (state.events.length >= maxEventsPerTab) {
+    state.limitReached = true;
+    emitLimitReached({
+      tabId,
+      reason: LIMIT_REASON.COUNT,
+      limit: maxEventsPerTab,
+      message: `Event limit reached (${maxEventsPerTab}). Clear events to keep capturing.`,
+    });
+    return;
+  }
+
+  if (state.approxBytes > tabStateByteBudget) {
+    state.limitReached = true;
+    emitLimitReached({
+      tabId,
+      reason: LIMIT_REASON.SIZE,
+      limit: tabStateByteBudget,
+      message: `Session size limit reached (${Math.round(tabStateByteBudget / 1_000_000)} MB). Clear events to keep capturing.`,
+    });
+  }
 }
 
 /**
@@ -321,6 +335,8 @@ export function clearEvents(tabId: number): void {
   if (state) {
     state.events = [];
     state.nextIndex = 1;
+    state.limitReached = false;
+    state.approxBytes = 0;
     schedulePersist(tabId);
   }
 }
@@ -335,6 +351,8 @@ export function resetTabState(tabId: number, newUrl: string = ""): void {
     state.containers = [];
     state.url = newUrl;
     state.nextIndex = 1;
+    state.limitReached = false;
+    state.approxBytes = 0;
     // Keep isRecording as-is
     schedulePersist(tabId);
   }
@@ -381,7 +399,8 @@ export function getContainers(tabId: number): readonly string[] {
 
 /**
  * Configurable event limit (kept in sync with the maxEventsPerTab setting).
- * Defaults to the built-in limit until settings are loaded.
+ * Defaults to the built-in limit until settings are loaded. A HARD limit:
+ * capture stops there until the user clears (docs/TECH-DEBT.md, item 16).
  */
 let maxEventsPerTab: number = LIMITS.MAX_EVENTS_PER_TAB;
 
@@ -391,19 +410,6 @@ let maxEventsPerTab: number = LIMITS.MAX_EVENTS_PER_TAB;
 export function setMaxEventsPerTab(limit: number): void {
   if (Number.isFinite(limit) && limit > 0) {
     maxEventsPerTab = limit;
-  }
-}
-
-/**
- * Prune old events if over limit
- *
- * The rule lives in shared/utils/prune.ts so the DevTools panel applies
- * exactly the same window (docs/TECH-DEBT.md, item 2).
- */
-function pruneEventsIfNeeded(state: MutableTabState): void {
-  const toRemove = countToPrune(state.events.length, maxEventsPerTab);
-  if (toRemove > 0) {
-    state.events.splice(0, toRemove);
   }
 }
 
@@ -419,4 +425,6 @@ export function clearAllStates(): void {
   isRestored = false;
   tabStateByteBudget = STORAGE_LIMITS.MAX_TAB_STATE_BYTES;
   storageWarningListener = null;
+  limitReachedListener = null;
+  maxEventsPerTab = LIMITS.MAX_EVENTS_PER_TAB;
 }

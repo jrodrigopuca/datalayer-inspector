@@ -9,14 +9,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 - **JSON export v2** (`formatVersion: 2`): every raw event now carries `trigger` (the same attribution shown in the timeline and PDF), `category`, and, when a schema matched, `validation` with per-schema status and errors. The payload opens with a `summary` (counts by category, by trigger type, and validation pass/fail/unchecked) so a session can be evaluated without opening DevTools.
 - **Pre-existing attribution**: events already in the array when Strata attaches are marked `preload` instead of `page-load`.
-- Session storage warnings in the status bar when a tab's captured state is pruned to fit the quota or cannot be saved.
+- **Reload markers**: every event carries the id of the document load that captured it; the timeline shows "↻ Page reloaded" when the same page loads again (a back/forward restore is not a reload and gets no marker). The id is included in the JSON export.
+- **Hard per-tab limit**: capture stops at `maxEventsPerTab` (default 500) or at the session-size budget, the status bar shows `captured / limit`, and a banner offers Clear. Nothing is dropped silently anymore (earlier builds pruned the oldest events).
+- Session storage warning in the status bar when a tab's state cannot be saved.
 
 ### Changed
 
 - **Capture is off by default.** Strata is used in short sessions (open, capture a flow, export), so it no longer wraps `dataLayer.push` output on every page all day. The toolbar icon shows `OFF`, the panel's empty state offers "Turn on capture", and turning it on picks up everything already in the dataLayer as "Pre-existing". Users who never changed a setting will find capture off after this update; users with saved settings keep their choice.
 - Page script runs as a `world: "MAIN"` content script (no script-tag injection, immune to page CSP). Capture starts before the settings round-trip; messages are buffered until the relay is ready.
 - Schemas are owned by the service worker: every open panel stays in sync and concurrent edits no longer overwrite each other.
-- Per-tab session persistence; the panel is bounded to the same `maxEventsPerTab` as the worker.
+- Per-tab session persistence.
 
 ### Fixed
 

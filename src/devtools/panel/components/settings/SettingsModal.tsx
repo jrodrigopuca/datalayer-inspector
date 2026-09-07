@@ -207,7 +207,8 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 Max events per tab
               </label>
               <p className="text-2xs text-gray-500 mt-0.5">
-                Oldest events are pruned beyond this limit (100–5000).
+                Capture stops at this limit until you clear events; nothing is
+                dropped silently (100–5000).
               </p>
             </div>
             <input

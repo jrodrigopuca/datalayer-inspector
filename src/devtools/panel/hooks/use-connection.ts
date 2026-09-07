@@ -15,7 +15,6 @@ import {
   CLIENT_REQUEST_TYPE,
   CLIENT_RESPONSE_TYPE,
   PORT_NAME,
-  STORAGE_WARNING_KIND,
   type UserSettings,
 } from "@shared/types";
 import { useEffect, useRef } from "react";
@@ -51,6 +50,7 @@ export function useConnection(): void {
   const setIsRecording = usePanelStore((s) => s.setIsRecording);
   const updateSettings = usePanelStore((s) => s.updateSettings);
   const setSchemas = usePanelStore((s) => s.setSchemas);
+  const setLimitReached = usePanelStore((s) => s.setLimitReached);
   const reconnectRequest = usePanelStore((s) => s.reconnectRequest);
 
   useEffect(() => {
@@ -128,10 +128,12 @@ export function useConnection(): void {
 
         case BACKGROUND_MESSAGE_TYPE.STORAGE_WARNING:
           setWarningMessage(message.payload.message);
-          if (message.payload.kind === STORAGE_WARNING_KIND.PRUNED_BY_SIZE) {
-            // The worker dropped events in memory too - mirror it
-            void requestInitialState(tabId);
-          }
+          break;
+
+        case BACKGROUND_MESSAGE_TYPE.LIMIT_REACHED:
+          // Capture stopped; the timeline shows a banner with Clear
+          setLimitReached(true);
+          setWarningMessage(message.payload.message);
           break;
 
         case BACKGROUND_MESSAGE_TYPE.RECORDING_CHANGED:
@@ -208,6 +210,7 @@ export function useConnection(): void {
           setEvents(stateResponse.payload.events);
           setContainers(stateResponse.payload.containers);
           setIsRecording(stateResponse.payload.isRecording);
+          setLimitReached(stateResponse.payload.limitReached === true);
         }
 
         // Request settings (including enabled state)
@@ -271,6 +274,7 @@ export function useConnection(): void {
     setIsRecording,
     updateSettings,
     setSchemas,
+    setLimitReached,
   ]);
 
   // Manual "Reconnect" from the status bar: start over from attempt 0

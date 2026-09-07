@@ -85,7 +85,8 @@ function isEventCapturedPayload(payload: unknown): boolean {
     isObject(payload.data) &&
     Array.isArray(payload.containerIds) &&
     hasStringProp(payload, "sourceName") &&
-    hasNumberProp(payload, "index")
+    hasNumberProp(payload, "index") &&
+    isOptionalString(payload.documentId)
   );
 }
 
@@ -152,7 +153,8 @@ function isDataLayerEventPayload(payload: unknown): boolean {
     isObject(payload.data) &&
     Array.isArray(payload.containerIds) &&
     hasStringProp(payload, "source") &&
-    hasNumberProp(payload, "index")
+    hasNumberProp(payload, "index") &&
+    isOptionalString(payload.documentId)
   );
 }
 

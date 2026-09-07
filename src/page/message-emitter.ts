@@ -50,6 +50,7 @@ export interface CapturedEventData {
   readonly sourceName: string;
   readonly index: number;
   readonly trigger?: EventTrigger;
+  readonly documentId?: string;
 }
 
 /**

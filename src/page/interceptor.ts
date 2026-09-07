@@ -48,6 +48,17 @@ interface InterceptorState {
   containerIds: string[];
 }
 
+/**
+ * Identity of this page-script instance, i.e. of this document load.
+ * A reload creates a new instance (new id); a bfcache restore keeps it.
+ */
+const DOCUMENT_ID: string = generateId();
+
+/** For tests and diagnostics */
+export function getDocumentId(): string {
+  return DOCUMENT_ID;
+}
+
 // Module-level state (closure, not on window)
 const state: InterceptorState = {
   interceptedArrays: new WeakSet(),
@@ -247,6 +258,7 @@ function createCapturedEvent(
     sourceName,
     index: state.eventIndex,
     trigger: isPreexisting ? PRELOAD_TRIGGER : resolveTrigger(timestamp),
+    documentId: DOCUMENT_ID,
   };
 }
 

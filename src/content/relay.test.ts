@@ -186,6 +186,21 @@ describe("relay", () => {
       expect("trigger" in sent.payload).toBe(false);
     });
 
+    it("forwards the document id when present", () => {
+      pageHandler(
+        pageMessage(PAGE_MESSAGE_TYPE.EVENT_CAPTURED, {
+          ...CAPTURED_PAYLOAD,
+          documentId: "doc-1",
+        })
+      );
+
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({ documentId: "doc-1" }),
+        })
+      );
+    });
+
     it("forwards trigger attribution when present", () => {
       const trigger = {
         type: "click",

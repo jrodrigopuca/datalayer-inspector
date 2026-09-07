@@ -6,7 +6,12 @@
 import { TRIGGER_TYPE } from "@shared/types";
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetTracker } from "./interaction-tracker";
-import { interceptDataLayer, replayExisting, resetState } from "./interceptor";
+import {
+  getDocumentId,
+  interceptDataLayer,
+  replayExisting,
+  resetState,
+} from "./interceptor";
 import type { CapturedEventData } from "./message-emitter";
 
 describe("interceptor preload attribution", () => {
@@ -63,6 +68,18 @@ describe("interceptor preload attribution", () => {
     (window as unknown as Record<string, unknown>).notArray = 42;
     expect(replayExisting("notArray", (e) => captured.push(e))).toBe(0);
     expect(captured).toHaveLength(0);
+  });
+
+  it("stamps every event with this document's id", () => {
+    const win = window as unknown as { dataLayer: unknown[] };
+    win.dataLayer = [{ event: "gtm.js" }];
+    interceptDataLayer("dataLayer", (e) => captured.push(e));
+    win.dataLayer.push({ event: "add_to_cart" });
+
+    const ids = new Set(captured.map((e) => e.documentId));
+    expect(ids.size).toBe(1);
+    expect(getDocumentId()).toBeTruthy();
+    expect(captured[0]?.documentId).toBe(getDocumentId());
   });
 
   it("keeps the original order of pre-existing events", () => {

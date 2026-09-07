@@ -11,7 +11,8 @@ A Chrome DevTools extension built for developers and technical analysts who need
 - Intercepts all `dataLayer.push()` calls as they happen
 - Multi-container GTM support
 - Pause/resume a tab's timeline while Strata keeps capturing elsewhere
-- Event timeline with color-coded categories (GTM, Ecommerce, Custom, Errors)
+- Event timeline with color-coded categories (GTM, Ecommerce, Custom, Errors), page and reload separators
+- Explicit per-tab limit (500 by default, configurable): capture stops at the limit and asks you to clear; nothing is dropped silently
 
 ### Schema Validation
 

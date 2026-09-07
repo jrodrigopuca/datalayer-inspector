@@ -8,7 +8,6 @@
  * of items fine. Can add virtualization later if needed for 1000+ events.
  */
 
-import type { DataLayerEvent } from "@shared/types";
 import { useEffect, useMemo, useRef } from "react";
 import {
   useCommands,
@@ -17,35 +16,19 @@ import {
   useSchemas,
   useValidation,
 } from "../../hooks";
+import { buildTimelineRows, computeDeltas } from "../../lib/timeline-rows";
 import { usePanelStore } from "../../store";
 import { EmptyIcon } from "../common";
 import { EventItem } from "./EventItem";
-
-/**
- * Extract a display path from an event URL ("/checkout/payment")
- */
-function getPagePath(url: string): string {
-  try {
-    const parsed = new URL(url);
-    return parsed.pathname + parsed.search;
-  } catch {
-    return url;
-  }
-}
-
-/** Row model: an event, optionally preceded by a page separator */
-interface TimelineRow {
-  event: DataLayerEvent;
-  deltaMs: number | null;
-  pageBreak: string | null;
-}
 
 export function EventList() {
   const events = useFilteredEvents();
   const allEvents = usePanelStore((s) => s.events);
   const isRecording = usePanelStore((s) => s.isRecording);
   const isEnabled = usePanelStore((s) => s.settings.enabled);
-  const { toggleEnabled } = useCommands();
+  const limitReached = usePanelStore((s) => s.limitReached);
+  const maxEvents = usePanelStore((s) => s.settings.maxEventsPerTab);
+  const { toggleEnabled, clearEvents } = useCommands();
   const { selectedEventId, selectEvent } = useEventSelection();
   const autoScroll = usePanelStore((s) => s.settings.autoScroll);
   const showSchemaEditor = usePanelStore((s) => s.showSchemaEditor);
@@ -54,38 +37,11 @@ export function EventList() {
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Time deltas are computed against the FULL event stream (not the
-  // filtered view) so they stay truthful when filters hide events.
-  const deltaByEventId = useMemo(() => {
-    const deltas = new Map<string, number>();
-    for (let i = 1; i < allEvents.length; i++) {
-      const current = allEvents[i];
-      const previous = allEvents[i - 1];
-      if (current && previous) {
-        deltas.set(current.id, current.timestamp - previous.timestamp);
-      }
-    }
-    return deltas;
-  }, [allEvents]);
-
-  // Insert a page separator whenever the URL path changes between
-  // consecutive visible events.
-  const rows = useMemo<TimelineRow[]>(() => {
-    const result: TimelineRow[] = [];
-    let previousPath: string | null = null;
-
-    for (const event of events) {
-      const path = getPagePath(event.url);
-      result.push({
-        event,
-        deltaMs: deltaByEventId.get(event.id) ?? null,
-        pageBreak: previousPath !== null && path !== previousPath ? path : null,
-      });
-      previousPath = path;
-    }
-
-    return result;
-  }, [events, deltaByEventId]);
+  const deltaByEventId = useMemo(() => computeDeltas(allEvents), [allEvents]);
+  const rows = useMemo(
+    () => buildTimelineRows(events, deltaByEventId),
+    [events, deltaByEventId]
+  );
 
   // Auto-scroll to bottom when new events arrive
   useEffect(() => {
@@ -163,9 +119,29 @@ export function EventList() {
 
   return (
     <div ref={containerRef} className="h-full overflow-auto">
-      {rows.map(({ event, deltaMs, pageBreak }) => (
+      {limitReached && (
+        <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 text-xs bg-event-error/15 border-b border-event-error/40 text-gray-200">
+          <span className="flex-1">
+            Event limit reached ({maxEvents}). Capture is paused until you
+            clear.
+          </span>
+          <button
+            type="button"
+            onClick={() => void clearEvents()}
+            className="px-2 py-1 rounded bg-event-error/80 text-white hover:bg-event-error transition-colors"
+          >
+            Clear events
+          </button>
+        </div>
+      )}
+      {rows.map(({ event, deltaMs, separator }) => (
         <div key={event.id}>
-          {pageBreak !== null && <PageSeparator path={pageBreak} />}
+          {separator?.kind === "page" && (
+            <PageSeparator path={separator.path} />
+          )}
+          {separator?.kind === "reload" && (
+            <ReloadSeparator path={separator.path} />
+          )}
           <EventItem
             event={event}
             deltaMs={deltaMs}
@@ -180,6 +156,19 @@ export function EventList() {
         </div>
       ))}
       <div ref={bottomRef} />
+    </div>
+  );
+}
+
+/** Visual divider marking a reload of the same page */
+function ReloadSeparator({ path }: { path: string }) {
+  return (
+    <div className="flex items-center gap-2 px-2 py-1 text-2xs text-gray-500 bg-panel-surface/60 border-y border-panel-border/60">
+      <span aria-hidden="true">↻</span>
+      <span>Page reloaded</span>
+      <span className="font-mono truncate opacity-70" title={path}>
+        {path}
+      </span>
     </div>
   );
 }

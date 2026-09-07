@@ -57,6 +57,12 @@ export interface DataLayerEvent {
   readonly index: number;
   /** Best-effort attribution of what caused this push */
   readonly trigger?: EventTrigger;
+  /**
+   * Identity of the page-script instance that captured the event: one per
+   * document load. A reload yields a new id; a bfcache restore keeps it.
+   * The timeline uses it to mark reloads (docs/TECH-DEBT.md, item 16).
+   */
+  readonly documentId?: string;
 }
 
 /**
@@ -74,6 +80,8 @@ export interface TabState {
   readonly isRecording: boolean;
   /** Incremental counter for assigning event index */
   readonly nextIndex: number;
+  /** Capture stopped: the per-tab limit was hit; Clear to continue */
+  readonly limitReached: boolean;
 }
 
 /**
@@ -96,6 +104,9 @@ export interface MutableTabState {
   url: string;
   isRecording: boolean;
   nextIndex: number;
+  limitReached: boolean;
+  /** Running estimate of the serialized size of `events` (chars) */
+  approxBytes: number;
 }
 
 /**
@@ -103,9 +114,13 @@ export interface MutableTabState {
  */
 export function toReadonlyTabState(state: MutableTabState): TabState {
   return {
-    ...state,
+    tabId: state.tabId,
     events: [...state.events],
     containers: [...state.containers],
+    url: state.url,
+    isRecording: state.isRecording,
+    nextIndex: state.nextIndex,
+    limitReached: state.limitReached,
   };
 }
 
@@ -123,5 +138,7 @@ export function createInitialTabState(
     url,
     isRecording: true,
     nextIndex: 1,
+    limitReached: false,
+    approxBytes: 0,
   };
 }

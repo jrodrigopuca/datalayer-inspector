@@ -159,6 +159,7 @@ function transformMessage(
         source: payload.sourceName,
         index: payload.index,
         ...(payload.trigger && { trigger: payload.trigger }),
+        ...(payload.documentId && { documentId: payload.documentId }),
       };
 
       return {
