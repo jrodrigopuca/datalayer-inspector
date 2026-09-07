@@ -4,14 +4,19 @@
  * Manages per-tab state including events, containers, and recording status.
  * Acts as single source of truth for tab data.
  *
- * Uses chrome.storage.session for persistence to survive service worker dormancy.
+ * Uses chrome.storage.session for persistence to survive service worker
+ * dormancy. Each tab is stored under its own key so a write touches only the
+ * tab that changed and one oversized tab cannot take the others down with it
+ * (docs/TECH-DEBT.md, item 3).
  */
 
-import { LIMITS, STORAGE_KEYS } from "@shared/constants";
+import { LIMITS, STORAGE_KEYS, STORAGE_LIMITS } from "@shared/constants";
 import {
   createInitialTabState,
   type DataLayerEvent,
   type MutableTabState,
+  STORAGE_WARNING_KIND,
+  type StorageWarningPayload,
 } from "@shared/types";
 import { countToPrune } from "@shared/utils/prune";
 
@@ -27,58 +32,184 @@ const tabStates = new Map<number, MutableTabState>();
 let isRestored = false;
 
 /**
- * Debounce timer for persistence
+ * Debounce delay between the last change and the write (ms)
  */
-let persistTimeout: ReturnType<typeof setTimeout> | null = null;
+const PERSIST_DEBOUNCE_MS = 100;
 
 /**
- * Persist tab states to session storage (debounced)
+ * Pending persistence timers, one per tab
  */
-function schedulePersist(): void {
-  if (persistTimeout) {
-    clearTimeout(persistTimeout);
-  }
+const persistTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
-  persistTimeout = setTimeout(() => {
-    void persistToStorage();
-  }, 100);
+/**
+ * Per-tab serialized size budget (see STORAGE_LIMITS)
+ */
+let tabStateByteBudget: number = STORAGE_LIMITS.MAX_TAB_STATE_BYTES;
+
+/**
+ * Override the per-tab byte budget (testing / future setting)
+ */
+export function setTabStateByteBudget(bytes: number): void {
+  if (Number.isFinite(bytes) && bytes > 0) {
+    tabStateByteBudget = bytes;
+  }
 }
 
 /**
- * Actually persist to storage
+ * Listener notified when persistence had to drop events or failed.
+ * The service worker entry point forwards these to the tab's clients.
  */
-async function persistToStorage(): Promise<void> {
+type StorageWarningListener = (warning: StorageWarningPayload) => void;
+let storageWarningListener: StorageWarningListener | null = null;
+
+export function onStorageWarning(
+  listener: StorageWarningListener | null
+): void {
+  storageWarningListener = listener;
+}
+
+function emitStorageWarning(warning: StorageWarningPayload): void {
   try {
-    const serializable: Record<string, MutableTabState> = {};
-    for (const [tabId, state] of tabStates) {
-      serializable[tabId.toString()] = state;
+    storageWarningListener?.(warning);
+  } catch (error) {
+    console.error("[Strata] Storage warning listener failed:", error);
+  }
+}
+
+/**
+ * Session storage key for a tab
+ */
+function tabStorageKey(tabId: number): string {
+  return `${STORAGE_KEYS.TAB_STATE_PREFIX}${tabId}`;
+}
+
+/**
+ * Parse a session storage key back into a tab id (null if not ours)
+ */
+function tabIdFromKey(key: string): number | null {
+  if (!key.startsWith(STORAGE_KEYS.TAB_STATE_PREFIX)) return null;
+  const tabId = Number(key.slice(STORAGE_KEYS.TAB_STATE_PREFIX.length));
+  return Number.isInteger(tabId) ? tabId : null;
+}
+
+/**
+ * Minimal shape check for a restored state (storage is not fully trusted)
+ */
+function isTabStateLike(value: unknown): value is MutableTabState {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.tabId === "number" &&
+    Array.isArray(candidate.events) &&
+    Array.isArray(candidate.containers) &&
+    typeof candidate.isRecording === "boolean" &&
+    typeof candidate.nextIndex === "number"
+  );
+}
+
+/**
+ * Schedule a debounced write for one tab
+ */
+function schedulePersist(tabId: number): void {
+  const pending = persistTimers.get(tabId);
+  if (pending) {
+    clearTimeout(pending);
+  }
+
+  persistTimers.set(
+    tabId,
+    setTimeout(() => {
+      persistTimers.delete(tabId);
+      void persistToStorage(tabId);
+    }, PERSIST_DEBOUNCE_MS)
+  );
+}
+
+/**
+ * Drop the oldest events until the serialized state fits the byte budget.
+ * Mutates the in-memory state so memory and storage never disagree.
+ *
+ * @returns Number of events dropped
+ */
+function pruneToByteBudget(state: MutableTabState): number {
+  let size = JSON.stringify(state).length;
+  if (size <= tabStateByteBudget) return 0;
+
+  let toDrop = 0;
+  // Always keep the newest event, however large it is
+  const droppable = state.events.length - 1;
+  for (const event of state.events) {
+    if (size <= tabStateByteBudget || toDrop >= droppable) break;
+    // +1 for the separating comma in the serialized array
+    size -= JSON.stringify(event).length + 1;
+    toDrop++;
+  }
+
+  if (toDrop > 0) {
+    state.events.splice(0, toDrop);
+  }
+  return toDrop;
+}
+
+/**
+ * Write one tab's state (or remove its key if the tab is gone)
+ */
+async function persistToStorage(tabId: number): Promise<void> {
+  const key = tabStorageKey(tabId);
+  const state = tabStates.get(tabId);
+
+  try {
+    if (!state) {
+      await chrome.storage.session.remove(key);
+      return;
     }
 
-    await chrome.storage.session.set({
-      [STORAGE_KEYS.TAB_STATES]: serializable,
-    });
+    const dropped = pruneToByteBudget(state);
+    if (dropped > 0) {
+      emitStorageWarning({
+        tabId,
+        kind: STORAGE_WARNING_KIND.PRUNED_BY_SIZE,
+        droppedCount: dropped,
+        message: `Dropped ${dropped} oldest event${dropped === 1 ? "" : "s"} to fit the session storage budget`,
+      });
+    }
+
+    await chrome.storage.session.set({ [key]: state });
   } catch (error) {
-    console.error("[Strata] Failed to persist tab states:", error);
+    console.error(`[Strata] Failed to persist tab ${tabId}:`, error);
+    emitStorageWarning({
+      tabId,
+      kind: STORAGE_WARNING_KIND.PERSIST_FAILED,
+      droppedCount: 0,
+      message:
+        "Could not save the session; events will be lost if the service worker restarts",
+    });
   }
 }
 
 /**
- * Restore tab states from session storage
+ * Restore every tab state from session storage
  */
 export async function restoreFromStorage(): Promise<void> {
   if (isRestored) return;
 
   try {
-    const result = await chrome.storage.session.get(STORAGE_KEYS.TAB_STATES);
-    const stored = result[STORAGE_KEYS.TAB_STATES] as
-      | Record<string, MutableTabState>
-      | undefined;
+    const all = await chrome.storage.session.get(null);
 
-    if (stored) {
-      tabStates.clear();
-      for (const [tabIdStr, state] of Object.entries(stored)) {
-        tabStates.set(Number(tabIdStr), state);
+    tabStates.clear();
+    for (const [key, value] of Object.entries(all)) {
+      const tabId = tabIdFromKey(key);
+      if (tabId === null) continue;
+      if (!isTabStateLike(value)) {
+        console.warn(`[Strata] Ignoring malformed stored state for ${key}`);
+        continue;
       }
+      tabStates.set(tabId, value);
+    }
+
+    // Pre-1.5 layout stored every tab under one key; drop it if present
+    if (STORAGE_KEYS.LEGACY_TAB_STATES in all) {
+      void chrome.storage.session.remove(STORAGE_KEYS.LEGACY_TAB_STATES);
     }
 
     isRestored = true;
@@ -100,7 +231,7 @@ export function getOrCreateTabState(
   if (!state) {
     state = createInitialTabState(tabId, url);
     tabStates.set(tabId, state);
-    schedulePersist();
+    schedulePersist(tabId);
   }
 
   return state;
@@ -153,7 +284,7 @@ export function addEvent(
   // Prune old events if over limit
   pruneEventsIfNeeded(state);
 
-  schedulePersist();
+  schedulePersist(tabId);
   return fullEvent;
 }
 
@@ -170,7 +301,7 @@ export function updateContainers(tabId: number, containerIds: string[]): void {
   }
 
   state.containers = [...existing];
-  schedulePersist();
+  schedulePersist(tabId);
 }
 
 /**
@@ -179,7 +310,7 @@ export function updateContainers(tabId: number, containerIds: string[]): void {
 export function setRecording(tabId: number, isRecording: boolean): void {
   const state = getOrCreateTabState(tabId);
   state.isRecording = isRecording;
-  schedulePersist();
+  schedulePersist(tabId);
 }
 
 /**
@@ -190,7 +321,7 @@ export function clearEvents(tabId: number): void {
   if (state) {
     state.events = [];
     state.nextIndex = 1;
-    schedulePersist();
+    schedulePersist(tabId);
   }
 }
 
@@ -205,7 +336,7 @@ export function resetTabState(tabId: number, newUrl: string = ""): void {
     state.url = newUrl;
     state.nextIndex = 1;
     // Keep isRecording as-is
-    schedulePersist();
+    schedulePersist(tabId);
   }
 }
 
@@ -216,7 +347,7 @@ export function updateTabUrl(tabId: number, newUrl: string): void {
   const state = tabStates.get(tabId);
   if (state) {
     state.url = newUrl;
-    schedulePersist();
+    schedulePersist(tabId);
   }
 }
 
@@ -226,7 +357,8 @@ export function updateTabUrl(tabId: number, newUrl: string): void {
 export function removeTabState(tabId: number): boolean {
   const deleted = tabStates.delete(tabId);
   if (deleted) {
-    schedulePersist();
+    // With no in-memory state the write becomes a key removal
+    schedulePersist(tabId);
   }
   return deleted;
 }
@@ -300,8 +432,15 @@ export function importStates(states: Map<number, MutableTabState>): void {
 }
 
 /**
- * Clear all states (for testing)
+ * Clear all states and pending writes (for testing)
  */
 export function clearAllStates(): void {
   tabStates.clear();
+  for (const timer of persistTimers.values()) {
+    clearTimeout(timer);
+  }
+  persistTimers.clear();
+  isRestored = false;
+  tabStateByteBudget = STORAGE_LIMITS.MAX_TAB_STATE_BYTES;
+  storageWarningListener = null;
 }

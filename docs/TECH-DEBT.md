@@ -24,8 +24,8 @@
 | # | Ítem | Bucket | Estado | Commit |
 |---|------|--------|--------|--------|
 | 1 | CI y umbral de coverage honesto | Estructural | ✅ Cerrado (e2e queda manual, ver nota) | `8128a01` |
-| 2 | Acotar el panel al mismo límite que el service worker | Estructural | ✅ Cerrado | |
-| 3 | Persistencia por tab en `storage.session` | Estructural | ⬜ Pendiente | |
+| 2 | Acotar el panel al mismo límite que el service worker | Estructural | ✅ Cerrado | `108b1cd` |
+| 3 | Persistencia por tab en `storage.session` | Estructural | ✅ Cerrado | |
 | 4 | Un único dueño de la persistencia de schemas | Estructural | ⬜ Pendiente | |
 | 5 | Cerrar el gap de inyección del page script | Estructural | ⬜ Pendiente | |
 | 6 | Restringir el texto capturado por el tracker | Privacidad | ⬜ Pendiente | |
@@ -100,7 +100,7 @@ captura o la persistencia. Refactorizar eso sin red es apostar.
 **Criterio de aceptación.**
 
 - [x] Un PR con un test que falla se marca rojo en GitHub (`.github/workflows/ci.yml`, job `check`).
-- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 37/35/23/39 tras el ítem 2, medido 38.0/36.2/24.0/39.8).
+- [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 39/36/24/41 tras el ítem 3, medido 39.8/37.6/25.1/41.7).
 - [x] Existen tests para los cuatro módulos listados en el paso 3 (59 tests nuevos; 235 en total).
 
 **Nota de cierre (2026-09).** El job `e2e` existe pero corre solo con `workflow_dispatch`. Promoverlo a cada PR cuando haya pasado verde tres veces seguidas de forma manual. Ese es el único cabo suelto del ítem.
@@ -193,11 +193,27 @@ desbordó.
 
 **Criterio de aceptación.**
 
-- [ ] Test unitario: un evento en el tab A produce una escritura que contiene
-      solo la clave del tab A.
-- [ ] Test unitario: `restoreFromStorage` reconstruye N tabs desde N claves.
-- [ ] Test unitario: superar el presupuesto por tab poda y emite el aviso, no
+- [x] Test unitario: un evento en el tab A produce una escritura que contiene
+      solo la clave del tab A (`src/background/tab-manager.persistence.test.ts`).
+- [x] Test unitario: `restoreFromStorage` reconstruye N tabs desde N claves.
+- [x] Test unitario: superar el presupuesto por tab poda y emite el aviso, no
       lanza ni silencia.
+
+**Nota de cierre (2026-09).**
+
+- Claves `strata_tab_<tabId>`; un timer de debounce por tab; cerrar el tab
+  borra su clave. La clave única anterior (`strata_tab_states`) se elimina en
+  el primer restore si existe.
+- Presupuesto por tab en `STORAGE_LIMITS.MAX_TAB_STATE_BYTES` (2 MB, medido
+  como longitud del JSON, que es como Chrome mide la cuota). Al superarlo se
+  podan los eventos más viejos EN MEMORIA (no solo en la escritura), para que
+  SW y panel no diverjan; siempre se conserva el más nuevo.
+- Nuevo mensaje `STORAGE_WARNING` (`pruned-by-size` | `persist-failed`). El
+  panel lo muestra en ámbar en la barra de estado, con botón para descartarlo,
+  y en el caso `pruned-by-size` re-sincroniza el estado desde el SW.
+- `restoreFromStorage` valida la forma de cada estado antes de cargarlo; un
+  valor corrupto se ignora con un warning en lugar de romper el arranque.
+- Pendiente para el ítem 12: `DESIGN.md` §10 describe la clave única vieja.
 
 ---
 

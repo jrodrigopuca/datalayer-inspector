@@ -63,8 +63,10 @@ export interface UISlice {
   searchQuery: string;
   /** Active filter (event type) */
   activeFilter: string | null;
-  /** Error message if any */
+  /** Error message if any (connection problems) */
   errorMessage: string | null;
+  /** Non-fatal warning (e.g. session storage pruned or unavailable) */
+  warningMessage: string | null;
   /** Current tab ID */
   tabId: number | null;
   /** JSON tree expanded paths (for detail view) */
@@ -81,6 +83,7 @@ export interface UISlice {
   setSearchQuery: (query: string) => void;
   setActiveFilter: (filter: string | null) => void;
   setErrorMessage: (message: string | null) => void;
+  setWarningMessage: (message: string | null) => void;
   setTabId: (tabId: number | null) => void;
   togglePath: (path: string) => void;
   expandPath: (path: string) => void;
@@ -103,6 +106,7 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   searchQuery: "",
   activeFilter: null,
   errorMessage: null,
+  warningMessage: null,
   tabId: null,
   expandedPaths: new Set(),
   rightPanelView: { type: RIGHT_PANEL_VIEW.EVENT_DETAIL },
@@ -119,6 +123,8 @@ export const createUISlice: StateCreator<UISlice, [], [], UISlice> = (set) => ({
   setActiveFilter: (activeFilter) => set({ activeFilter }),
 
   setErrorMessage: (errorMessage) => set({ errorMessage }),
+
+  setWarningMessage: (warningMessage) => set({ warningMessage }),
 
   setTabId: (tabId) => set({ tabId }),
 

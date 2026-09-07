@@ -120,7 +120,28 @@ export const BACKGROUND_MESSAGE_TYPE = {
   TAB_STATE_RESET: "TAB_STATE_RESET",
   RECORDING_CHANGED: "RECORDING_CHANGED",
   EXTENSION_ENABLED_CHANGED: "EXTENSION_ENABLED_CHANGED",
+  STORAGE_WARNING: "STORAGE_WARNING",
 } as const;
+
+/** Why the service worker is warning about session persistence */
+export const STORAGE_WARNING_KIND = {
+  /** Oldest events were dropped to fit the per-tab byte budget */
+  PRUNED_BY_SIZE: "pruned-by-size",
+  /** The write failed (quota exhausted or storage unavailable) */
+  PERSIST_FAILED: "persist-failed",
+} as const;
+
+export type StorageWarningKind =
+  (typeof STORAGE_WARNING_KIND)[keyof typeof STORAGE_WARNING_KIND];
+
+export interface StorageWarningPayload {
+  readonly tabId: number;
+  readonly kind: StorageWarningKind;
+  /** Events removed from the tab (0 for persist failures) */
+  readonly droppedCount: number;
+  /** Human-readable summary for the status bar */
+  readonly message: string;
+}
 
 export type BackgroundMessageType =
   (typeof BACKGROUND_MESSAGE_TYPE)[keyof typeof BACKGROUND_MESSAGE_TYPE];
@@ -163,6 +184,10 @@ export type BackgroundToClientMessage =
       readonly payload: {
         readonly enabled: boolean;
       };
+    }
+  | {
+      readonly type: typeof BACKGROUND_MESSAGE_TYPE.STORAGE_WARNING;
+      readonly payload: StorageWarningPayload;
     };
 
 // ============================================================================

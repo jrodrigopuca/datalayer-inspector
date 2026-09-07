@@ -17,6 +17,7 @@ import {
   type ClientToBackgroundRequest,
   type ClientToBackgroundResponse,
   PORT_NAME,
+  STORAGE_WARNING_KIND,
   type UserSettings,
 } from "@shared/types";
 import { useEffect, useRef } from "react";
@@ -31,6 +32,7 @@ export function useConnection(): void {
 
   const setConnectionState = usePanelStore((s) => s.setConnectionState);
   const setErrorMessage = usePanelStore((s) => s.setErrorMessage);
+  const setWarningMessage = usePanelStore((s) => s.setWarningMessage);
   const setTabId = usePanelStore((s) => s.setTabId);
   const setEvents = usePanelStore((s) => s.setEvents);
   const addEvent = usePanelStore((s) => s.addEvent);
@@ -82,7 +84,16 @@ export function useConnection(): void {
         case BACKGROUND_MESSAGE_TYPE.TAB_STATE_RESET:
           // Re-sync state from background - don't clear first to avoid flash of empty state
           // The requestInitialState will set the correct events from background
+          setWarningMessage(null);
           void requestInitialState(tabId);
+          break;
+
+        case BACKGROUND_MESSAGE_TYPE.STORAGE_WARNING:
+          setWarningMessage(message.payload.message);
+          if (message.payload.kind === STORAGE_WARNING_KIND.PRUNED_BY_SIZE) {
+            // The worker dropped events in memory too - mirror it
+            void requestInitialState(tabId);
+          }
           break;
 
         case BACKGROUND_MESSAGE_TYPE.RECORDING_CHANGED:
@@ -192,6 +203,7 @@ export function useConnection(): void {
   }, [
     setConnectionState,
     setErrorMessage,
+    setWarningMessage,
     setTabId,
     setEvents,
     addEvent,

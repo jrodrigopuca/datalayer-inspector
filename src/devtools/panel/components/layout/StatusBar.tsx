@@ -17,12 +17,14 @@ import {
 } from "../../store/selectors";
 
 export function StatusBar() {
-  const { containers, errorMessage } = usePanelStore(
+  const { containers, errorMessage, warningMessage } = usePanelStore(
     useShallow((s) => ({
       containers: s.containers,
       errorMessage: s.errorMessage,
+      warningMessage: s.warningMessage,
     }))
   );
+  const setWarningMessage = usePanelStore((s) => s.setWarningMessage);
 
   const counts = usePanelStore(useShallow(selectEventCounts));
   const validation = usePanelStore(useShallow(selectValidationSummary));
@@ -174,6 +176,23 @@ export function StatusBar() {
 
       {/* Right section: Error + Hints */}
       <div className="flex items-center gap-4">
+        {/* Storage warning (non-fatal, dismissible) */}
+        {warningMessage && (
+          <span className="flex items-center gap-1 text-yellow-500">
+            <span title={warningMessage} className="truncate max-w-72">
+              ⚠ {warningMessage}
+            </span>
+            <button
+              type="button"
+              onClick={() => setWarningMessage(null)}
+              aria-label="Dismiss warning"
+              className="px-1 hover:text-yellow-300 transition-colors"
+            >
+              ×
+            </button>
+          </span>
+        )}
+
         {/* Error message */}
         {errorMessage && (
           <span className="text-event-error">{errorMessage}</span>

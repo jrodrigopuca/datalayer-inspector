@@ -15,7 +15,7 @@
  * Handlers that need restored state await the `ready` gate instead.
  */
 
-import { PORT_NAME } from "@shared/types";
+import { BACKGROUND_MESSAGE_TYPE, PORT_NAME } from "@shared/types";
 import {
   handleClientRequest,
   handleContentMessage,
@@ -23,7 +23,7 @@ import {
   handleTabRemoved,
   toggleExtensionEnabled,
 } from "./message-handler";
-import { registerPort } from "./port-manager";
+import { broadcastToTab, registerPort } from "./port-manager";
 import * as storage from "./storage";
 import * as tabManager from "./tab-manager";
 
@@ -47,6 +47,14 @@ const ready: Promise<void> = (async () => {
 // Keep the event limit in sync with settings changes
 storage.onSettingsChanged((updated) => {
   tabManager.setMaxEventsPerTab(updated.maxEventsPerTab);
+});
+
+// Surface persistence problems in the panel instead of only in the console
+tabManager.onStorageWarning((warning) => {
+  broadcastToTab(warning.tabId, {
+    type: BACKGROUND_MESSAGE_TYPE.STORAGE_WARNING,
+    payload: warning,
+  });
 });
 
 /**

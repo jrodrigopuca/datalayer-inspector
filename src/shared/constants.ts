@@ -32,10 +32,25 @@ export const LIMITS = {
 export const STORAGE_KEYS = {
   /** User settings (sync storage) */
   SETTINGS: "strata_settings",
-  /** Tab states backup (session storage) */
-  TAB_STATES: "strata_tab_states",
+  /** Per-tab state backup (session storage): `${TAB_STATE_PREFIX}${tabId}` */
+  TAB_STATE_PREFIX: "strata_tab_",
+  /** Pre-1.5 single-key backup, removed on restore */
+  LEGACY_TAB_STATES: "strata_tab_states",
   /** Schemas for validation - Phase 2 (local storage) */
   SCHEMAS: "strata_schemas",
+} as const;
+
+/**
+ * Persistence budgets for chrome.storage.session
+ *
+ * The session area is capped at 10 MB shared by every tab. Each tab gets a
+ * slice of it; when a tab's serialized state exceeds the slice, the oldest
+ * events are dropped and the panel is told (docs/TECH-DEBT.md, item 3).
+ * Chrome measures quota as the JSON string length of value plus key.
+ */
+export const STORAGE_LIMITS = {
+  /** Maximum serialized size of one tab's state (approx. bytes) */
+  MAX_TAB_STATE_BYTES: 2_000_000,
 } as const;
 
 /**

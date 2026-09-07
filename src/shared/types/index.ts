@@ -49,6 +49,8 @@ export type {
   PageMessageType,
   PageToContentMessage,
   PortName,
+  StorageWarningKind,
+  StorageWarningPayload,
   TabResetReason,
 } from "./messages";
 export {
@@ -60,6 +62,7 @@ export {
   MESSAGE_SOURCE,
   PAGE_MESSAGE_TYPE,
   PORT_NAME,
+  STORAGE_WARNING_KIND,
   TAB_RESET_REASON,
 } from "./messages";
 // Schema types
