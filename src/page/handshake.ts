@@ -5,7 +5,9 @@
  * index.ts so the four situations are testable:
  *
  * - first handshake: announce (DL_INITIALIZED); the buffer holds the rest
- * - same relay, capture turned ON: replay the array (history) as preload
+ * - same relay, capture turned ON: the buffer (containers included) was
+ *   dropped while off, so re-announce containers and replay the array
+ *   (history) as preload
  * - NEW relay (extension reloaded/enabled): its worker knows nothing about
  *   this tab, so re-announce containers and replay the history
  * - anything else: just apply the enabled flag
@@ -45,7 +47,7 @@ export function planHandshake(
 
   return {
     announce: first,
-    reannounceContainers: newRelay,
+    reannounceContainers: newRelay || turnedOn,
     replayHistory: config.enabled && (turnedOn || newRelay),
     next: {
       announced: true,

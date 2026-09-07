@@ -8,7 +8,7 @@
  * of items fine. Can add virtualization later if needed for 1000+ events.
  */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useCommands,
   useEventSelection,
@@ -18,7 +18,7 @@ import {
 } from "../../hooks";
 import { buildTimelineRows, computeDeltas } from "../../lib/timeline-rows";
 import { usePanelStore } from "../../store";
-import { EmptyIcon } from "../common";
+import { ConfirmDialog, EmptyIcon } from "../common";
 import { EventItem } from "./EventItem";
 
 export function EventList() {
@@ -36,6 +36,7 @@ export function EventList() {
   const { createSchemaFromEvent } = useSchemas();
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const deltaByEventId = useMemo(() => computeDeltas(allEvents), [allEvents]);
   const rows = useMemo(
@@ -120,7 +121,7 @@ export function EventList() {
   return (
     <div ref={containerRef} className="h-full overflow-auto">
       {!isEnabled && (
-        <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 text-xs bg-panel-surface border-b border-panel-border text-gray-300">
+        <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 text-xs bg-panel-surface border-b border-panel-border border-l-4 border-l-gray-500 text-gray-300">
           <span className="flex-1">
             Capture is off. These events are from before; new pushes are not
             being recorded.
@@ -135,20 +136,33 @@ export function EventList() {
         </div>
       )}
       {limitReached && (
-        <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 text-xs bg-event-error/15 border-b border-event-error/40 text-gray-200">
+        <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 text-xs bg-panel-surface border-b border-panel-border border-l-4 border-l-event-error text-event-error">
           <span className="flex-1">
             Event limit reached ({maxEvents}). Capture is paused until you
             clear.
           </span>
           <button
             type="button"
-            onClick={() => void clearEvents()}
-            className="px-2 py-1 rounded bg-event-error/80 text-white hover:bg-event-error transition-colors"
+            onClick={() => setShowClearConfirm(true)}
+            className="px-2 py-1 rounded bg-event-error text-white hover:opacity-90 transition-opacity"
           >
             Clear events
           </button>
         </div>
       )}
+      <ConfirmDialog
+        isOpen={showClearConfirm}
+        title="Clear All Events"
+        message={`This removes all ${allEvents.length} captured events and resumes capture. Export them first if you need them.`}
+        confirmText="Clear"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          setShowClearConfirm(false);
+          void clearEvents();
+        }}
+        onCancel={() => setShowClearConfirm(false)}
+      />
       {rows.map(({ event, deltaMs, separator }) => (
         <div key={event.id}>
           {separator?.kind === "page" && (

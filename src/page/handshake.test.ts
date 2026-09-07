@@ -39,7 +39,7 @@ describe("planHandshake", () => {
     });
   });
 
-  it("same relay, capture turned on after being off: replay the history", () => {
+  it("same relay, capture turned on after being off: re-announce containers and replay", () => {
     const state = { announced: true, wasEnabled: false, lastRelayId: "r1" };
 
     const plan = planHandshake(state, {
@@ -49,7 +49,8 @@ describe("planHandshake", () => {
     });
 
     expect(plan.replayHistory).toBe(true);
-    expect(plan.reannounceContainers).toBe(false);
+    // The initial announcement was dropped with the buffer while off
+    expect(plan.reannounceContainers).toBe(true);
   });
 
   it("new relay while enabled (extension reloaded/enabled): re-announce and replay", () => {

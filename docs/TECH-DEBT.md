@@ -652,8 +652,12 @@ recarga. Además, el autor fijó dos principios:
 - [x] Manual (smoke test, autor 2026-09): recargar la página con Strata
       encendido muestra "↻ Page reloaded" antes de los nuevos Pre-existing;
       el estado en `session` tiene dos `documentId`.
-- [ ] Manual: poner el límite en 100 en Settings, superar 100 pushes; el
-      contador queda en 100/100 en rojo, aparece el banner, Clear reanuda.
+- [x] Manual (autor, 2026-09): al superar el límite aparece el banner y
+      Clear reanuda. Dos ajustes a partir de la prueba: el fondo translúcido
+      del banner se veía mal sobre el timeline (ahora superficie opaca con
+      borde rojo), y el botón Clear del banner no pedía confirmación,
+      mientras que el del toolbar sí; ahora abre el mismo diálogo y
+      recuerda exportar antes.
 
 ### 17. El panel muere tras recargar la extensión y no explica cómo recuperarse
 
@@ -851,9 +855,15 @@ va en la misma dirección equivocada (descartado, ver log). Por eso
       Hallazgo: con eventos conservados de antes, el estado vacío "Capture is
       off" no aparece y nada más avisa; se agregó un banner fijo arriba del
       timeline cuando Strata está apagado y hay eventos.
-- [ ] Manual: encender desde el panel; deben aparecer los eventos previos
-      como Pre-existing (tras "↻ Page reloaded", porque la página se recargó
-      apagada) y los clicks posteriores en vivo.
+- [x] Manual (autor, 2026-09): encender desde el panel; aparecen los
+      eventos previos como Pre-existing y el click posterior en vivo con su
+      label. Bug encontrado: el export traía `containers: []` mientras cada
+      evento tenía `containerIds`. Causa: con la página cargada apagada, el
+      anuncio inicial de containers se descarta con el buffer, y al
+      encender `planHandshake` solo re-anunciaba ante un relay NUEVO. Fix:
+      re-anunciar también en la transición apagado → encendido (test
+      actualizado). Verificar en el próximo build que `containers` vuelve a
+      traer `GTM-SMOKE1` tras encender.
 
 ---
 
