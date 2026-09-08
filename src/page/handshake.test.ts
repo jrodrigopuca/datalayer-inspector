@@ -14,7 +14,7 @@ describe("planHandshake", () => {
     expect(plan).toMatchObject({
       announce: true,
       reannounceContainers: false,
-      replayHistory: false,
+      replay: null,
     });
     expect(plan.next).toEqual({
       announced: true,
@@ -35,7 +35,7 @@ describe("planHandshake", () => {
     expect(plan).toMatchObject({
       announce: false,
       reannounceContainers: false,
-      replayHistory: false,
+      replay: null,
     });
   });
 
@@ -48,7 +48,8 @@ describe("planHandshake", () => {
       relayId: "r1",
     });
 
-    expect(plan.replayHistory).toBe(true);
+    // Only what the worker never received: toggling must not duplicate
+    expect(plan.replay).toBe("undelivered");
     // The initial announcement was dropped with the buffer while off
     expect(plan.reannounceContainers).toBe(true);
   });
@@ -65,7 +66,7 @@ describe("planHandshake", () => {
     expect(plan).toMatchObject({
       announce: false,
       reannounceContainers: true,
-      replayHistory: true,
+      replay: "all",
     });
     expect(plan.next.lastRelayId).toBe("r2");
   });
@@ -80,7 +81,7 @@ describe("planHandshake", () => {
     });
 
     expect(plan.reannounceContainers).toBe(true);
-    expect(plan.replayHistory).toBe(false);
+    expect(plan.replay).toBeNull();
   });
 
   it("first handshake while disabled never replays, and a later enable does", () => {
@@ -89,13 +90,13 @@ describe("planHandshake", () => {
       dataLayerNames: NAMES,
       relayId: "r1",
     });
-    expect(first.replayHistory).toBe(false);
+    expect(first.replay).toBeNull();
 
     const later = planHandshake(first.next, {
       enabled: true,
       dataLayerNames: NAMES,
       relayId: "r1",
     });
-    expect(later.replayHistory).toBe(true);
+    expect(later.replay).toBe("undelivered");
   });
 });

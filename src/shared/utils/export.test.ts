@@ -3,7 +3,9 @@ import type { DataLayerEvent, EventValidation } from "../types";
 import {
   createExportPayload,
   EXPORT_FORMAT_VERSION,
+  generateDataLayerOnlyFilename,
   generateExportFilename,
+  serializeDataLayerOnly,
   serializeExport,
   summarizeEvents,
   transformEventForExport,
@@ -281,6 +283,36 @@ describe("createExportPayload", () => {
     const payload = createExportPayload(events, [], currentUrl);
 
     expect(payload.containers).toEqual([]);
+  });
+});
+
+describe("serializeDataLayerOnly", () => {
+  it("is a plain array of the pushed objects, in order, with nothing added", () => {
+    const events = [
+      createMockEvent({ id: "1", data: { event: "gtm.js", "gtm.start": 1 } }),
+      createMockEvent({
+        id: "2",
+        data: { event: "purchase", ecommerce: { value: 9.99 } },
+      }),
+    ];
+
+    const parsed: unknown = JSON.parse(serializeDataLayerOnly(events));
+
+    expect(parsed).toEqual([
+      { event: "gtm.js", "gtm.start": 1 },
+      { event: "purchase", ecommerce: { value: 9.99 } },
+    ]);
+  });
+
+  it("is pretty-printed and empty for no events", () => {
+    expect(serializeDataLayerOnly([])).toBe("[]");
+    expect(serializeDataLayerOnly([createMockEvent()])).toContain("\n");
+  });
+
+  it("names the file after the domain with a payloads suffix", () => {
+    expect(generateDataLayerOnlyFilename("https://shop.example.com/x")).toMatch(
+      /^datalayer-shop-example-com-.*-payloads\.json$/
+    );
   });
 });
 

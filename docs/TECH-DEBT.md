@@ -862,8 +862,22 @@ va en la misma dirección equivocada (descartado, ver log). Por eso
       anuncio inicial de containers se descarta con el buffer, y al
       encender `planHandshake` solo re-anunciaba ante un relay NUEVO. Fix:
       re-anunciar también en la transición apagado → encendido (test
-      actualizado). Verificar en el próximo build que `containers` vuelve a
-      traer `GTM-SMOKE1` tras encender.
+      actualizado). Segunda vuelta (autor): seguía sin salir
+      `DL_CONTAINERS_DETECTED` tras encender. Causa: `index.ts` re-anunciaba
+      ANTES de aplicar `enabled: true` al emisor, que lo descartaba. Fix de
+      orden, más un test de integración del page script completo
+      (`src/page/index.test.ts`) que cubre el orden del handshake. También
+      "Connected · capture off" en la barra, porque "Connected" a secas con
+      Strata apagado resultaba confuso. Tercera vuelta (autor): `containers`
+      verificado, pero apagar y encender SIN recargar replayaba el historial
+      entero y duplicaba los eventos en el worker. Fix: el emisor cuenta los
+      eventos ENTREGADOS por array y, en la transición apagado → encendido,
+      se replaya solo lo no entregado (lo pushed mientras estaba apagado);
+      un relay nuevo sigue recibiendo todo. Cubierto por
+      `src/page/index.test.ts`. Verificado por el autor (2026-09): con seis
+      eventos capturados, apagar, cuatro pushes apagado, encender: entran
+      exactamente esos cuatro como Pre-existing, sin duplicar los seis
+      anteriores; `session` y export coinciden. Caso 2 CERRADO.
 
 ---
 

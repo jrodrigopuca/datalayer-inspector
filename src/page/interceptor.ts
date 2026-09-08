@@ -131,22 +131,35 @@ export function interceptDataLayer(
 }
 
 /**
- * Re-emit everything currently in an array as "preload" events.
+ * Re-emit the array's contents as "preload" events, skipping the first
+ * `skipValidItems` pushes (the ones the worker already has).
  *
- * Used when capture is turned ON after the page loaded: the array IS the
- * history GTM keeps, so nothing needs to be buffered while capture is off.
+ * The array IS the history GTM keeps, so nothing needs to be buffered while
+ * capture is off: turning it on replays what was never delivered, and a
+ * fresh worker gets everything.
  *
  * @returns Number of events emitted
  */
 export function replayExisting(
   arrayName: string,
-  onEvent: EventCallback
+  onEvent: EventCallback,
+  skipValidItems = 0
 ): number {
   try {
     const win = window as unknown as Record<string, unknown>;
     const arr = win[arrayName];
     if (!Array.isArray(arr)) return 0;
-    return processExistingEvents(arr, arrayName, onEvent);
+
+    let seen = 0;
+    let count = 0;
+    for (const item of arr) {
+      if (!isValidPushItem(item)) continue;
+      seen++;
+      if (seen <= skipValidItems) continue;
+      onEvent(createCapturedEvent(item, arrayName, true));
+      count++;
+    }
+    return count;
   } catch {
     return 0;
   }

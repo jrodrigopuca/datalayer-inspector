@@ -5,11 +5,11 @@
  * index.ts so the four situations are testable:
  *
  * - first handshake: announce (DL_INITIALIZED); the buffer holds the rest
- * - same relay, capture turned ON: the buffer (containers included) was
- *   dropped while off, so re-announce containers and replay the array
- *   (history) as preload
+ * - same relay, capture turned ON: whatever was buffered or pushed while
+ *   off never reached the worker; re-announce containers and replay only
+ *   the UNDELIVERED part of the array (so toggling off/on never duplicates)
  * - NEW relay (extension reloaded/enabled): its worker knows nothing about
- *   this tab, so re-announce containers and replay the history
+ *   this tab, so re-announce containers and replay the WHOLE history
  * - anything else: just apply the enabled flag
  */
 
@@ -21,13 +21,19 @@ export interface HandshakeState {
   readonly lastRelayId: string | null;
 }
 
+export type ReplayMode =
+  /** Fresh worker: everything in the array */
+  | "all"
+  /** Same worker: only pushes it never received */
+  | "undelivered";
+
 export interface HandshakePlan {
   /** Emit DL_INITIALIZED (first handshake only) */
   readonly announce: boolean;
-  /** Re-emit detected containers (fresh relay) */
+  /** Re-emit detected containers (fresh relay, or turned on after off) */
   readonly reannounceContainers: boolean;
-  /** Re-emit the array contents as preload events */
-  readonly replayHistory: boolean;
+  /** Re-emit array contents as preload events, and which part */
+  readonly replay: ReplayMode | null;
   readonly next: HandshakeState;
 }
 
@@ -45,10 +51,14 @@ export function planHandshake(
   const newRelay = !first && config.relayId !== state.lastRelayId;
   const turnedOn = config.enabled && state.wasEnabled === false;
 
+  let replay: ReplayMode | null = null;
+  if (config.enabled && newRelay) replay = "all";
+  else if (turnedOn) replay = "undelivered";
+
   return {
     announce: first,
     reannounceContainers: newRelay || turnedOn,
-    replayHistory: config.enabled && (turnedOn || newRelay),
+    replay,
     next: {
       announced: true,
       wasEnabled: config.enabled,

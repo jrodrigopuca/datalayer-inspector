@@ -28,6 +28,7 @@ export function StatusBar() {
   const requestReconnect = usePanelStore((s) => s.requestReconnect);
   const maxEvents = usePanelStore((s) => s.settings.maxEventsPerTab);
   const limitReached = usePanelStore((s) => s.limitReached);
+  const captureOn = usePanelStore((s) => s.settings.enabled);
 
   const counts = usePanelStore(useShallow(selectEventCounts));
   const validation = usePanelStore(useShallow(selectValidationSummary));
@@ -59,11 +60,13 @@ export function StatusBar() {
               hasError && "bg-red-500"
             )}
           />
-          <span>
+          <span title="Connection between this panel and the Strata service worker">
             {isLoading
               ? "Connecting"
               : isConnected
-                ? "Connected"
+                ? captureOn
+                  ? "Connected"
+                  : "Connected · capture off"
                 : "Disconnected"}
           </span>
         </div>

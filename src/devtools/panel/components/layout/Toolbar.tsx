@@ -44,7 +44,7 @@ export function Toolbar() {
     useShallow(selectConnectionInfo)
   );
   const { clearEvents, toggleRecording, toggleEnabled } = useCommands();
-  const { exportAll, canExport } = useExport();
+  const { exportAll, exportDataLayer, canExport } = useExport();
   const { schemas } = useSchemas();
   const showSchemaList = usePanelStore((s) => s.showSchemaList);
   const openModal = usePanelStore((s) => s.openModal);
@@ -109,6 +109,7 @@ export function Toolbar() {
       {/* Export menu */}
       <ExportMenu
         disabled={!canExport}
+        onExportDataLayer={exportDataLayer}
         onExportJson={() => exportAll()}
         onExportTest={() => openModal(MODAL_TYPE.EXPORT_TEST)}
         onExportEvidence={() => openModal(MODAL_TYPE.EXPORT_EVIDENCE)}
@@ -218,6 +219,7 @@ export function Toolbar() {
 
 interface ExportMenuProps {
   disabled: boolean;
+  onExportDataLayer: () => void;
   onExportJson: () => void;
   onExportTest: () => void;
   onExportEvidence: () => void;
@@ -257,6 +259,7 @@ function useDismissable(
 
 function ExportMenu({
   disabled,
+  onExportDataLayer,
   onExportJson,
   onExportTest,
   onExportEvidence,
@@ -294,8 +297,14 @@ function ExportMenu({
         >
           <MenuItem
             icon={<ExportIcon className="w-4 h-4" />}
-            label="JSON file"
-            description="Raw events for debugging"
+            label="dataLayer only"
+            description="Just the pushed objects, as an array"
+            onClick={() => pick(onExportDataLayer)}
+          />
+          <MenuItem
+            icon={<ExportIcon className="w-4 h-4" />}
+            label="Full JSON"
+            description="Events with trigger, validation and summary"
             onClick={() => pick(onExportJson)}
           />
           <MenuItem

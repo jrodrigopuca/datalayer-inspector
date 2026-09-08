@@ -63,6 +63,23 @@ describe("interceptor preload attribution", () => {
     ).toBe(true);
   });
 
+  it("replay can skip the pushes the worker already has", () => {
+    const win = window as unknown as { dataLayer: unknown[] };
+    win.dataLayer = [
+      { event: "a" },
+      () => undefined,
+      { event: "b" },
+      { event: "c" },
+    ];
+    interceptDataLayer("dataLayer", () => undefined);
+
+    const replayed = replayExisting("dataLayer", (e) => captured.push(e), 2);
+
+    // functions are not pushes: skipping 2 valid items leaves only "c"
+    expect(replayed).toBe(1);
+    expect(captured.map((e) => e.eventName)).toEqual(["c"]);
+  });
+
   it("replay is a no-op for a missing or non-array global", () => {
     expect(replayExisting("nope", (e) => captured.push(e))).toBe(0);
     (window as unknown as Record<string, unknown>).notArray = 42;

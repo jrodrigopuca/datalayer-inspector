@@ -38,7 +38,8 @@ Validate your dataLayer events against JSON templates:
 
 ### Export Options
 
-- **JSON**: Export events with trigger attribution, category and validation results, plus a session summary (machine-readable twin of the Evidence PDF)
+- **dataLayer only**: a plain JSON array of the pushed objects, in order, nothing added (what `JSON.stringify(dataLayer)` would give)
+- **Full JSON**: events with trigger attribution, category and validation results, plus a session summary (machine-readable twin of the Evidence PDF)
 - **Test Assertions**: Generate Playwright or Cypress test code
 - **Evidence**: Create PDF documents for QA reports
 

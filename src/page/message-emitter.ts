@@ -38,6 +38,17 @@ const state: EmitterState = {
 };
 
 /**
+ * Events actually handed to the relay, per source array. "Delivered" means
+ * posted while ready and enabled; buffered-then-dropped does not count.
+ * Lets a later replay send only what the worker never received.
+ */
+const delivered = new Map<string, number>();
+
+export function getDeliveredCount(sourceName: string): number {
+  return delivered.get(sourceName) ?? 0;
+}
+
+/**
  * Captured event data to emit
  */
 export interface CapturedEventData {
@@ -80,10 +91,15 @@ export function resetEmitter(): void {
   state.ready = false;
   state.enabled = true;
   state.buffer = [];
+  delivered.clear();
 }
 
 function post(message: PageToContentMessage): void {
   window.postMessage(message, "*");
+  if (message.type === PAGE_MESSAGE_TYPE.EVENT_CAPTURED) {
+    const source = message.payload.sourceName;
+    delivered.set(source, (delivered.get(source) ?? 0) + 1);
+  }
 }
 
 function flush(): void {

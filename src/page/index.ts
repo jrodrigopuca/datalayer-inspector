@@ -37,6 +37,7 @@ import {
   emitContainers,
   emitEvent,
   emitInitialized,
+  getDeliveredCount,
 } from "./message-emitter";
 
 const DEFAULT_DATALAYER_NAMES: readonly string[] = ["dataLayer"];
@@ -110,17 +111,21 @@ function init(): void {
         emitInitialized([...interceptedNames], existingEventsTotal);
       }
 
+      // Apply the flag BEFORE re-announcing or replaying: on the off -> on
+      // transition the emitter is still disabled and would drop them.
+      configureEmitter({ enabled: config.enabled });
+
       if (plan.reannounceContainers) {
         announceContainers(true);
       }
 
-      configureEmitter({ enabled: config.enabled });
-
       // The array IS the history GTM keeps: replaying it (as "preload")
-      // restores the session after capture was off or the relay is new.
-      if (plan.replayHistory) {
+      // restores the session. A fresh worker gets everything; the same
+      // worker only what it never received, so toggling never duplicates.
+      if (plan.replay) {
         for (const name of interceptedNames) {
-          replayExisting(name, handleCapturedEvent);
+          const skip = plan.replay === "all" ? 0 : getDeliveredCount(name);
+          replayExisting(name, handleCapturedEvent, skip);
         }
       }
     });

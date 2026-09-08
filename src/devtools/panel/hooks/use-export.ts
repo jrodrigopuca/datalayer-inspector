@@ -4,7 +4,11 @@
  * Provides functions to export all events or only filtered events
  */
 
-import { type ExportOptions, exportEventsAsJSON } from "@shared/utils";
+import {
+  type ExportOptions,
+  exportDataLayerOnly,
+  exportEventsAsJSON,
+} from "@shared/utils";
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { usePanelStore } from "../store";
@@ -15,6 +19,8 @@ interface UseExportReturn {
   exportAll: (options?: ExportOptions) => void;
   /** Export only the currently filtered events */
   exportFiltered: (options?: ExportOptions) => void;
+  /** Export just the pushed objects, as a plain array (no Strata metadata) */
+  exportDataLayer: () => void;
   /** Whether there are events to export */
   canExport: boolean;
   /** Total events available */
@@ -85,9 +91,15 @@ export function useExport(): UseExportReturn {
     [filteredEvents, containers, validations, getCurrentUrl]
   );
 
+  const exportDataLayer = useCallback((): void => {
+    if (events.length === 0) return;
+    exportDataLayerOnly(events, getCurrentUrl());
+  }, [events, getCurrentUrl]);
+
   return {
     exportAll,
     exportFiltered,
+    exportDataLayer,
     canExport: events.length > 0,
     totalEvents: events.length,
     filteredEventsCount: filteredEvents.length,

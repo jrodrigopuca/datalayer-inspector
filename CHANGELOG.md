@@ -3,10 +3,11 @@
 All notable changes to Strata are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.5.0] - 2026-09-07
 
 ### Added
 
+- **dataLayer only export**: Export → "dataLayer only" downloads a plain JSON array of the pushed objects, in capture order, with nothing added. The full export is now labelled "Full JSON".
 - **JSON export v2** (`formatVersion: 2`): every raw event now carries `trigger` (the same attribution shown in the timeline and PDF), `category`, and, when a schema matched, `validation` with per-schema status and errors. The payload opens with a `summary` (counts by category, by trigger type, and validation pass/fail/unchecked) so a session can be evaluated without opening DevTools.
 - **Pre-existing attribution**: events already in the array when Strata attaches are marked `preload` instead of `page-load`.
 - **Reload markers**: every event carries the id of the document load that captured it; the timeline shows "↻ Page reloaded" when the same page loads again (a back/forward restore is not a reload and gets no marker). The id is included in the JSON export.
@@ -15,7 +16,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Changed
 
-- **Capture is off by default.** Strata is used in short sessions (open, capture a flow, export), so it no longer wraps `dataLayer.push` output on every page all day. The toolbar icon shows `OFF`, the panel's empty state offers "Turn on capture", and turning it on picks up everything already in the dataLayer as "Pre-existing". Users who never changed a setting will find capture off after this update; users with saved settings keep their choice.
+- **Capture is off by default.** Strata is used in short sessions (open, capture a flow, export), so it no longer wraps `dataLayer.push` output on every page all day. The toolbar icon shows `OFF`, the panel's empty state offers "Turn on capture", and turning it on picks up what the dataLayer already holds as "Pre-existing" (only what Strata has not captured yet, so toggling never duplicates). Users who never changed a setting will find capture off after this update; users with saved settings keep their choice.
 - Page script runs as a `world: "MAIN"` content script (no script-tag injection, immune to page CSP). Capture starts before the settings round-trip; messages are buffered until the relay is ready.
 - Schemas are owned by the service worker: every open panel stays in sync and concurrent edits no longer overwrite each other.
 - Per-tab session persistence.

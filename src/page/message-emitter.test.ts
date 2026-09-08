@@ -7,6 +7,7 @@ import {
   emitEvent,
   emitInitialized,
   getBufferedCount,
+  getDeliveredCount,
   resetEmitter,
 } from "./message-emitter";
 
@@ -122,6 +123,21 @@ describe("message-emitter", () => {
     };
     expect(first.payload.id).toBe("evt-101");
     expect(last.payload.id).toBe("evt-600");
+  });
+
+  it("counts only events actually delivered, per source array", () => {
+    emitEvent(event(1)); // buffered
+    configureEmitter({ enabled: false }); // dropped
+    expect(getDeliveredCount("dataLayer")).toBe(0);
+
+    configureEmitter({ enabled: true });
+    emitEvent(event(2));
+    emitEvent({ ...event(3), sourceName: "customLayer" });
+    configureEmitter({ enabled: false });
+    emitEvent(event(4)); // dropped while off
+
+    expect(getDeliveredCount("dataLayer")).toBe(1);
+    expect(getDeliveredCount("customLayer")).toBe(1);
   });
 
   it("never throws when postMessage fails", () => {

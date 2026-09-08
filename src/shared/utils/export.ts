@@ -278,6 +278,46 @@ export function downloadFile(content: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+// ============================================================================
+// dataLayer-only export: just the pushed objects, as an array
+// ============================================================================
+
+/**
+ * The pushed objects only, in capture order, with nothing added: what
+ * `JSON.stringify(window.dataLayer)` would give for the captured pushes.
+ * For people who want the dataLayer, not Strata's view of it.
+ */
+export function serializeDataLayerOnly(
+  events: readonly DataLayerEvent[]
+): string {
+  return JSON.stringify(
+    events.map((event) => event.data),
+    null,
+    2
+  );
+}
+
+/**
+ * Filename for the dataLayer-only export
+ * Format: datalayer-{domain}-{timestamp}-payloads.json
+ */
+export function generateDataLayerOnlyFilename(url: string): string {
+  return generateExportFilename(url).replace(/\.json$/, "-payloads.json");
+}
+
+/**
+ * Download the captured pushes as a plain JSON array
+ */
+export function exportDataLayerOnly(
+  events: readonly DataLayerEvent[],
+  currentUrl: string
+): void {
+  downloadFile(
+    serializeDataLayerOnly(events),
+    generateDataLayerOnlyFilename(currentUrl)
+  );
+}
+
 /**
  * Export events as JSON file (main entry point)
  */
