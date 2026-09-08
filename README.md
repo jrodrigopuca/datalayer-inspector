@@ -113,7 +113,7 @@ Load the built extension, turn capture on, interact with the page and read the l
 
 1. Bump `version` in `manifest.json` and `package.json`, move the CHANGELOG's _Unreleased_ section under the new version.
 2. Commit, then tag and push: `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`.
-3. CI builds the extension and attaches `strata-vX.Y.Z.zip` to the workflow run, ready for the Web Store.
+3. CI builds the extension, creates the GitHub Release for the tag with that version's CHANGELOG section as notes, and attaches `strata-vX.Y.Z.zip` to it, ready for the Web Store. (The "Source code" archives GitHub adds are the repository, not the extension.)
 
 ### Project Structure
 

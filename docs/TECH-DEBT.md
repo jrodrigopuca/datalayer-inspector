@@ -578,9 +578,12 @@ el zip del Web Store al detectar un tag.
 
 **Nota de cierre (2026-09).** El workflow de CI corre también en tags `v*`
 y, tras el job `check`, empaqueta `dist/` como `strata-vX.Y.Z.zip` adjunto a
-la ejecución (90 días). Pasos de release documentados en el README. No se
-crea un GitHub Release automáticamente para no pedir permisos de escritura
-al workflow; es un paso manual desde el zip.
+la ejecución (90 días). Pasos de release documentados en el README.
+Revisión (2026-09-08): el autor buscó el zip en la página de Releases y
+encontró solo los "Source code" que GitHub genera del tag. Ahora el job
+`release`, con `permissions: contents: write` acotado a él, crea el Release
+del tag con la sección correspondiente del CHANGELOG como notas y adjunta
+`strata-vX.Y.Z.zip`; el artefacto del run se conserva además.
 
 ### 15. `DL_CONTAINERS_DETECTED` duplicado en el arranque
 
