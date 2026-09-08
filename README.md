@@ -109,6 +109,20 @@ pnpm smoke:stop     # stop it
 
 Load the built extension, turn capture on, interact with the page and read the log on screen or `window.__strataLog` in the console. Export JSON from the panel to compare. Options: `--port <n>`, `--no-open`, `--fg` (foreground).
 
+### Store screenshots and promo tiles
+
+The Web Store wants 24-bit PNG (no alpha) at exact sizes: screenshots 1280×800, small tile 440×280, marquee 1400×560. Capture however you like and normalize:
+
+```bash
+pnpm store:image capture.png src/assets/screenshots/screenshot-1.png              # 1280x800
+pnpm store:image tile.png src/assets/promo/promo-440x280.png --size small           # 440x280
+pnpm store:image banner.png src/assets/promo/promo-1400x560.png --size marquee      # 1400x560
+```
+
+Options: `--fit cover` to fill instead of letterbox, `--bg #rrggbb` for the letterbox colour, `--trim` to drop the margin macOS adds around a window capture. macOS names captures with a narrow no-break space (U+202F) before "AM/PM", so a path typed by hand will not match: rename the capture first (e.g. `mv ~/Desktop/Screenshot*.png capture.png`) or pass it through a shell glob, and call `node scripts/store-image.mjs` directly, since `pnpm run` joins its arguments into one string and drops the quotes.
+
+Suggested capture flow for the panel: `pnpm smoke`, turn capture on, interact until the timeline tells a story, undock DevTools into its own window (⋮ → Dock side → Undock), make that window wide, and capture it (macOS: ⌘⇧4, then Space, click the window; run with `--trim`). Screenshots and tiles are uploaded in the Web Store dashboard; they are not part of the extension zip.
+
 ### Releasing
 
 1. Bump `version` in `manifest.json` and `package.json`, move the CHANGELOG's _Unreleased_ section under the new version.

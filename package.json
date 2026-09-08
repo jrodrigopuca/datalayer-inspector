@@ -19,7 +19,8 @@
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/smoke.mjs start",
     "smoke:stop": "node scripts/smoke.mjs stop",
-    "smoke:status": "node scripts/smoke.mjs status"
+    "smoke:status": "node scripts/smoke.mjs status",
+    "store:image": "node scripts/store-image.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.0",

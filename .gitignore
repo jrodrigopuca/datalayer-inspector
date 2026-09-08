@@ -45,3 +45,6 @@ yarn.lock
 # Smoke-test server state
 .smoke.pid
 
+
+# Raw window captures (normalize with pnpm store:image into src/assets/screenshots)
+scripts/screenshots/
