@@ -107,7 +107,7 @@ captura o la persistencia. Refactorizar eso sin red es apostar.
 - [x] `pnpm run test:coverage` pasa en `main` (umbral ratchet 46/44/31/47 tras el ítem 16, medido 46.3/45.1/32.1/48.0).
 - [x] Existen tests para los cuatro módulos listados en el paso 3 (59 tests nuevos; 235 en total).
 
-**Nota de cierre (2026-09).** El job `e2e` existe pero corre solo con `workflow_dispatch`. Promoverlo a cada PR cuando haya pasado verde tres veces seguidas de forma manual. Ese es el único cabo suelto del ítem.
+**Nota de cierre (2026-09).** El job `e2e` existe pero corre solo con `workflow_dispatch`. Promoverlo a cada PR cuando haya pasado verde tres veces seguidas de forma manual. Primera corrida manual (2026-09-08, run 34172410578): 18/18 en 34 s, verde a la primera contra el build 1.5.0. Faltan dos corridas verdes más para promoverlo. Aviso menor del runner: las actions v4 apuntan a Node 20, que GitHub fuerza a Node 24; subir a v5 cuando toque tocar el workflow.
 
 ---
 
